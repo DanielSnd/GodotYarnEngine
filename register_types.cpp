@@ -3,6 +3,7 @@
 #include "core/object/class_db.h"
 #include "yarnengine.h"
 #include "core/config/engine.h"
+#include "editor/AOBakeEditorPlugin.h"
 #include "editor/CatButtonsEditorPlugin.h"
 
 // This is your singleton reference.
@@ -17,6 +18,9 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 		ClassDB::register_class<yarnengine::YarnEditorCategory>();
 		ClassDB::register_class<yarnengine::YarnEditorSeparator>();
 		EditorPlugins::add_by_type<yarnengine::CatButtonsEditorPlugin>();
+
+		ClassDB::register_class<AOBakeEditorPlugin>();
+		EditorPlugins::add_by_type<AOBakeEditorPlugin>();
 	}
 #endif
 
@@ -24,6 +28,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
  			return;
 	}
  	ClassDB::register_class<YarnEngine>();
+ 	ClassDB::register_class<AOBakeableMeshInstance>();
 
 	// Initialize your singleton.
 	YarnEnginePtr = memnew(YarnEngine);
