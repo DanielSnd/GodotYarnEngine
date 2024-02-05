@@ -15,3 +15,5 @@ func button():
 	pass
 ```
 Essentially you make an export variable that starts with `_btn_yourfunctionname`.
+
+![Example gif](http://yarncatgames.com/images/Example_Inspector_button.gif)
