@@ -2,6 +2,7 @@
 // Created by Daniel on 2024-02-03.
 //
 
+#ifdef TOOLS_ENABLED
 #include "AOBakeEditorPlugin.h"
 
 #include "editor/editor_data.h"
@@ -15,7 +16,7 @@ class AOBakeEditorButtons : public Control {
 
 	Ref<AOBakeGenerator> ao_bake_generator;
 	AOBakeableMeshInstance* _aobakeable = nullptr;
-	static const int PREVIEW_HEIGHT = 72;
+	static const int PREVIEW_HEIGHT = 140;
 	static const int PADDING_PREVIEW_INFO = 2;
 	VBoxContainer * _vbox = nullptr;
 	Button *_bake_AO_button = nullptr;
@@ -76,17 +77,22 @@ public:
 		if(_aobakeable->get_parent() != nullptr) {
 			_aobakeable->get_parent()->add_child(new_bakeable_mesh);
 			new_bakeable_mesh->set_owner(_aobakeable->get_owner());
+			_aobakeable->get_parent()->move_child(new_bakeable_mesh,_aobakeable->get_index());
 		} else {
 			_aobakeable->add_child(new_bakeable_mesh);
 			new_bakeable_mesh->set_owner(_aobakeable);
 		}
-		new_bakeable_mesh->set_mesh(_aobakeable->baked_mesh);
-		new_bakeable_mesh->set_name(_aobakeable->get_name());
 		for (int i = 0; i < _aobakeable->get_surface_override_material_count(); ++i) {
 			if(_aobakeable->get_surface_override_material(i) != nullptr) {
 				new_bakeable_mesh->set_surface_override_material(i,_aobakeable->get_surface_override_material(i));
 			}
 		}
+		new_bakeable_mesh->set_mesh(_aobakeable->baked_mesh);
+		new_bakeable_mesh->set_name(_aobakeable->get_name());
+		new_bakeable_mesh->set_global_position(_aobakeable->get_global_position());
+		new_bakeable_mesh->set_global_rotation(_aobakeable->get_global_rotation());
+		new_bakeable_mesh->set_material_override(_aobakeable->get_material_override());
+		new_bakeable_mesh->set_material_overlay(_aobakeable->get_material_overlay());
 	}
 	void wait_another_frame() {
 		if (!SceneTree::get_singleton()->is_connected(SNAME("process_frame"),callable_mp(this,&AOBakeEditorButtons::waiting_on_generate))) {
@@ -188,6 +194,8 @@ public:
 			new_mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES,new_mesh_arrays);
 			new_mesh->surface_set_material(s,surface_data_info.surface_material);
 			new_mesh->surface_set_name(s,surface_data_info.surface_name);
+			if (new_mesh->get_name().is_empty())
+				new_mesh->set_name(vformat("Combined %s",surface_data_info.surface_owner_array[s]->get_name()));
 		}
 
 		_aobakeable->baked_mesh = new_mesh;
@@ -199,6 +207,8 @@ public:
 				if (child == nullptr) { continue; }
 				child->set_visible(false);
 			}
+
+			create_create_mesh_instance_button();
 		}
 	}
 
@@ -233,6 +243,27 @@ public:
 		Vector<Vector2> uv_to = mesh_arrays_to[Mesh::ARRAY_TEX_UV];
 		uv_to.append_array(uv_from);
 		mesh_arrays_to[Mesh::ARRAY_TEX_UV] = uv_to;
+		
+		Vector<Vector3> tangent_from = mesh_arrays_from[Mesh::ARRAY_TANGENT];
+		Vector<Vector3> tangent_to = mesh_arrays_to[Mesh::ARRAY_TANGENT];
+		tangent_to.append_array(tangent_from);
+		mesh_arrays_to[Mesh::ARRAY_TANGENT] = tangent_to;
+		
+		Vector<Vector2> uv2_from = mesh_arrays_from[Mesh::ARRAY_TEX_UV2];
+		Vector<Vector2> uv2_to = mesh_arrays_to[Mesh::ARRAY_TEX_UV2];
+		uv2_to.append_array(uv2_from);
+		mesh_arrays_to[Mesh::ARRAY_TEX_UV2] = uv2_to;
+
+		Vector<Vector3> custom_from = mesh_arrays_from[Mesh::ARRAY_CUSTOM0];
+		Vector<Vector3> custom_to = mesh_arrays_to[Mesh::ARRAY_CUSTOM0];
+		custom_to.append_array(custom_from);
+		mesh_arrays_to[Mesh::ARRAY_CUSTOM0] = custom_to;
+		
+		Vector<Vector3> custom1_from = mesh_arrays_from[Mesh::ARRAY_CUSTOM1];
+		Vector<Vector3> custom1_to = mesh_arrays_to[Mesh::ARRAY_CUSTOM1];
+		custom1_to.append_array(custom1_from);
+		mesh_arrays_to[Mesh::ARRAY_CUSTOM1] = custom1_to;
+		
 		Vector<int> index_from = mesh_arrays_from[Mesh::ARRAY_INDEX];
 		for (int i = 0; i < index_from.size(); ++i) {
 			index_from.write[i] = index_from[i] + index_shift;
@@ -406,10 +437,6 @@ AOBakeEditorPlugin * AOBakeEditorPlugin::get_singleton() {
 	return singleton;
 }
 
-String AOBakeEditorPlugin::get_name() const {
-    return AOBakeEditorPlugin::get_class_static();
-}
-
 AOBakeEditorPlugin::AOBakeEditorPlugin() {
 	singleton = this;
     Ref<AOBakeInspectorPlugin> plugin;
@@ -428,10 +455,10 @@ void AOBakeEditorPlugin::CreateBakeableMeshInstance() {
 	converting_node = Object::cast_to<MeshInstance3D>(selected_node_list[0]);
 	if (converting_node != nullptr) {
 		AOBakeableMeshInstance* new_bakeable_mesh = memnew(AOBakeableMeshInstance);
-		new_bakeable_mesh->set_name(converting_node->get_name());
 		if(converting_node->get_parent() != nullptr) {
 			converting_node->get_parent()->add_child(new_bakeable_mesh);
 			new_bakeable_mesh->set_owner(converting_node->get_owner());
+			converting_node->get_parent()->move_child(new_bakeable_mesh,converting_node->get_index());
 		} else {
 			converting_node->add_child(new_bakeable_mesh);
 			new_bakeable_mesh->set_owner(converting_node);
@@ -442,6 +469,11 @@ void AOBakeEditorPlugin::CreateBakeableMeshInstance() {
 				new_bakeable_mesh->set_surface_override_material(i,converting_node->get_surface_override_material(i));
 			}
 		}
+		new_bakeable_mesh->set_name(converting_node->get_name());
+		new_bakeable_mesh->set_global_position(converting_node->get_global_position());
+		new_bakeable_mesh->set_global_rotation(converting_node->get_global_rotation());
+		new_bakeable_mesh->set_material_override(converting_node->get_material_override());
+		new_bakeable_mesh->set_material_overlay(converting_node->get_material_overlay());
 	}
 }
 
@@ -451,3 +483,5 @@ AOBakeEditorPlugin::~AOBakeEditorPlugin() {
 		singleton = nullptr;
 	}
 }
+
+#endif //TOOLS_ENABLED

@@ -3,9 +3,11 @@
 #include "core/object/class_db.h"
 #include "yarnengine.h"
 #include "core/config/engine.h"
+#ifdef TOOLS_ENABLED
 #include "editor/AOBakeEditorPlugin.h"
 #include "editor/CatButtonsEditorPlugin.h"
-
+#endif
+#include "AOBakeableMeshInstance.h"
 // This is your singleton reference.
 static YarnEngine* YarnEnginePtr;
 
@@ -27,6 +29,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
  	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
  			return;
 	}
+
  	ClassDB::register_class<YarnEngine>();
  	ClassDB::register_class<AOBakeableMeshInstance>();
 
@@ -45,7 +48,7 @@ void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	Engine::get_singleton()->remove_singleton("YarnEngine");
 	if (YarnEnginePtr != nullptr) {
 		memdelete(YarnEnginePtr);
-		YarnEnginePtr = nullptr;
 	}
+	YarnEnginePtr = nullptr;
    // Nothing to do here in this example.
 }

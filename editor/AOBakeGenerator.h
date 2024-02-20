@@ -4,6 +4,8 @@
 
 #ifndef AOBAKEGENERATOR_H
 #define AOBAKEGENERATOR_H
+
+#ifdef TOOLS_ENABLED
 #include "../AOBakeableMeshInstance.h"
 #include "core/object/ref_counted.h"
 #include "core/os/semaphore.h"
@@ -73,5 +75,5 @@ public:
 };
 
 
-
+#endif //TOOLS ENABLED
 #endif //AOBAKEGENERATOR_H

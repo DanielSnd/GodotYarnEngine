@@ -1,3 +1,5 @@
+
+#ifdef TOOLS_ENABLED
 #include "AOBakeGenerator.h"
 
 #include "../AOBakeableMeshInstance.h"
@@ -106,6 +108,7 @@ void AOBakeGenerator::start_generation() {
 	RS::get_singleton()->instance_set_base(mesh_instance, mesh_to_generate->get_rid());
 	RS::get_singleton()->instance_geometry_set_material_override(mesh_instance,shader_material);
 	set_last_baked_mesh(memnew(ArrayMesh));
+	last_baked_mesh->set_name(mesh_to_generate->get_name());
 	//print_line("How many surfaces are we dealing with? ",mesh_to_generate->get_surface_count());
 	all_surfaces = mesh_to_generate->get_surface_count();
 	current_surface = 0;
@@ -249,3 +252,5 @@ AOBakeGenerator::~AOBakeGenerator() {
 		mesh_to_generate.unref();
 	}
 }
+
+#endif //TOOLS ENABLED

@@ -4,12 +4,14 @@
 
 #ifndef AOBAKEEDITORPLUGIN_H
 #define AOBAKEEDITORPLUGIN_H
+
+#ifdef TOOLS_ENABLED
 #include "../AOBakeableMeshInstance.h"
 #include "editor/editor_inspector.h"
 #include "editor/editor_plugin.h"
-#include "editor/editor_scale.h"
 #include "scene/gui/button.h"
 #include "AOBakeGenerator.h"
+#include "editor/themes/editor_scale.h"
 #include "core/object/ref_counted.h"
 #include "scene/3d/camera_3d.h"
 #include "scene/gui/texture_rect.h"
@@ -23,7 +25,6 @@ public:
     inline static AOBakeEditorPlugin* singleton = nullptr;
 
     static AOBakeEditorPlugin* get_singleton();
-    String get_name() const;
     AOBakeEditorPlugin();
 
     void CreateBakeableMeshInstance();
@@ -31,6 +32,6 @@ public:
     ~AOBakeEditorPlugin();
 };
 
-
+#endif //TOOLS_ENABLED
 
 #endif //AOBAKEEDITORPLUGIN_H

@@ -4,6 +4,8 @@
 
 #ifndef CATBUTTONSEDITORPLUGIN_H
 #define CATBUTTONSEDITORPLUGIN_H
+
+#ifdef TOOLS_ENABLED
 #include "editor/editor_plugin.h"
 #include "editor/editor_inspector.h"
 #include "scene/gui/separator.h"
@@ -93,4 +95,5 @@ public:
 
 }
 
+#endif //TOOLS ENABLED
 #endif //CATBUTTONSEDITORPLUGIN_H

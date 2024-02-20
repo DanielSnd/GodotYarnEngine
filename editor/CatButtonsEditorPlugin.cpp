@@ -2,6 +2,9 @@
 // Created by Daniel on 2024-01-22.
 //
 
+
+#ifdef TOOLS_ENABLED
+
 #include "CatButtonsEditorPlugin.h"
 
 #include "core/object/script_language.h"
@@ -176,3 +179,5 @@ yarnengine::YarnEditorSeparator::YarnEditorSeparator() {
         set_focus_mode(FOCUS_NONE);
         set_modulate(Color(1.5,1.5,1.5,1.0));
 }
+
+#endif
