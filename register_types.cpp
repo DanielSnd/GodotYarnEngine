@@ -8,9 +8,12 @@
 #include "editor/CatButtonsEditorPlugin.h"
 #endif
 #include "AOBakeableMeshInstance.h"
+#include "yarnsave.h"
+#include "yarntime.h"
 // This is your singleton reference.
-static YarnEngine* YarnEnginePtr;
-
+static YEngine* YEnginePtr;
+static Ref<YSave> yarn_save_ref;
+static Ref<YTime> yarn_time_ref;
 void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 #ifdef TOOLS_ENABLED
 	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
@@ -30,25 +33,37 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
  			return;
 	}
 
- 	ClassDB::register_class<YarnEngine>();
+	ClassDB::register_class<YTime>();
+	ClassDB::register_class<YSave>();
+ 	ClassDB::register_class<YEngine>();
  	ClassDB::register_class<AOBakeableMeshInstance>();
 
 	// Initialize your singleton.
-	YarnEnginePtr = memnew(YarnEngine);
+	YEnginePtr = memnew(YEngine);
+	yarn_save_ref.instantiate();
+	YSave::set_singleton(yarn_save_ref);
+
+	yarn_time_ref.instantiate();
+	YTime::set_singleton(yarn_time_ref);
 
 	// Bind your singleton.
-	Engine::get_singleton()->add_singleton(Engine::Singleton("YarnEngine", YarnEngine::get_singleton()));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("YEngine", YEngine::get_singleton()));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("YSave", YSave::get_singleton()));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("YTime", YTime::get_singleton()));
 }
 
 void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
  			return;
     }
-
-	Engine::get_singleton()->remove_singleton("YarnEngine");
-	if (YarnEnginePtr != nullptr) {
-		memdelete(YarnEnginePtr);
+	if (YEnginePtr != nullptr) {
+		memdelete(YEnginePtr);
 	}
-	YarnEnginePtr = nullptr;
+	Engine::get_singleton()->remove_singleton("YEngine");
+	Engine::get_singleton()->remove_singleton("YSave");
+	Engine::get_singleton()->remove_singleton("YTime");
+	YEnginePtr = nullptr;
+	yarn_save_ref.unref();
+	yarn_time_ref.unref();
    // Nothing to do here in this example.
 }

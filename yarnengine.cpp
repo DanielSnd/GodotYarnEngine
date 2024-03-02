@@ -1,178 +1,87 @@
 #include "yarnengine.h"
 
+#include "yarnsave.h"
+#include "core/config/project_settings.h"
 #include "core/io/dir_access.h"
 #include "core/io/json.h"
+#include "core/string/translation.h"
+#include "scene/gui/control.h"
 
-YarnEngine* YarnEngine::singleton = nullptr;
+YEngine* YEngine::singleton = nullptr;
 
-YarnEngine * YarnEngine::get_singleton() {
+YEngine * YEngine::get_singleton() {
     return singleton;
 }
 
-void YarnEngine::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("setup_node"), &YarnEngine::setup_node);
-    ClassDB::bind_method(D_METHOD("get_current_scene"), &YarnEngine::get_current_scene);
-    ClassDB::bind_method(D_METHOD("attempt_pause"), &YarnEngine::attempt_pause);
+void YEngine::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("setup_node"), &YEngine::setup_node);
+    ClassDB::bind_method(D_METHOD("get_current_scene"), &YEngine::get_current_scene);
 
-    ClassDB::bind_method(D_METHOD("set_is_paused", "is_paused"), &YarnEngine::set_is_paused);
-    ClassDB::bind_method(D_METHOD("get_is_paused"), &YarnEngine::get_is_paused);
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "is_paused"), "set_is_paused", "get_is_paused");
-
-    ClassDB::bind_method(D_METHOD("set_time", "time"), &YarnEngine::set_time);
-    ClassDB::bind_method(D_METHOD("get_time"), &YarnEngine::get_time);
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "time"), "set_time", "get_time");
-
-    ClassDB::bind_method(D_METHOD("set_pause_independent_time", "pause_independent_time"), &YarnEngine::set_pause_independent_time);
-    ClassDB::bind_method(D_METHOD("get_pause_independent_time"), &YarnEngine::get_pause_independent_time);
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "pause_independent_time"), "set_pause_independent_time", "get_pause_independent_time");
-
-    ClassDB::bind_method(D_METHOD("has_time_elapsed", "time_checking", "interval"), &YarnEngine::has_time_elapsed);
-    ClassDB::bind_method(D_METHOD("has_pause_independent_time_elapsed", "time_checking", "interval"), &YarnEngine::has_pause_independent_time_elapsed);
-
-    ClassDB::bind_method(D_METHOD("test_callback_thing", "callable"), &YarnEngine::test_callback_thing);
-
-    ClassDB::bind_method(D_METHOD("set_save_path", "save_path"), &YarnEngine::set_save_path);
-    ClassDB::bind_method(D_METHOD("get_save_path"), &YarnEngine::get_save_path);
-    ADD_PROPERTY(PropertyInfo(Variant::STRING, "save_path"), "set_save_path", "get_save_path");
+    ClassDB::bind_method(D_METHOD("set_last_button_click_time", "last_button_click_time"), &YEngine::set_last_button_click_time);
+    ClassDB::bind_method(D_METHOD("get_last_button_click_time"), &YEngine::get_last_button_click_time);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "last_button_click_time"), "set_last_button_click_time", "get_last_button_click_time");
     
-    ClassDB::bind_method(D_METHOD("set_save_backup_path", "save_backup_path"), &YarnEngine::set_save_backup_path);
-    ClassDB::bind_method(D_METHOD("get_save_backup_path"), &YarnEngine::get_save_backup_path);
-    ADD_PROPERTY(PropertyInfo(Variant::STRING, "save_backup_path"), "set_save_backup_path", "get_save_backup_path");
-    
-    ClassDB::bind_method(D_METHOD("set_save_requested", "save_requested"), &YarnEngine::set_save_requested);
-    ClassDB::bind_method(D_METHOD("get_save_requested"), &YarnEngine::get_save_requested);
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "save_requested"), "set_save_requested", "get_save_requested");
-    
-    ClassDB::bind_method(D_METHOD("set_save_data", "save_data"), &YarnEngine::set_save_data);
-    ClassDB::bind_method(D_METHOD("get_save_data"), &YarnEngine::get_save_data);
-    ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "save_data"), "set_save_data", "get_save_data");
+    ClassDB::bind_method(D_METHOD("set_can_button_click", "can_button_click"), &YEngine::set_can_button_click);
+    ClassDB::bind_method(D_METHOD("get_can_button_click"), &YEngine::get_can_button_click);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "can_button_click"), "set_can_button_click", "get_can_button_click");
 
-    ClassDB::bind_method(D_METHOD("add_to_save_data", "save_key","adding"), &YarnEngine::add_to_save_data);
+    ClassDB::bind_method(D_METHOD("button_click_callable", "callable"), &YEngine::button_click_callable);
+    ClassDB::bind_method(D_METHOD("button_click_callable_if_modulate", "callable","control"), &YEngine::button_click_callable_if_modulate);
 
-    ClassDB::bind_method(D_METHOD("set_to_save", "save_key","save"), &YarnEngine::set_to_save);
-
-    ClassDB::bind_method(D_METHOD("get_from_save", "save_key","default"), &YarnEngine::get_from_save);
-
-    ClassDB::bind_method(D_METHOD("request_save", "immediate"), &YarnEngine::request_save,DEFVAL(false));
+    ClassDB::bind_method(D_METHOD("find_resources_in", "path", "name_contains"), &YEngine::find_resources_in,DEFVAL(""));
+    ClassDB::bind_method(D_METHOD("find_resources_paths_in", "path", "name_contains"), &YEngine::find_resources_paths_in,DEFVAL(""));
 
     ADD_SIGNAL(MethodInfo("changed_pause", PropertyInfo(Variant::BOOL, "pause_value")));
-
-    ADD_SIGNAL(MethodInfo("after_full_save_reset"));
-    ADD_SIGNAL(MethodInfo("prepare_save"));
-    ADD_SIGNAL(MethodInfo("loaded_save", PropertyInfo(Variant::DICTIONARY, "save_data")));
 }
 
-Node* YarnEngine::get_current_scene() {
+Variant YEngine::execute_button_click_callable_if_modulate(const Callable &p_callable,Control* p_control) {
+    if(p_control == nullptr || p_control->get_modulate().a < 0.94) return Variant{};
+    if(ytime->has_pause_independent_time_elapsed(last_button_click_time,0.15)) {
+        last_button_click_time = ytime->pause_independent_time;
+        return p_callable.call();
+    }
+    return Variant{};
+}
+Variant YEngine::execute_button_click_callable(const Callable &p_callable) {
+    if(ytime->has_pause_independent_time_elapsed(last_button_click_time,0.15)) {
+        last_button_click_time = ytime->pause_independent_time;
+        return p_callable.call();
+    }
+    return Variant{};
+}
+
+Callable YEngine::button_click_callable(const Callable &p_callable) {
+    return (callable_mp(this,&YEngine::execute_button_click_callable).bind(p_callable));
+}
+
+Callable YEngine::button_click_callable_if_modulate(const Callable &p_callable,Control* p_control) {
+    return (callable_mp(this,&YEngine::execute_button_click_callable_if_modulate).bind(p_callable,p_control));
+}
+
+Node* YEngine::get_current_scene() {
     return SceneTree::get_singleton()->get_current_scene();
 }
 
-void YarnEngine::setup_node() {
+void YEngine::setup_node() {
+    ysave = YSave::get_singleton();
+    ytime = YTime::get_singleton();
+    add_setting("application/config/window_name", "", Variant::Type::STRING);
     if(!already_setup_in_tree && SceneTree::get_singleton() != nullptr) {
+        String appname = GLOBAL_GET("application/config/window_name");
+        if (appname.is_empty()) {
+            appname = GLOBAL_GET("application/config/name");
+        }
+        DisplayServer::get_singleton()->window_set_title(TranslationServer::get_singleton()->translate(appname));
+
         SceneTree::get_singleton()->get_root()->add_child(this);
+        set_name("YEngine");
         already_setup_in_tree=true;
+        ysave->time_started = OS::get_singleton()->get_ticks_msec() * 0.001f;
     }
 }
 
-void YarnEngine::create_save_backup() {
-    auto dir = DirAccess::create(DirAccess::ACCESS_USERDATA);
-    if (!dir->file_exists(save_path)) {
-        return;
-    }
-    auto file = FileAccess::open(save_path, FileAccess::READ);
-    auto file_string = file->get_as_text();
-    file->close();
-    if (!file_string.is_empty()) {
-        auto write = FileAccess::open(save_backup_path, FileAccess::WRITE);
-        write->store_string(file_string);
-        write->close();
-    }
-}
-
-Variant YarnEngine::get_from_save(String p_save_key, Variant p_save_default) {
-    if (p_save_key.contains("/")) {
-        auto splitted = p_save_key.split("/");
-        Dictionary* desired_dict = &save_data;
-        for (int i = 0; i < splitted.size(); ++i) {
-            if (i == splitted.size()-1)
-                return desired_dict->get(p_save_key,p_save_default);
-            if (!desired_dict->has(splitted[i])) return p_save_default;
-            auto found_pointer = Object::cast_to<Dictionary>(desired_dict->get(splitted[i],Dictionary{}));
-            if (found_pointer != nullptr) {
-                desired_dict = found_pointer;
-            } else {
-                return p_save_default;
-            }
-        }
-    }
-    return save_data.get(p_save_key,p_save_default);
-}
-
-YarnEngine *YarnEngine::set_to_save(String p_save_key, Variant p_save_value) {
-    if (p_save_key.contains("/")) {
-        auto splitted = p_save_key.split("/");
-        Dictionary* desired_dict = &save_data;
-        for (int i = 0; i < splitted.size(); ++i) {
-            if (i == splitted.size()-1) {
-                if (desired_dict->has(splitted[i])) {
-                    desired_dict->erase(splitted[i]);
-                }
-                desired_dict->get_or_add(splitted[i],p_save_value);
-                return this;
-            }
-            if (!desired_dict->has(splitted[i]))
-                desired_dict->get_or_add(splitted[i],Dictionary{});
-            auto found_pointer = Object::cast_to<Dictionary>(desired_dict->get(splitted[i],Dictionary{}));
-            if (found_pointer != nullptr) {
-                desired_dict = found_pointer;
-            } else {
-                ERR_PRINT(vformat("FAILED TO ADD DICTIONARY WITH STRING %s original %s",splitted,p_save_key));
-            }
-        }
-    }
-    save_data[p_save_key] = p_save_value;
-    return this;
-}
-
-
-
-YarnEngine *YarnEngine::add_to_save_data(String p_save_key, Variant p_save_value) {
-    if (p_save_key.contains("/")) {
-        auto splitted = p_save_key.split("/");
-        Dictionary* desired_dict = &save_data;
-        for (int i = 0; i < splitted.size(); ++i) {
-            if (i == splitted.size()-1) {
-                float initial_value = desired_dict->get(splitted[i],0.0);
-                if (desired_dict->has(splitted[i])) {
-                    desired_dict->erase(splitted[i]);
-                }
-                desired_dict->get_or_add(splitted[i],static_cast<float>(p_save_value) + initial_value);
-                return this;
-            }
-            if (!desired_dict->has(splitted[i]))
-                desired_dict->get_or_add(splitted[i],Dictionary{});
-            auto found_pointer = Object::cast_to<Dictionary>(desired_dict->get(splitted[i],Dictionary{}));
-            if (found_pointer != nullptr) {
-                desired_dict = found_pointer;
-            } else {
-                ERR_PRINT(vformat("FAILED TO ADD DICTIONARY WITH STRING %s original %s",splitted,p_save_key));
-            }
-        }
-    }
-    else {
-        if (save_data.has(p_save_key)) {
-            auto current = save_data[p_save_key];
-            if (current.is_num() && p_save_value.is_num()) {
-                save_data[p_save_key] = Variant{static_cast<float>(current) + static_cast<float>(p_save_value)};
-            }
-        } else {
-            save_data[p_save_key] = p_save_value;
-        }
-    }
-    return this;
-}
-
-void YarnEngine::_notification(int p_what) {
-    if (p_what == 0) {
+void YEngine::_notification(int p_what) {
+    if (p_what == NOTIFICATION_POSTINITIALIZE) {
         call_deferred("setup_node");
     }
     switch (p_what) {
@@ -192,7 +101,7 @@ void YarnEngine::_notification(int p_what) {
         } break;
         case NOTIFICATION_PROCESS: {
             if (!Engine::get_singleton()->is_editor_hint()) {
-                handle_time_setting();
+                do_process();
             }
             //print_line(pause_independent_time);
         } break;
@@ -201,112 +110,129 @@ void YarnEngine::_notification(int p_what) {
     }
 }
 
-bool YarnEngine::attempt_pause() {
-    if (last_time_ended_pause + 0.3 < pause_independent_time) {
-        return false;
-    }
-    return is_paused;
+void YEngine::do_process() {
+    ytime->handle_time_setting();
+    ysave->process(ytime->pause_independent_time);
 }
 
-void YarnEngine::set_is_paused(bool val) {
-    if (is_paused != val) {
-        is_paused = val;
-        if (is_paused)
-            amount_when_paused = OS::get_singleton()->get_ticks_msec() * 0.001f;
-        else
-            amount_when_unpaused = OS::get_singleton()->get_ticks_msec() * 0.001f;
-        amount_time_last_frame = amount_when_unpaused;
-        emit_signal(SNAME("changed_pause"),val);
-    }
-}
+//
+// Variant YEngine::test_callback_thing(const Callable &p_callable) {
+//     if (!p_callable.is_null() && p_callable.is_valid()) {
+//         return p_callable.call();
+//     }
+//     return Variant{};
+// }
 
-
-void YarnEngine::handle_time_setting() {
-    pause_independent_time = OS::get_singleton()->get_ticks_msec() * 0.001f;
-    if (!is_paused) {
-        time += pause_independent_time - amount_time_last_frame;
-        amount_time_last_frame = pause_independent_time;
-    }
-    if(save_next_frame) {
-        save_next_frame = false;
-        actually_save();
-    } else if (!save_next_frame && save_requested && (last_time_save_requested + 0.33 < pause_independent_time)) {
-        save_requested = false;
-        execute_save();
-    }
-}
-
-void YarnEngine::execute_save() {
-    emit_signal(SNAME("prepare_save"));
-    save_next_frame = true;
-}
-
-void YarnEngine::actually_save() {
-    auto file = FileAccess::open(save_path,FileAccess::WRITE);
-    file->store_string(JSON::stringify(save_data));
-    file->close();
-    print_line("Saved");
-}
-
-bool YarnEngine::request_load() {
-    auto dir = DirAccess::create(DirAccess::ACCESS_USERDATA);
-    if (!dir->file_exists(save_path)) {
-        return false;
-    }
-    auto file = FileAccess::open(save_path, FileAccess::READ);
-    auto file_string = file->get_as_text();
-    if (file_string.is_empty())
-        return false;
-    Ref<JSON> jason;
-    jason.instantiate();
-    Error error = jason->parse(file_string);
-    if(error != Error::OK) {
-        jason.unref();
-        print_line(vformat("Parse JSON failed. Error at line %d: %s", jason->get_error_line(), jason->get_error_message()));
-        return false;
-    }
-    save_data = jason->get_data();
-    Variant args[1] = { save_data };
-    const Variant *argptrs[1] = { &args[0] };
-    emit_signalp(SNAME("loaded_save"),argptrs,1);
-    return true;
-}
-
-void YarnEngine::request_save(bool immediate = false) {
-    if(immediate) {
-        emit_signal(SNAME("prepare_save"));
-        actually_save();
-    } else {
-        save_requested = true;
-        last_time_save_requested = pause_independent_time;
-    }
-}
-
-bool YarnEngine::has_time_elapsed(float test_time, float interval) {
-    return test_time + interval < time;
-}
-
-bool YarnEngine::has_pause_independent_time_elapsed(float test_time, float interval) {
-    return test_time + interval < pause_independent_time;
-}
-
-Variant YarnEngine::test_callback_thing(const Callable &p_callable) {
-    if (!p_callable.is_null() && p_callable.is_valid()) {
-        return p_callable.call();
-    }
-    return Variant{};
-}
-
-YarnEngine::YarnEngine() {
+YEngine::YEngine() {
     singleton = this;
-    is_paused = false;
-    amount_time_last_frame = 0.0;
-    amount_when_paused = 0.0;
-    amount_when_unpaused = 0.0;
 }
 
-YarnEngine::~YarnEngine() {
+YEngine::~YEngine() {
     if (singleton != nullptr && singleton == this) {
         singleton = nullptr;
     }
+    ysave = nullptr;
 }
+
+void YEngine::add_setting(const String& p_name, const Variant& p_default_value, Variant::Type p_type,
+PropertyHint p_hint, const String& p_hint_string, int p_usage,bool restart_if_changed) {
+    if (!ProjectSettings::get_singleton()->has_setting(p_name)) {
+        ProjectSettings::get_singleton()->set_setting(p_name, p_default_value);
+    }
+    ProjectSettings::get_singleton()->set_custom_property_info(PropertyInfo(p_type, p_name, p_hint, p_hint_string,p_usage));
+    ProjectSettings::get_singleton()->set_initial_value(p_name, p_default_value);
+    ProjectSettings::get_singleton()->set_restart_if_changed(p_name, restart_if_changed);
+}
+
+TypedArray<Resource> YEngine::find_resources_in(const Variant &variant_path, const String &name_contains) {
+    PackedStringArray _paths;
+    if(variant_path.get_type() == Variant::Type::ARRAY) { _paths = variant_path;
+    } else if (variant_path.get_type() != Variant::Type::STRING) { return Array{}; }
+    else { _paths.append(variant_path); }
+    TypedArray<Resource> return_paths;
+    bool has_name_contains = !name_contains.is_empty();
+
+    for (auto _path: _paths) {
+        Error check_error;
+        auto dir = DirAccess::open(_path,&check_error);
+        if (check_error != OK) {
+            WARN_PRINT(vformat("[find_resources_in] Couldn't open dir %s",_path));
+            continue;
+        }
+
+        dir->list_dir_begin();
+        String file_name = dir->get_next();
+        while (!file_name.is_empty()) {
+            file_name = file_name.trim_suffix(".remap");
+            if (file_name.ends_with(".tres"))
+                if (!has_name_contains || file_name.contains(name_contains)) {
+                    Ref<Resource> loaded_resource = ResourceLoader::load(vformat("%s/%s",_path,file_name));
+                    if(loaded_resource.is_valid())
+                        return_paths.append(loaded_resource);
+                    else
+                        WARN_PRINT(vformat("[find_resources_in] Failed loading resource at %s/%s",_path,file_name));
+                }
+            file_name = dir->get_next();
+        }
+    }
+    return return_paths;
+}
+
+PackedStringArray YEngine::find_resources_paths_in(const Variant &variant_path, const String &name_contains) {
+    PackedStringArray _paths;
+    if(variant_path.get_type() == Variant::Type::ARRAY) { _paths = variant_path;
+    } else if (variant_path.get_type() != Variant::Type::STRING) { return PackedStringArray{}; }
+    else { _paths.append(variant_path); }
+    bool has_name_contains = !name_contains.is_empty();
+    PackedStringArray return_paths;
+    for (auto _path: _paths) {
+        Error check_error;
+        auto dir = DirAccess::open(_path,&check_error);
+
+        if (check_error != OK) {
+            WARN_PRINT(vformat("[find_resources_paths_in] Couldn't open dir %s",_path));
+            continue;
+        }
+
+        dir->list_dir_begin();
+        String file_name = dir->get_next();
+        while (!file_name.is_empty()) {
+            file_name = file_name.trim_suffix(".remap");
+            if (file_name.ends_with(".tres"))
+                if (!has_name_contains || file_name.contains(name_contains))
+                    return_paths.append(file_name);
+            file_name = dir->get_next();
+        }
+    }
+    return return_paths;
+}
+
+// func find_unlock_infos():
+//     var upgrades_paths :Array[String] = ["res://hentai_resources/"]
+//     #print(DirAccess.get_files_at(upgrades_paths[0]))
+//     for path in upgrades_paths:
+//         var dir = DirAccess.open(path)
+//         if DirAccess.get_open_error() == OK:
+//             #print(dir.dir_exists("res://hentai_resources/"))
+//             dir.list_dir_begin()
+//             var file_name = dir.get_next()
+//             while (file_name != ""):
+//                 file_name = file_name.trim_suffix(".remap")
+//                 if (file_name.ends_with(".tres")):
+//                     var res = load(path + file_name)
+//                     if res == null:
+//                         print("Error loading ",path,file_name)
+//                     if res is UnlockableSpriteFrames:
+//                         unlock_pool.append(res)
+//                 file_name = dir.get_next()
+//         else:
+//             print("An error occurred when trying to access the ",path," path.")
+//     print("Loaded ", str(unlock_pool.size()), " UnlockInfos.")
+//     if save_data.has("unlocked") or all_unlocked:
+//         for unlockable in unlock_pool.duplicate():
+//             if check_has_unlock(unlockable.unlock_id):
+//                 already_unlocked.append(unlockable)
+//                 #if using_steam and unlockable.has_steam_achievement_id:
+//                     #Steam.setAchievement(unlockable.steam_achievement_id)
+//                     #unlocked_stema_achievement = true
+//                 unlock_pool.erase(unlockable)
