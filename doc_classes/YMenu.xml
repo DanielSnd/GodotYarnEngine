@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YMenu" inherits="Panel" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+            YMenu is a custom class for managing menus in Godot.
+	</brief_description>
+	<description>
+            YMenu provides functionality for managing menu stacks, handling button presses, and transitioning between menus.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="_on_back_button_pressed" qualifiers="virtual">
+			<return type="void" />
+			<description>
+                    Virtual method called when the back button is pressed.
+			</description>
+		</method>
+		<method name="_on_started_menu" qualifiers="virtual">
+			<return type="void" />
+			<description>
+				
+                    Virtual method called when the menu is started.
+                
+			</description>
+		</method>
+		<method name="add_to_menu_stack">
+			<return type="void" />
+			<description>
+				
+                    Adds the menu to the menu stack.
+                
+			</description>
+		</method>
+		<method name="fade_out">
+			<return type="Tween" />
+			<description>
+				
+                    Fades out the menu.
+                
+			</description>
+		</method>
+		<method name="get_can_click_buttons">
+			<return type="bool" />
+			<description>
+				
+                    Returns whether buttons can be clicked.
+                
+			</description>
+		</method>
+		<method name="get_is_active">
+			<return type="bool" />
+			<description>
+				
+                    Returns whether the menu is active.
+                
+			</description>
+		</method>
+		<method name="instantiate_child_menu">
+			<return type="Node" />
+			<param index="0" name="parent_node" type="Control" />
+			<param index="1" name="child_menu_scene" type="PackedScene" />
+			<param index="2" name="auto_start" type="bool" default="true" />
+			<description>
+				
+                    Instantiates a child menu under the specified parent node.
+                
+			</description>
+		</method>
+		<method name="instantiate_replacement_menu">
+			<return type="Node" />
+			<param index="0" name="parent_node" type="Control" />
+			<param index="1" name="child_menu_scene" type="PackedScene" />
+			<param index="2" name="auto_start" type="bool" default="true" />
+			<description>
+				
+                    Instantiates a replacement menu under the specified parent node.
+                
+			</description>
+		</method>
+		<method name="on_back_button_pressed">
+			<return type="void" />
+			<description>
+				
+                    Called when the back button is pressed.
+                
+			</description>
+		</method>
+		<method name="on_back_to_menu">
+			<return type="void" />
+			<description>
+				
+                    Called when returning to the menu.
+                
+			</description>
+		</method>
+		<method name="on_started_menu">
+			<return type="void" />
+			<description>
+				
+                    Called when the menu is started.
+                
+			</description>
+		</method>
+		<method name="remove_from_menu_stack">
+			<return type="void" />
+			<description>
+				
+                    Removes the menu from the menu stack.
+                
+			</description>
+		</method>
+		<method name="set_back_button">
+			<return type="void" />
+			<param index="0" name="back_button" type="Control" />
+			<description>
+				
+                    Sets the back button for the menu.
+                
+			</description>
+		</method>
+		<method name="set_is_active">
+			<return type="void" />
+			<param index="0" name="active" type="bool" />
+			<description>
+				
+                    Sets the activity state of the menu.
+                
+			</description>
+		</method>
+		<method name="set_last_clicked_time">
+			<return type="void" />
+			<description>
+				
+                    Sets the last clicked time for the menu.
+                
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="auto_start_menu" type="bool" setter="set_auto_start_menu" getter="get_auto_start_menu" default="false">
+			
+                Indicates whether the menu auto-starts.
+            
+		</member>
+		<member name="can_go_back_to_menu" type="bool" setter="set_can_go_back_to_menu" getter="get_can_go_back_to_menu" default="false">
+			
+                Indicates whether the menu can go back.
+            
+		</member>
+	</members>
+	<signals>
+		<signal name="go_back_to_menu">
+			<description>
+				
+                    Signal emitted when going back to the menu.
+                
+			</description>
+		</signal>
+		<signal name="started_menu">
+			<description>
+				
+                    Signal emitted when the menu is started.
+                
+			</description>
+		</signal>
+	</signals>
+</class>

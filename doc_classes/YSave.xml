@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YSave" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		YSave is a custom class designed for managing saving and loading game data.
+	</brief_description>
+	<description>
+		This class provides functionality for saving and loading game data, managing settings, and handling events.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_from_save">
+			<return type="Variant" />
+			<param index="0" name="save_key" type="String" />
+			<param index="1" name="default" type="Variant" />
+			<description>
+				Retrieves data from the save file using the provided key.
+			</description>
+		</method>
+		<method name="get_from_settings">
+			<return type="Variant" />
+			<param index="0" name="settings_key" type="String" />
+			<param index="1" name="default" type="Variant" />
+			<description>
+				Retrieves data from the settings using the provided key.
+			</description>
+		</method>
+		<method name="get_registered_event_time">
+			<return type="int" />
+			<param index="0" name="event_id" type="int" />
+			<description>
+				Returns the time when the specified event was registered.
+			</description>
+		</method>
+		<method name="get_registered_events">
+			<return type="Array" />
+			<description>
+				Returns an array of registered events.
+			</description>
+		</method>
+		<method name="has_time_elapsed_since_registered_event">
+			<return type="bool" />
+			<param index="0" name="current_time" type="int" />
+			<param index="1" name="elapsed_time" type="int" />
+			<param index="2" name="_unnamed_arg2" type="int" />
+			<description>
+				Checks if the specified time has elapsed since the registered event.
+			</description>
+		</method>
+		<method name="load_registered_events_from_save_data">
+			<return type="void" />
+			<description>
+				Loads registered events from the save data.
+			</description>
+		</method>
+		<method name="load_save_details">
+			<return type="void" />
+			<param index="0" name="desired_path" type="String" />
+			<param index="1" name="_unnamed_arg1" type="Variant" default="&quot;&quot;" />
+			<description>
+				Loads save details from the specified path.
+			</description>
+		</method>
+		<method name="load_settings">
+			<return type="bool" />
+			<description>
+				Loads settings from the settings file.
+			</description>
+		</method>
+		<method name="remove_registered_event">
+			<return type="void" />
+			<param index="0" name="event_id" type="int" />
+			<description>
+				Removes the specified event from the registered events.
+			</description>
+		</method>
+		<method name="request_load">
+			<return type="bool" />
+			<description>
+				Requests loading of the save data.
+			</description>
+		</method>
+		<method name="request_save">
+			<return type="void" />
+			<param index="0" name="immediate" type="bool" default="false" />
+			<description>
+				Requests saving of the data.
+			</description>
+		</method>
+		<method name="reset_save">
+			<return type="YSave" />
+			<description>
+				Resets the save data to its initial state.
+			</description>
+		</method>
+		<method name="save_settings">
+			<return type="void" />
+			<description>
+				Saves the current settings.
+			</description>
+		</method>
+		<method name="set_registered_event_time">
+			<return type="void" />
+			<param index="0" name="event_id" type="int" />
+			<param index="1" name="time_happened" type="int" />
+			<description>
+				Sets the time when the specified event happened.
+			</description>
+		</method>
+		<method name="set_registered_events_to_save_data">
+			<return type="void" />
+			<description>
+				Sets registered events to the save data.
+			</description>
+		</method>
+		<method name="set_save_detail">
+			<return type="void" />
+			<param index="0" name="save_detail" type="String" />
+			<param index="1" name="detail_value" type="Variant" />
+			<description>
+				Sets a detail in the save data.
+			</description>
+		</method>
+		<method name="set_to_save">
+			<return type="YSave" />
+			<param index="0" name="save_key" type="String" />
+			<param index="1" name="save" type="Variant" />
+			<description>
+				Sets data to the save file using the provided key.
+			</description>
+		</method>
+		<method name="set_to_settings">
+			<return type="YSave" />
+			<param index="0" name="settings_key" type="String" />
+			<param index="1" name="setting" type="Variant" />
+			<description>
+				Sets data to the settings using the provided key.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="save_backup_path" type="String" setter="set_save_backup_path" getter="get_save_backup_path" default="&quot;user://game.save.backup&quot;">
+		</member>
+		<member name="save_data" type="Dictionary" setter="set_save_data" getter="get_save_data" default="{}">
+		</member>
+		<member name="save_path" type="String" setter="set_save_path" getter="get_save_path" default="&quot;user://game.save&quot;">
+		</member>
+		<member name="save_requested" type="bool" setter="set_save_requested" getter="get_save_requested" default="false">
+		</member>
+		<member name="settings_path" type="String" setter="set_settings_path" getter="get_settings_path" default="&quot;user://game.settings&quot;">
+		</member>
+	</members>
+	<signals>
+		<signal name="executed_save_reset">
+			<description>
+				Emitted when the save reset operation has been executed.
+			</description>
+		</signal>
+		<signal name="loaded_save">
+			<param index="0" name="save_data" type="Dictionary" />
+			<description>
+				Emitted when the save data has been loaded.
+			</description>
+		</signal>
+		<signal name="prepare_save">
+			<description>
+				Emitted when preparing for a save operation.
+			</description>
+		</signal>
+		<signal name="saved">
+			<param index="0" name="save_path" type="String" />
+			<description>
+				Emitted when the save operation has been completed.
+			</description>
+		</signal>
+	</signals>
+</class>

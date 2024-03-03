@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YEngine" inherits="Node" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+            YEngine is a custom class for managing game engine functionalities in Godot.
+	</brief_description>
+	<description>
+            YEngine provides various methods for managing game settings, handling button clicks, and finding resources within specified paths.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="button_click_callable">
+			<return type="Callable" />
+			<param index="0" name="callable" type="Callable" />
+			<description>
+                    Binds a callable function to be executed upon a button click event.
+			</description>
+		</method>
+		<method name="button_click_callable_if_modulate">
+			<return type="Callable" />
+			<param index="0" name="callable" type="Callable" />
+			<param index="1" name="control" type="Control" />
+			<description>
+                    Binds a callable function to be executed upon a button click event if the control's modulate alpha value is above 0.94.
+			</description>
+		</method>
+		<method name="find_resources_in">
+			<return type="Resource[]" />
+			<param index="0" name="path" type="Variant" />
+			<param index="1" name="name_contains" type="String" default="&quot;&quot;" />
+			<description>
+				
+                    Finds resources within the specified path(s) with optional filtering by name.
+                
+			</description>
+		</method>
+		<method name="find_resources_paths_in">
+			<return type="PackedStringArray" />
+			<param index="0" name="path" type="Variant" />
+			<param index="1" name="name_contains" type="String" default="&quot;&quot;" />
+			<description>
+				
+                    Finds resource paths within the specified path(s) with optional filtering by name.
+                
+			</description>
+		</method>
+		<method name="get_current_scene">
+			<return type="Node" />
+			<description>
+				
+                    Retrieves the current scene in the SceneTree.
+                
+			</description>
+		</method>
+		<method name="get_menu_stack">
+			<return type="Node[]" />
+			<description>
+				
+                    Retrieves the stack of menu nodes.
+                
+			</description>
+		</method>
+		<method name="get_menu_stack_size" qualifiers="const">
+			<return type="int" />
+			<description>
+				
+                    Retrieves the size of the menu stack.
+                
+			</description>
+		</method>
+		<method name="setup_node">
+			<return type="void" />
+			<description>
+				
+                    Sets up the YEngine node within the scene tree.
+                
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="can_button_click" type="bool" setter="set_can_button_click" getter="get_can_button_click" default="true">
+			
+                Indicates whether button clicks are enabled.
+            
+		</member>
+		<member name="last_button_click_time" type="float" setter="set_last_button_click_time" getter="get_last_button_click_time" default="6.30584e-44">
+			
+                Represents the timestamp of the last button click.
+            
+		</member>
+	</members>
+	<signals>
+		<signal name="changed_pause">
+			<param index="0" name="pause_value" type="bool" />
+			<description>
+				
+                    Emitted when the pause state changes.
+                
+			</description>
+		</signal>
+	</signals>
+</class>

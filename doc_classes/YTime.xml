@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YTime" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A custom class for managing time-related functionalities.
+	</brief_description>
+	<description>
+		This class provides functionalities for managing time, including pausing, tracking clock time, and handling time intervals.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="attempt_pause">
+			<return type="bool" />
+			<description>
+				Attempts to pause the time.
+			</description>
+		</method>
+		<method name="get_clock_day" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="clock_time" type="int" default="0" />
+			<description>
+				Returns the day of the month based on the provided clock time.
+			</description>
+		</method>
+		<method name="get_clock_day_unconstrained" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="clock_time" type="int" default="0" />
+			<description>
+				Returns the day of the month without constraints based on the provided clock time.
+			</description>
+		</method>
+		<method name="get_clock_formatted" qualifiers="const">
+			<return type="String" />
+			<param index="0" name="clock_time" type="int" default="0" />
+			<description>
+				Returns the formatted clock time as a string.
+			</description>
+		</method>
+		<method name="get_clock_formatted_day_month" qualifiers="const">
+			<return type="String" />
+			<param index="0" name="clock_time" type="int" default="0" />
+			<description>
+				Returns the formatted day and month of the clock time as a string.
+			</description>
+		</method>
+		<method name="get_clock_formatted_day_month_year" qualifiers="const">
+			<return type="String" />
+			<param index="0" name="clock_time" type="int" default="0" />
+			<description>
+				Returns the formatted day, month, and year of the clock time as a string.
+			</description>
+		</method>
+		<method name="get_clock_formatted_full_date_time" qualifiers="const">
+			<return type="String" />
+			<param index="0" name="clock_time" type="int" default="0" />
+			<description>
+				Returns the formatted full date and time of the clock time as a string.
+			</description>
+		</method>
+		<method name="get_clock_hour" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="clock_time" type="int" default="0" />
+			<description>
+				Returns the hour of the clock time.
+			</description>
+		</method>
+		<method name="get_clock_hour_unconstrained" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="clock_time" type="int" default="0" />
+			<description>
+				Returns the hour of the clock time without constraints.
+			</description>
+		</method>
+		<method name="get_clock_minute" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="clock_time" type="int" default="0" />
+			<description>
+				Returns the minute of the clock time.
+			</description>
+		</method>
+		<method name="get_clock_minute_of_day" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="clock_time" type="int" default="0" />
+			<description>
+				Returns the minute of the day based on the clock time.
+			</description>
+		</method>
+		<method name="get_clock_month" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="clock_time" type="int" default="0" />
+			<description>
+				Returns the month of the year based on the clock time.
+			</description>
+		</method>
+		<method name="get_clock_year" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="clock_time" type="int" default="0" />
+			<description>
+				Returns the year based on the clock time.
+			</description>
+		</method>
+		<method name="has_clock_time_elapsed">
+			<return type="bool" />
+			<param index="0" name="clock_time_checking" type="int" />
+			<param index="1" name="interval" type="int" />
+			<description>
+				Checks if the specified clock time has elapsed.
+			</description>
+		</method>
+		<method name="has_pause_independent_time_elapsed" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="time_checking" type="float" />
+			<param index="1" name="interval" type="float" />
+			<description>
+				Checks if the pause-independent time has elapsed.
+			</description>
+		</method>
+		<method name="has_time_elapsed" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="time_checking" type="float" />
+			<param index="1" name="interval" type="float" />
+			<description>
+				Checks if the time has elapsed.
+			</description>
+		</method>
+		<method name="set_clock_and_emit_signal">
+			<return type="void" />
+			<param index="0" name="clock" type="int" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="clock" type="int" setter="set_clock" getter="get_clock">
+		</member>
+		<member name="clock_days_in_month" type="int" setter="set_clock_days_in_month" getter="get_clock_days_in_month">
+		</member>
+		<member name="clock_interval" type="float" setter="set_clock_interval" getter="get_clock_interval">
+		</member>
+		<member name="clock_month_names" type="PackedStringArray" setter="set_clock_month_names" getter="get_clock_month_names">
+		</member>
+		<member name="clock_months_in_year" type="int" setter="set_clock_months_in_year" getter="get_clock_months_in_year">
+		</member>
+		<member name="is_clock_running" type="bool" setter="set_is_clock_running" getter="get_is_clock_running">
+		</member>
+		<member name="is_paused" type="bool" setter="set_is_paused" getter="get_is_paused">
+		</member>
+		<member name="pause_independent_time" type="float" setter="set_pause_independent_time" getter="get_pause_independent_time">
+		</member>
+		<member name="time" type="float" setter="set_time" getter="get_time">
+		</member>
+	</members>
+	<signals>
+		<signal name="clock_day_changed">
+			<description>
+			</description>
+		</signal>
+		<signal name="clock_hour_changed">
+			<description>
+			</description>
+		</signal>
+		<signal name="clock_time_changed">
+			<description>
+			</description>
+		</signal>
+	</signals>
+</class>

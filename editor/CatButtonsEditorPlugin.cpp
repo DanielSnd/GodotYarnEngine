@@ -5,21 +5,24 @@
 
 #ifdef TOOLS_ENABLED
 
+#include "editor/editor_node.h"
 #include "CatButtonsEditorPlugin.h"
 
 #include "core/object/script_language.h"
 
 yarnengine::CatButtonsEditorPlugin::CatButtonsEditorPlugin() {
         singleton = this;
-        Ref<CatButtonsInspectorPlugin> plugin;
-        plugin.instantiate();
-        add_inspector_plugin(plugin);
+        if (EditorNode::get_singleton() == nullptr || !EditorNode::get_singleton()->is_editor_ready()) return;
+        inspector_plugin.instantiate();
+        add_inspector_plugin(inspector_plugin);
 }
 
 yarnengine::CatButtonsEditorPlugin::~CatButtonsEditorPlugin() {
         if(singleton != nullptr && singleton == this) {
                 singleton = nullptr;
         }
+        if (inspector_plugin != nullptr && inspector_plugin.is_valid())
+                inspector_plugin.unref();
 }
 
 void yarnengine::YarnEditorFunctionButton::_bind_methods() {

@@ -14,7 +14,6 @@ YEngine * YEngine::get_singleton() {
 }
 
 void YEngine::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("setup_node"), &YEngine::setup_node);
     ClassDB::bind_method(D_METHOD("get_current_scene"), &YEngine::get_current_scene);
 
     ClassDB::bind_method(D_METHOD("set_last_button_click_time", "last_button_click_time"), &YEngine::set_last_button_click_time);
@@ -30,6 +29,9 @@ void YEngine::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("find_resources_in", "path", "name_contains"), &YEngine::find_resources_in,DEFVAL(""));
     ClassDB::bind_method(D_METHOD("find_resources_paths_in", "path", "name_contains"), &YEngine::find_resources_paths_in,DEFVAL(""));
+
+    ClassDB::bind_method(D_METHOD("get_menu_stack"), &YEngine::get_menu_stack);
+    ClassDB::bind_method(D_METHOD("get_menu_stack_size"), &YEngine::get_menu_stack_size);
 
     ADD_SIGNAL(MethodInfo("changed_pause", PropertyInfo(Variant::BOOL, "pause_value")));
 }
@@ -63,10 +65,9 @@ Node* YEngine::get_current_scene() {
 }
 
 void YEngine::setup_node() {
-    ysave = YSave::get_singleton();
-    ytime = YTime::get_singleton();
-    add_setting("application/config/window_name", "", Variant::Type::STRING);
     if(!already_setup_in_tree && SceneTree::get_singleton() != nullptr) {
+        ysave = YSave::get_singleton();
+        ytime = YTime::get_singleton();
         String appname = GLOBAL_GET("application/config/window_name");
         if (appname.is_empty()) {
             appname = GLOBAL_GET("application/config/name");
@@ -81,8 +82,8 @@ void YEngine::setup_node() {
 }
 
 void YEngine::_notification(int p_what) {
-    if (p_what == NOTIFICATION_POSTINITIALIZE) {
-        call_deferred("setup_node");
+    if (p_what == NOTIFICATION_POSTINITIALIZE && !Engine::get_singleton()->is_editor_hint()) {
+        callable_mp(this,&YEngine::setup_node).call_deferred();
     }
     switch (p_what) {
         case NOTIFICATION_ENTER_TREE: {
@@ -100,7 +101,7 @@ void YEngine::_notification(int p_what) {
             set_process(true);
         } break;
         case NOTIFICATION_PROCESS: {
-            if (!Engine::get_singleton()->is_editor_hint()) {
+            if (!Engine::get_singleton()->is_editor_hint() && OS::get_singleton() != nullptr) {
                 do_process();
             }
             //print_line(pause_independent_time);
@@ -132,6 +133,7 @@ YEngine::~YEngine() {
         singleton = nullptr;
     }
     ysave = nullptr;
+    ytime = nullptr;
 }
 
 void YEngine::add_setting(const String& p_name, const Variant& p_default_value, Variant::Type p_type,
@@ -177,6 +179,8 @@ TypedArray<Resource> YEngine::find_resources_in(const Variant &variant_path, con
     }
     return return_paths;
 }
+
+
 
 PackedStringArray YEngine::find_resources_paths_in(const Variant &variant_path, const String &name_contains) {
     PackedStringArray _paths;

@@ -14,11 +14,13 @@
 #include "../yarnengine.h"
 
 namespace yarnengine {
-    class CatButtonsEditorPlugin : public EditorPlugin {
+        class CatButtonsInspectorPlugin;
+
+        class CatButtonsEditorPlugin : public EditorPlugin {
         GDCLASS(CatButtonsEditorPlugin, EditorPlugin);
 
         protected:
-
+            Ref<CatButtonsInspectorPlugin> inspector_plugin;
         public:
                 inline static CatButtonsEditorPlugin* singleton = nullptr;
             CatButtonsEditorPlugin();

@@ -20,7 +20,7 @@ class AOBakeEditorPlugin : public EditorPlugin {
     GDCLASS(AOBakeEditorPlugin, EditorPlugin);
 
 protected:
-
+    bool created_menu_item = false;
 public:
     inline static AOBakeEditorPlugin* singleton = nullptr;
 

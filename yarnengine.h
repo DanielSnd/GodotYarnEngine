@@ -3,7 +3,6 @@
 
 #include "yarnsave.h"
 #include "yarntime.h"
-#include "core/object/ref_counted.h"
 #include "scene/main/node.h"
 #include "scene/main/window.h"
 
@@ -19,7 +18,6 @@ protected:
 
     Variant execute_button_click_callable(const Callable &p_callable);
 
-
     Node *get_current_scene();
 
     void _notification(int p_what);
@@ -32,6 +30,36 @@ public:
 
     Callable button_click_callable(const Callable &p_callable);
     Callable button_click_callable_if_modulate(const Callable &p_callable, Control* p_control);
+
+    List<Node *> menu_stack;
+
+    int get_menu_stack_size() const {return menu_stack.size();}
+
+    TypedArray<Node> get_menu_stack() {
+        TypedArray<Node> btns;
+        for (int i = 0; i < menu_stack.size(); ++i) {
+            btns.append(menu_stack[i]);
+        }
+        return btns;
+    }
+
+    bool is_top_of_menu_stack(Node* test_menu) const {
+        return menu_stack[menu_stack.size()-1] == test_menu;
+    }
+
+    void add_to_menu_stack(Node* adding_menu) {
+        for (int i = 0; i < menu_stack.size(); ++i)
+            if (menu_stack[i] == adding_menu) return;
+        menu_stack.push_back(adding_menu);
+    }
+
+    void remove_from_menu_stack(Node* removing_menu) {
+        for (int i = 0; i < menu_stack.size(); ++i)
+            if (menu_stack[i] == removing_menu) {
+                menu_stack.erase(removing_menu);
+                return;
+            }
+    }
 
     float last_button_click_time;
     float get_last_button_click_time() {return last_button_click_time;}

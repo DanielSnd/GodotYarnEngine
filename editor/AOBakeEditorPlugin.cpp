@@ -439,10 +439,12 @@ AOBakeEditorPlugin * AOBakeEditorPlugin::get_singleton() {
 
 AOBakeEditorPlugin::AOBakeEditorPlugin() {
 	singleton = this;
+	if (EditorNode::get_singleton() == nullptr || !EditorNode::get_singleton()->is_editor_ready()) return;
     Ref<AOBakeInspectorPlugin> plugin;
     plugin.instantiate();
     add_inspector_plugin(plugin);
 	EditorPlugin::add_tool_menu_item("Create BakeableMeshInstance",callable_mp(this,&AOBakeEditorPlugin::CreateBakeableMeshInstance));
+	created_menu_item=true;
 }
 
 void AOBakeEditorPlugin::CreateBakeableMeshInstance() {
@@ -479,7 +481,8 @@ void AOBakeEditorPlugin::CreateBakeableMeshInstance() {
 
 AOBakeEditorPlugin::~AOBakeEditorPlugin() {
 	if(singleton != nullptr && singleton == this) {
-		EditorPlugin::remove_tool_menu_item("Create BakeableMeshInstance");
+		if (created_menu_item)
+			EditorPlugin::remove_tool_menu_item("Create BakeableMeshInstance");
 		singleton = nullptr;
 	}
 }
