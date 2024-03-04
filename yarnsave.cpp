@@ -160,9 +160,8 @@ YSave::YSave() {
 }
 
 YSave::~YSave() {
-    if(singleton == this) {
+    if(singleton.is_valid() && singleton == this) {
         singleton.unref();
-        singleton = nullptr;
     }
     if (reg_event_callbacks.size() > 0) {
         reg_event_callbacks.clear();

@@ -18,8 +18,7 @@ YPhysics::YPhysics() {
 }
 
 YPhysics::~YPhysics() {
-    if(singleton == this) {
+    if(singleton.is_valid() && singleton == this) {
         singleton.unref();
-        singleton = nullptr;
     }
 }
