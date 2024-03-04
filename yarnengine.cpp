@@ -68,6 +68,7 @@ void YEngine::setup_node() {
     if(!already_setup_in_tree && SceneTree::get_singleton() != nullptr) {
         ysave = YSave::get_singleton();
         ytime = YTime::get_singleton();
+        ytime->is_paused = false;
         String appname = GLOBAL_GET("application/config/window_name");
         if (appname.is_empty()) {
             appname = GLOBAL_GET("application/config/name");

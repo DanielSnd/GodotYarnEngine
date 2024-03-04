@@ -55,7 +55,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	YTime::set_singleton(yarn_time_ref);
 
 	yarn_physics_ref.instantiate();
-	YTime::set_singleton(yarn_physics_ref);
+	YPhysics::set_singleton(yarn_physics_ref);
 
 	// Bind your singleton.
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YEngine", YEngine::get_singleton()));

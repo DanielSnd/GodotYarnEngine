@@ -61,7 +61,11 @@ void YSave::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_registered_event_time","event_id"), &YSave::get_registered_event_time);
     ClassDB::bind_method(D_METHOD("set_registered_event_time","event_id","time_happened"), &YSave::set_registered_event_time);
     ClassDB::bind_method(D_METHOD("remove_registered_event","event_id"), &YSave::remove_registered_event);
-    ClassDB::bind_method(D_METHOD("has_time_elapsed_since_registered_event","current_time","elapsed_time"), &YSave::has_time_elapsed_since_registered_event);
+    ClassDB::bind_method(D_METHOD("has_time_elapsed_since_registered_event","event_id","current_time","elapsed_time"), &YSave::has_time_elapsed_since_registered_event);
+
+
+    ClassDB::bind_method(D_METHOD("register_event_callback","node","event_id","callback"), &YSave::register_event_callback);
+    ClassDB::bind_method(D_METHOD("clear_registered_event_callbacks","node","event_id"), &YSave::clear_registered_event_callbacks_node,DEFVAL(-1));
 
     ADD_SIGNAL(MethodInfo("executed_save_reset"));
     ADD_SIGNAL(MethodInfo("prepare_save"));
@@ -159,6 +163,9 @@ YSave::~YSave() {
     if(singleton == this) {
         singleton.unref();
         singleton = nullptr;
+    }
+    if (reg_event_callbacks.size() > 0) {
+        reg_event_callbacks.clear();
     }
 }
 
@@ -309,6 +316,76 @@ void YSave::set_registered_events_to_save_data() {
         _events_save.append(registered_event.value);
     }
     save_data["regevents"] = _events_save;
+}
+
+void YSave::clear_registered_event_callbacks_node(Node *_reference, int _event_id) {
+    if (_reference != nullptr)
+        clear_registered_event_callbacks(_reference->get_instance_id(),_event_id);
+}
+
+void YSave::clear_registered_event_callbacks(ObjectID p_node_inst_id,int _event_id) {
+    Array event_ids_to_remove;
+    Array ints_to_remove;
+    if (_event_id != -1) {
+        if (reg_event_callbacks.has(_event_id)) {
+            int index = 0;
+            for (auto _regEventCallback_instance: reg_event_callbacks[_event_id].callbacks) {
+                if (_regEventCallback_instance.node_inst_id == p_node_inst_id) {
+                    ints_to_remove.push_front(index);
+                }
+                index++;
+            }
+            for (int i = 0; i < ints_to_remove.size(); ++i) {
+                reg_event_callbacks[_event_id].callbacks.remove_at(ints_to_remove[i]);
+            }
+            ints_to_remove.clear();
+            if (reg_event_callbacks[_event_id].callbacks.size() == 0) {
+                reg_event_callbacks.erase(_event_id);
+            }
+        }
+    } else {
+        for (auto _regEventCallback: reg_event_callbacks) {
+            int _index = 0;
+            for (auto _regEventCallback_instance: _regEventCallback.value.callbacks) {
+                if (_regEventCallback_instance.node_inst_id == p_node_inst_id) {
+                    ints_to_remove.push_front(_index);
+                }
+                _index++;
+            }
+            for (int i = 0; i < ints_to_remove.size(); ++i) {
+                _regEventCallback.value.callbacks.remove_at(ints_to_remove[i]);
+            }
+            ints_to_remove.clear();
+            if (_regEventCallback.value.callbacks.size() == 0) {
+                event_ids_to_remove.push_front(_regEventCallback.key);
+            }
+        }
+    }
+    if (event_ids_to_remove.size()>0) {
+        for (int i = 0; i < event_ids_to_remove.size(); ++i) {
+            reg_event_callbacks.erase(event_ids_to_remove[i]);
+        }
+        event_ids_to_remove.clear();
+    }
+}
+
+void YSave::register_event_callback(Node *p_reference, int _event_id, const Callable &p_callable) {
+    if (p_reference == nullptr) {
+        return;
+    }
+    if (registered_events.has(_event_id)) {
+        WARN_PRINT(vformat("Trying to register a callback for an already existing event_id %d. Callbacks only happen the first time an event is set.",_event_id));
+        return;
+    }
+    ObjectID _node_id = p_reference->get_instance_id();
+    if (!reg_event_callbacks.has(_event_id))
+        reg_event_callbacks[_event_id] = RegEventCallback{_event_id};
+    if (!count_node_callbacks.has(_node_id)) {
+        count_node_callbacks[_node_id] = 0;
+        p_reference->connect("tree_exiting", callable_mp(this, &YSave::clear_registered_event_callbacks).bind(_node_id), CONNECT_ONE_SHOT);
+    }
+    count_node_callbacks[_node_id] += 1;
+    reg_event_callbacks[_event_id].callbacks.append(RegEventCallback::RegEventCallbackInstance(_node_id,p_callable));
 }
 
 void YSave::set_save_detail(String save_detail,Variant detail_value) {

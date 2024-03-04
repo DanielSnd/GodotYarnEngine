@@ -145,7 +145,7 @@
 		</member>
 		<member name="save_path" type="String" setter="set_save_path" getter="get_save_path" default="&quot;user://game.save&quot;">
 		</member>
-		<member name="save_requested" type="bool" setter="set_save_requested" getter="get_save_requested" default="false">
+		<member name="save_requested" type="bool" setter="set_save_requested" getter="get_save_requested" default="true">
 		</member>
 		<member name="settings_path" type="String" setter="set_settings_path" getter="get_settings_path" default="&quot;user://game.settings&quot;">
 		</member>

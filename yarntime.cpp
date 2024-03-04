@@ -57,6 +57,9 @@ void YTime::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_clock_month_names"), &YTime::get_clock_month_names);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "clock_month_names"), "set_clock_month_names", "get_clock_month_names");
 
+    ClassDB::bind_method(D_METHOD("register_clock_callback","node","clock_time","callback"), &YTime::register_clock_callback);
+    ClassDB::bind_method(D_METHOD("clear_clock_callbacks","node","clock_time"), &YTime::clear_clock_callbacks_node,DEFVAL(-1));
+
     ClassDB::bind_method(D_METHOD("get_clock_year", "clock_time"), &YTime::get_clock_year,DEFVAL(0u));
     ClassDB::bind_method(D_METHOD("get_clock_month", "clock_time"), &YTime::get_clock_month,DEFVAL(0u));
     ClassDB::bind_method(D_METHOD("get_clock_day", "clock_time"), &YTime::get_clock_day,DEFVAL(0u));
@@ -99,6 +102,7 @@ bool YTime::has_pause_independent_time_elapsed(float test_time, float interval) 
 }
 
 void YTime::handle_time_setting() {
+    if (OS::get_singleton() == nullptr) return;
     pause_independent_time = static_cast<float>(OS::get_singleton()->get_ticks_msec()) * 0.001f;
     if (!is_paused) {
         time += pause_independent_time - amount_time_last_frame;
@@ -106,11 +110,76 @@ void YTime::handle_time_setting() {
         if (is_clock_running) {
             if (has_time_elapsed(last_time_stepped_clock,clock_interval)) {
                 last_time_stepped_clock = time;
-                set_clock_and_emit_signal(clock + 1u);
+                set_clock_and_emit_signal(clock + 1);
             }
         }
     }
 }
+
+void YTime::register_clock_callback(Node *p_reference, int _clock_time, const Callable &p_callable) {
+    if (p_reference == nullptr) return;
+    ObjectID _node_id = p_reference->get_instance_id();
+    if (!reg_clock_callbacks.has(_clock_time))
+        reg_clock_callbacks[_clock_time] = RegTimeCallback{_clock_time};
+    if (!count_node_callbacks.has(_node_id)) {
+        count_node_callbacks[_node_id] = 0;
+        p_reference->connect("tree_exiting", callable_mp(this, &YTime::clear_clock_callbacks).bind(_node_id), CONNECT_ONE_SHOT);
+    }
+    count_node_callbacks[_node_id] += 1;
+    reg_clock_callbacks[_clock_time].callbacks.append(RegTimeCallback::RegTimeCallbackInstance(_node_id,p_callable));
+}
+
+void YTime::clear_clock_callbacks(ObjectID p_node_inst_id, int _event_id) {
+    Array event_ids_to_remove;
+    Array ints_to_remove;
+    if (_event_id != -1) {
+        if (reg_clock_callbacks.has(_event_id)) {
+            int index = 0;
+            for (auto _regEventCallback_instance: reg_clock_callbacks[_event_id].callbacks) {
+                if (_regEventCallback_instance.node_inst_id == p_node_inst_id) {
+                    ints_to_remove.push_front(index);
+                }
+                index++;
+            }
+            for (int i = 0; i < ints_to_remove.size(); ++i) {
+                reg_clock_callbacks[_event_id].callbacks.remove_at(ints_to_remove[i]);
+            }
+            ints_to_remove.clear();
+            if (reg_clock_callbacks[_event_id].callbacks.size() == 0) {
+                reg_clock_callbacks.erase(_event_id);
+            }
+        }
+    } else {
+        for (auto _regEventCallback: reg_clock_callbacks) {
+            int _index = 0;
+            for (auto _regEventCallback_instance: _regEventCallback.value.callbacks) {
+                if (_regEventCallback_instance.node_inst_id == p_node_inst_id) {
+                    ints_to_remove.push_front(_index);
+                }
+                _index++;
+            }
+            for (int i = 0; i < ints_to_remove.size(); ++i) {
+                _regEventCallback.value.callbacks.remove_at(ints_to_remove[i]);
+            }
+            ints_to_remove.clear();
+            if (_regEventCallback.value.callbacks.size() == 0) {
+                event_ids_to_remove.push_front(_regEventCallback.key);
+            }
+        }
+    }
+    if (event_ids_to_remove.size()>0) {
+        for (int i = 0; i < event_ids_to_remove.size(); ++i) {
+            reg_clock_callbacks.erase(event_ids_to_remove[i]);
+        }
+        event_ids_to_remove.clear();
+    }
+}
+
+void YTime::clear_clock_callbacks_node(Node *_reference, int _event_id) {
+    if (_reference != nullptr)
+        clear_clock_callbacks(_reference->get_instance_id(),_event_id);
+}
+
 
 bool YTime::attempt_pause() {
     if (last_time_ended_pause + 0.3 < pause_independent_time) {
@@ -131,8 +200,8 @@ void YTime::set_is_paused(bool val) {
     }
 }
 
-void YTime::set_clock_and_emit_signal(const uint32_t val)  {
-    const uint32_t previous_clock = clock;
+void YTime::set_clock_and_emit_signal(const int val)  {
+    const int previous_clock = clock;
     clock = val;
     emit_signal(SNAME("clock_time_changed"));
     if (get_clock_hour(previous_clock) != get_clock_hour(clock)) {
@@ -140,5 +209,27 @@ void YTime::set_clock_and_emit_signal(const uint32_t val)  {
         if (get_clock_day(previous_clock) != get_clock_day(clock)) {
             emit_signal(SNAME("clock_day_changed"));
         }
+    }
+    if (reg_clock_callbacks.has(val)) {
+        auto _reg_event_callbacks = reg_clock_callbacks[val];
+        Vector<Callable> callables_to_call;
+        for (const auto& callback: _reg_event_callbacks.callbacks) {
+            if (callback.callable.is_valid()) {
+                callables_to_call.append(callback.callable);
+                if (count_node_callbacks.has(callback.node_inst_id)) {
+                    const int current_count = count_node_callbacks[callback.node_inst_id];
+                    if (current_count - 1 <=0 ) {
+                        count_node_callbacks.erase(callback.node_inst_id);
+                    } else {
+                        count_node_callbacks[callback.node_inst_id] = current_count-1;
+                    }
+                }
+            }
+        }
+        _reg_event_callbacks.callbacks.clear();
+        reg_clock_callbacks.erase(val);
+        for (const auto& to_call: callables_to_call)
+            if (!to_call.is_null() && to_call.is_valid())
+                to_call.call(val);
     }
 }
