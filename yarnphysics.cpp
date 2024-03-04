@@ -4,7 +4,7 @@
 
 #include "yarnphysics.h"
 
-Ref<YPhysics> YPhysics::singleton = nullptr;
+Ref<YPhysics> YPhysics::singleton;
 
 void YPhysics::_bind_methods() {
 

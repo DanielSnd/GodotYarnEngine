@@ -6,7 +6,7 @@
 
 #include "core/os/os.h"
 
-Ref<YTime> YTime::singleton = nullptr;
+Ref<YTime> YTime::singleton;
 
 YTime *YTime::get_singleton() {
     return *singleton;

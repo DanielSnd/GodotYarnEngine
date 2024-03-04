@@ -7,7 +7,7 @@
 #include "core/io/file_access.h"
 #include "core/io/json.h"
 
-Ref<YSave> YSave::singleton = nullptr;
+Ref<YSave> YSave::singleton;
 
 YSave *YSave::get_singleton() {
     return *singleton;
