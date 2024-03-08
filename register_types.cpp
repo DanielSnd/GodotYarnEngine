@@ -8,6 +8,7 @@
 #include "editor/CatButtonsEditorPlugin.h"
 #endif
 #include "AOBakeableMeshInstance.h"
+#include "CircleWithConeTexture2D.h"
 #include "yarnmenu.h"
 #include "yarnphysics.h"
 #include "yarnsave.h"
@@ -42,6 +43,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<YPhysics>();
  	ClassDB::register_class<YEngine>();
  	ClassDB::register_class<YMenu>();
+	ClassDB::register_class<CircleWithConeTexture2D>();
  	ClassDB::register_class<AOBakeableMeshInstance>();
 
 	// Initialize your singleton.

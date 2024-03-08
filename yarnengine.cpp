@@ -69,6 +69,7 @@ void YEngine::setup_node() {
         ysave = YSave::get_singleton();
         ytime = YTime::get_singleton();
         ytime->is_paused = false;
+        last_button_click_time = 0.0;
         String appname = GLOBAL_GET("application/config/window_name");
         if (appname.is_empty()) {
             appname = GLOBAL_GET("application/config/name");
@@ -127,6 +128,7 @@ void YEngine::do_process() {
 
 YEngine::YEngine() {
     singleton = this;
+    last_button_click_time = 0.0;
 }
 
 YEngine::~YEngine() {

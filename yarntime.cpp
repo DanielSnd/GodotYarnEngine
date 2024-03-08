@@ -82,6 +82,8 @@ YTime::YTime() {
     amount_time_last_frame = 0.0;
     amount_when_paused = 0.0;
     amount_when_unpaused = 0.0;
+    pause_independent_time = 0.0;
+    time = 0.0;
     clock = 0u;
     is_paused = false;
 }

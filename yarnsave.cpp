@@ -303,9 +303,14 @@ void YSave::load_registered_events_from_save_data() {
     while (_events_save.size() > 0) {
         if (_events_save.size() <= 1)
             _events_save.clear();
-        else
-            registered_events[_events_save.pop_front()] = _events_save.pop_front();
+        else {
+            const int key = _events_save.pop_front();
+            const int val = _events_save.pop_front();
+            //WARN_PRINT(vformat("Loading events save %d : %d",key,val));
+            registered_events[key] = val;
+        }
     }
+   // WARN_PRINT(vformat("Result loading events save %d",registered_events.size()));
 }
 
 void YSave::set_registered_events_to_save_data() {
