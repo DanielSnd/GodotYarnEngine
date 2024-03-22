@@ -14,9 +14,9 @@ void YMenu::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_auto_start_menu"), &YMenu::get_auto_start_menu);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "auto_start_menu"), "set_auto_start_menu", "get_auto_start_menu");
 
-    ClassDB::bind_method(D_METHOD("set_can_go_back_to_menu", "active"), &YMenu::set_can_go_back_to_menu);
-    ClassDB::bind_method(D_METHOD("get_can_go_back_to_menu"), &YMenu::get_can_go_back_to_menu);
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "can_go_back_to_menu"), "set_can_go_back_to_menu", "get_can_go_back_to_menu");
+    ClassDB::bind_method(D_METHOD("set_ui_cancel_presses_back_button", "active"), &YMenu::set_ui_cancel_presses_back_button);
+    ClassDB::bind_method(D_METHOD("get_ui_cancel_presses_back_button"), &YMenu::get_ui_cancel_presses_back_button);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "ui_cancel_presses_back_button"), "set_ui_cancel_presses_back_button", "get_ui_cancel_presses_back_button");
 
     ClassDB::bind_method(D_METHOD("on_back_button_pressed"), &YMenu::_on_back_button_pressed);
     ClassDB::bind_method(D_METHOD("on_back_to_menu"), &YMenu::_on_back_to_menu);
@@ -35,9 +35,12 @@ void YMenu::_bind_methods() {
     ClassDB::bind_method(D_METHOD("instantiate_child_menu", "parent_node","child_menu_scene","auto_start"), &YMenu::instantiate_child_menu, DEFVAL(true));
     ClassDB::bind_method(D_METHOD("instantiate_replacement_menu", "parent_node","child_menu_scene","auto_start"), &YMenu::instantiate_replacement_menu, DEFVAL(true));
 
+
+    ClassDB::bind_static_method("YMenu", D_METHOD("calculate_ideal_control_center","control_size", "control_parent"), &YMenu::calculate_ideal_control_center);
     ADD_SIGNAL(MethodInfo("go_back_to_menu"));
     ADD_SIGNAL(MethodInfo("started_menu"));
 
+    GDVIRTUAL_BIND(_can_back_button_auto_close_menu)
     GDVIRTUAL_BIND(_on_back_button_pressed);
     GDVIRTUAL_BIND(_on_started_menu);
 
@@ -61,6 +64,7 @@ void YMenu::_notification(int p_what) {
                 tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,1.0},0.4)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);
                 add_to_menu_stack();
                 if (auto_start_menu) {
+                    called_start_from_process = true;
                     get_tree()->connect(SNAME("process_frame"),callable_mp(this,&YMenu::_on_started_menu), CONNECT_ONE_SHOT);
                 }
             }
@@ -82,16 +86,21 @@ void YMenu::_on_back_button_pressed() {
     if (!get_can_click_buttons())
         return;
     YEngine::get_singleton()->last_button_click_time = YEngine::get_singleton()->ytime->pause_independent_time;
-    set_process(false);
-    remove_from_menu_stack();
+    bool can_auto_close = can_back_button_auto_close_menu();
+    if (can_auto_close) {
+        set_process(false);
+        remove_from_menu_stack();
+    }
+    on_back_button_pressed();
+    GDVIRTUAL_CALL(_on_back_button_pressed);
     // 	go_back_to_menu.emit()
     // 	await fade_out()
     // 	queue_free()
-    GDVIRTUAL_CALL(_on_back_button_pressed);
-    on_back_button_pressed();
-    emit_signal("go_back_to_menu");
-    auto tween = fade_out();
-    if (tween.is_valid()) tween->tween_callback(callable_mp(this,&YMenu::menu_queue_free));
+    if (can_auto_close) {
+        emit_signal("go_back_to_menu");
+        auto tween = fade_out();
+        if (tween.is_valid()) tween->tween_callback(callable_mp(this,&YMenu::menu_queue_free));
+    }
 }
 
 void YMenu::menu_queue_free() {
@@ -115,12 +124,12 @@ void YMenu::_on_back_to_menu() {
 }
 
 void YMenu::do_process() {
-    if (Input::get_singleton()->is_action_just_pressed("ui_cancel") && get_is_active() && can_go_back_to_menu && get_can_click_buttons())
+    if (Input::get_singleton()->is_action_just_pressed("ui_cancel") && get_is_active() && ui_cancel_presses_back_button && get_can_click_buttons())
  		_on_back_button_pressed();
 }
 
 void YMenu::on_back_button_pressed() {
-    print_line("On back button pressed on cpp");
+    //print_line("On back button pressed on cpp");
 }
 
 void YMenu::on_started_menu() {
@@ -128,6 +137,19 @@ void YMenu::on_started_menu() {
 }
 
 void YMenu::on_back_to_menu() {
+}
+
+bool YMenu::can_back_button_auto_close_menu() const {
+    bool rert=true;
+    GDVIRTUAL_CALL(_can_back_button_auto_close_menu,rert);
+    return rert;
+}
+
+Vector2 YMenu::calculate_ideal_control_center(Vector2 size,Control *parent) {
+    if (parent == nullptr) {
+        return {0.0,0.0};
+    }
+    return parent->get_size() * 0.5 - size * 0.5;
 }
 
 Node* YMenu::instantiate_child_menu(Control *parent_node, const PackedScene *child_menu_scene, const bool auto_start) {
@@ -145,7 +167,8 @@ Node* YMenu::instantiate_child_menu(Control *parent_node, const PackedScene *chi
         instantiated->connect("go_back_to_menu",callable_mp(this,&YMenu::_on_back_to_menu), CONNECT_ONE_SHOT);
     }
     if (auto_start && instantiated->has_method("_on_started_menu")) {
-        instantiated->call("_on_started_menu");
+        auto ymenu = Object::cast_to<YMenu>(instantiated);
+        if (ymenu!=nullptr && !ymenu->called_start_from_process) ymenu->_on_started_menu();
     }
     set_process(false);
     return instantiated;
@@ -162,8 +185,9 @@ Node*  YMenu::instantiate_replacement_menu(Control *parent_node, const PackedSce
         return nullptr;
     }
     parent_node->add_child(instantiated);
-    if (auto_start && instantiated->has_method("_on_started_menu")) {
-        instantiated->call("_on_started_menu");
+    if (auto_start && instantiated->has_method("_on_started_menu"))  {
+        auto ymenu = Object::cast_to<YMenu>(instantiated);
+        if (ymenu!=nullptr&& !ymenu->called_start_from_process) ymenu->_on_started_menu();
     }
     set_process(false);
     queue_free();

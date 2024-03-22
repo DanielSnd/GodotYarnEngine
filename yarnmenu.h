@@ -28,10 +28,11 @@ public:
     virtual void on_started_menu();
     virtual void on_back_to_menu();
 
+    bool called_start_from_process = false;
     void set_last_clicked_time() { YEngine::get_singleton()->last_button_click_time = YEngine::get_singleton()->ytime->pause_independent_time; }
-    bool can_go_back_to_menu = false;
-    bool get_can_go_back_to_menu() { return can_go_back_to_menu; }
-    void set_can_go_back_to_menu(bool val) { can_go_back_to_menu = val; }
+    bool ui_cancel_presses_back_button = false;
+    bool get_ui_cancel_presses_back_button() { return ui_cancel_presses_back_button; }
+    void set_ui_cancel_presses_back_button(bool val) { ui_cancel_presses_back_button = val; }
 
     bool auto_start_menu = false;
     bool get_auto_start_menu() { return auto_start_menu; }
@@ -47,6 +48,10 @@ public:
             YEngine::get_singleton()->add_to_menu_stack(this);
         }
     }
+
+    bool can_back_button_auto_close_menu() const;
+
+    static Vector2 calculate_ideal_control_center(Vector2 size, Control *parent);
 
     bool is_top_of_menu_stack() { return YEngine::get_singleton()->is_top_of_menu_stack(this); }
 
@@ -76,6 +81,7 @@ public:
     GDVIRTUAL0(_on_back_button_pressed)
     GDVIRTUAL0(_on_started_menu)
     GDVIRTUAL0(_on_back_to_menu)
+    GDVIRTUAL0RC(bool,_can_back_button_auto_close_menu)
     YMenu();
     ~YMenu();
 

@@ -12,7 +12,7 @@
 
 yarnengine::CatButtonsEditorPlugin::CatButtonsEditorPlugin() {
         singleton = this;
-        if (EditorNode::get_singleton() == nullptr || !EditorNode::get_singleton()->is_editor_ready()) return;
+        //if (EditorNode::get_singleton() == nullptr || !EditorNode::get_singleton()->is_editor_ready()) return;
         inspector_plugin.instantiate();
         add_inspector_plugin(inspector_plugin);
 }
@@ -21,7 +21,7 @@ yarnengine::CatButtonsEditorPlugin::~CatButtonsEditorPlugin() {
         if(singleton != nullptr && singleton == this) {
                 singleton = nullptr;
         }
-        if (inspector_plugin != nullptr && inspector_plugin.is_valid())
+        if (!inspector_plugin.is_null() && inspector_plugin.is_valid())
                 inspector_plugin.unref();
 }
 
@@ -146,6 +146,7 @@ void yarnengine::YarnEditorFunctionButton::setup_property(Object *p_object, cons
                                                           const BitField<PropertyUsageFlags> p_usage, const bool p_wide) {
                 object = p_object;
                 use_arg = p_type == Variant::Type::STRING;
+                //print_line("setup_property ",p_path);
                 if (p_path.to_lower().begins_with("members")) {
                         method_name = p_path.trim_prefix("Members/_btn_");
                 } else {

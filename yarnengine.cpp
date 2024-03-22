@@ -4,6 +4,7 @@
 #include "core/config/project_settings.h"
 #include "core/io/dir_access.h"
 #include "core/io/json.h"
+#include "core/math/random_number_generator.h"
 #include "core/string/translation.h"
 #include "scene/gui/control.h"
 
@@ -27,11 +28,22 @@ void YEngine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("button_click_callable", "callable"), &YEngine::button_click_callable);
     ClassDB::bind_method(D_METHOD("button_click_callable_if_modulate", "callable","control"), &YEngine::button_click_callable_if_modulate);
 
+    ClassDB::bind_method(D_METHOD("find_packedscenes_in", "path", "name_contains"), &YEngine::find_packedscenes_in,DEFVAL(""));
     ClassDB::bind_method(D_METHOD("find_resources_in", "path", "name_contains"), &YEngine::find_resources_in,DEFVAL(""));
     ClassDB::bind_method(D_METHOD("find_resources_paths_in", "path", "name_contains"), &YEngine::find_resources_paths_in,DEFVAL(""));
 
+    ClassDB::bind_method(D_METHOD("find_node_with_type","parent_node","node_type"), &YEngine::find_node_with_type);
+
+    ClassDB::bind_method(D_METHOD("find_node_with_method","parent_node","node_type"), &YEngine::find_node_with_type);
+
+    ClassDB::bind_method(D_METHOD("set_flag_value","flags","flag","set_value"), &YEngine::set_flag_value);
+    ClassDB::bind_method(D_METHOD("check_flag_value","flags","check_flag"), &YEngine::check_flag_value);
+
     ClassDB::bind_method(D_METHOD("get_menu_stack"), &YEngine::get_menu_stack);
     ClassDB::bind_method(D_METHOD("get_menu_stack_size"), &YEngine::get_menu_stack_size);
+
+    ClassDB::bind_method(D_METHOD("string_to_hash","input_string"), &YEngine::string_to_hash);
+    ClassDB::bind_method(D_METHOD("seeded_shuffle","array","seed"), &YEngine::seeded_shuffle);
 
     ADD_SIGNAL(MethodInfo("changed_pause", PropertyInfo(Variant::BOOL, "pause_value")));
 }
@@ -52,6 +64,12 @@ Variant YEngine::execute_button_click_callable(const Callable &p_callable) {
     return Variant{};
 }
 
+void YEngine::game_state_starting(const Ref<YGameState> &ygs) {
+    ygamestate = ygs;
+    using_game_state=true;
+    print_line("Registered using game state ",ygamestate," using game state now? ",using_game_state);
+}
+
 Callable YEngine::button_click_callable(const Callable &p_callable) {
     return (callable_mp(this,&YEngine::execute_button_click_callable).bind(p_callable));
 }
@@ -64,10 +82,25 @@ Node* YEngine::get_current_scene() {
     return SceneTree::get_singleton()->get_current_scene();
 }
 
+Array YEngine::seeded_shuffle(Array array_to_shuffle,int seed_to_use) {
+    Ref<RandomNumberGenerator> rng;
+    rng.instantiate();
+    rng->set_seed(seed_to_use);
+    for (int i = array_to_shuffle.size() - 1; i >= 1; i--) {
+        const int j = rng->randi_range(0,i);
+        const Variant tmp = array_to_shuffle[j];
+        array_to_shuffle[j] = array_to_shuffle[i];
+        array_to_shuffle[i] = tmp;
+    }
+    rng.unref();
+    return array_to_shuffle;
+}
+
 void YEngine::setup_node() {
     if(!already_setup_in_tree && SceneTree::get_singleton() != nullptr) {
         ysave = YSave::get_singleton();
         ytime = YTime::get_singleton();
+        ytween = YTween::get_singleton();
         ytime->is_paused = false;
         last_button_click_time = 0.0;
         String appname = GLOBAL_GET("application/config/window_name");
@@ -101,10 +134,19 @@ void YEngine::_notification(int p_what) {
         }
         case NOTIFICATION_READY: {
             set_process(true);
+            set_physics_process(true);
         } break;
+        case NOTIFICATION_PHYSICS_PROCESS: {
+            if (!Engine::get_singleton()->is_editor_hint() && OS::get_singleton() != nullptr) {
+                ytween->do_process(get_physics_process_delta_time());
+            }
+        }
         case NOTIFICATION_PROCESS: {
             if (!Engine::get_singleton()->is_editor_hint() && OS::get_singleton() != nullptr) {
                 do_process();
+                if (using_game_state) {
+                    ygamestate->do_process(get_process_delta_time());
+                }
             }
             //print_line(pause_independent_time);
         } break;
@@ -113,9 +155,73 @@ void YEngine::_notification(int p_what) {
     }
 }
 
+Node * YEngine::find_node_with_meta(Node *parent_node, const String &p_type) {
+    if (parent_node != nullptr) {
+        TypedArray<Node> find_stuff = parent_node->get_children();
+        while (find_stuff.size()) {
+            Node *_child = Object::cast_to<Node>(find_stuff.pop_back());
+            if (_child->has_meta(p_type)) return _child;
+        }
+    }
+    return nullptr;
+}
+
+Node * YEngine::find_node_with_method(Node *parent_node, const String &p_type) {
+    if (parent_node != nullptr) {
+        TypedArray<Node> find_stuff = parent_node->get_children();
+        while (find_stuff.size()) {
+            Node *_child = Object::cast_to<Node>(find_stuff.pop_back());
+            if (_child->has_method(p_type)) return _child;
+        }
+    }
+    return nullptr;
+}
+Node * YEngine::find_node_with_type(Node *parent_node, const String &p_type) {
+    if (parent_node != nullptr) {
+        TypedArray<Node> find_stuff = parent_node->find_children("*",p_type);
+        if (find_stuff.size() > 0) {
+            return Object::cast_to<Node>(find_stuff[0].operator Object*());
+        }
+    }
+    return nullptr;
+}
+
+uint32_t YEngine::set_flag_value(uint32_t collision_layer, int p_layer_number, bool p_value) {
+    ERR_FAIL_COND_V_MSG(p_layer_number < 1, collision_layer, "Collision layer number must be between 1 and 32 inclusive.");
+    ERR_FAIL_COND_V_MSG(p_layer_number > 32, collision_layer, "Collision layer number must be between 1 and 32 inclusive.");
+    uint32_t collision_layer_new = collision_layer;
+    if (p_value) {
+        collision_layer_new |= 1 << (p_layer_number - 1);
+    } else {
+        collision_layer_new &= ~(1 << (p_layer_number - 1));
+    }
+    return collision_layer_new;
+}
+
+bool YEngine::check_flag_value(uint32_t collision_layer, int p_layer_number) const {
+    ERR_FAIL_COND_V_MSG(p_layer_number < 1, false, "Collision layer number must be between 1 and 32 inclusive.");
+    ERR_FAIL_COND_V_MSG(p_layer_number > 32, false, "Collision layer number must be between 1 and 32 inclusive.");
+    return collision_layer & (1 << (p_layer_number - 1));
+}
+
 void YEngine::do_process() {
     ytime->handle_time_setting();
     ysave->process(ytime->pause_independent_time);
+    ytween->do_process(get_process_delta_time());
+}
+
+int YEngine::string_to_hash(const String &str) {
+    uint32_t crc = 0xFFFFFFFF;
+    const char32_t *chr = str.get_data();
+    uint32_t c = *chr++;
+    while (c) {
+        crc ^= static_cast<uint8_t>(c);
+        for (int j = 0; j < 8; j++) {
+            crc = (crc >> 1) ^ (-static_cast<int>(crc & 1) & 0xEDB88320);
+        }
+        c = *chr++;
+    }
+    return static_cast<int>(~crc);
 }
 
 //
@@ -129,12 +235,21 @@ void YEngine::do_process() {
 YEngine::YEngine() {
     singleton = this;
     last_button_click_time = 0.0;
+    using_game_state = false;
+    ytween=nullptr;
+    ysave=nullptr;
+    ytime=nullptr;
 }
 
 YEngine::~YEngine() {
     if (singleton != nullptr && singleton == this) {
         singleton = nullptr;
     }
+    if (using_game_state) {
+        using_game_state=false;
+        ygamestate.unref();
+    }
+    ytween=nullptr;
     ysave = nullptr;
     ytime = nullptr;
 }
@@ -147,6 +262,40 @@ PropertyHint p_hint, const String& p_hint_string, int p_usage,bool restart_if_ch
     ProjectSettings::get_singleton()->set_custom_property_info(PropertyInfo(p_type, p_name, p_hint, p_hint_string,p_usage));
     ProjectSettings::get_singleton()->set_initial_value(p_name, p_default_value);
     ProjectSettings::get_singleton()->set_restart_if_changed(p_name, restart_if_changed);
+}
+
+TypedArray<PackedScene> YEngine::find_packedscenes_in(const Variant &variant_path, const String &name_contains) {
+    PackedStringArray _paths;
+    if(variant_path.get_type() == Variant::Type::ARRAY) { _paths = variant_path;
+    } else if (variant_path.get_type() != Variant::Type::STRING) { return Array{}; }
+    else { _paths.append(variant_path); }
+    TypedArray<PackedScene> return_paths;
+    bool has_name_contains = !name_contains.is_empty();
+
+    for (auto _path: _paths) {
+        Error check_error;
+        auto dir = DirAccess::open(_path,&check_error);
+        if (check_error != OK) {
+            WARN_PRINT(vformat("[find_packedscenes_in] Couldn't open dir %s",_path));
+            continue;
+        }
+
+        dir->list_dir_begin();
+        String file_name = dir->get_next();
+        while (!file_name.is_empty()) {
+            file_name = file_name.trim_suffix(".remap");
+            if (file_name.ends_with(".tscn"))
+                if (!has_name_contains || file_name.contains(name_contains)) {
+                    Ref<PackedScene> loaded_resource = ResourceLoader::load(vformat("%s/%s",_path,file_name));
+                    if(loaded_resource.is_valid())
+                        return_paths.append(loaded_resource);
+                    else
+                        WARN_PRINT(vformat("[find_packedscenes_in] Failed loading packedscene at %s/%s",_path,file_name));
+                }
+            file_name = dir->get_next();
+        }
+    }
+    return return_paths;
 }
 
 TypedArray<Resource> YEngine::find_resources_in(const Variant &variant_path, const String &name_contains) {

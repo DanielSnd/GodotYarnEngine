@@ -3,8 +3,14 @@
 
 #include "yarnsave.h"
 #include "yarntime.h"
+#include "ytween.h"
+#include "ygamestate.h"
 #include "scene/main/node.h"
 #include "scene/main/window.h"
+#include "scene/resources/packed_scene.h"
+
+class YGameState;
+class YTween;
 
 class YEngine : public Node {
     GDCLASS(YEngine, Node);
@@ -20,14 +26,22 @@ protected:
 
     Node *get_current_scene();
 
+    Array seeded_shuffle(Array array_to_shuffle, int seed_to_use);
+
     void _notification(int p_what);
+
+    Node *find_node_with_meta(Node *parent_node, const String &p_type);
+
+    Node *find_node_with_method(Node *parent_node, const String &p_type);
 
     static YEngine* singleton;
     HashMap<StringName, Node *> othersingletons;
-
+    Ref<YGameState> ygamestate;
 public:
+    bool using_game_state=false;
     bool already_setup_in_tree = false;
 
+    void game_state_starting(const Ref<YGameState> &ygs);
     Callable button_click_callable(const Callable &p_callable);
     Callable button_click_callable_if_modulate(const Callable &p_callable, Control* p_control);
 
@@ -44,7 +58,7 @@ public:
     }
 
     bool is_top_of_menu_stack(Node* test_menu) const {
-        return menu_stack[menu_stack.size()-1] == test_menu;
+        return menu_stack.size() > 0 && test_menu != nullptr && menu_stack[menu_stack.size()-1] == test_menu;
     }
 
     void add_to_menu_stack(Node* adding_menu) {
@@ -68,17 +82,24 @@ public:
     bool can_button_click;
     bool get_can_button_click() {return can_button_click;}
     void set_can_button_click(const bool val) {can_button_click = val;}
+    Node* find_node_with_type(Node* parent_node, const String& type);
 
+    uint32_t set_flag_value(uint32_t collision_layer, int p_layer_number, bool p_value);
+    bool check_flag_value(uint32_t collision_layer, int p_layer_number) const;
     void do_process();
+    int string_to_hash(const String& str);
 
     YEngine();
     ~YEngine();
 
     YSave* ysave;
     YTime* ytime;
+    YTween* ytween;
     void add_setting(const String& name, const Variant& default_value, Variant::Type type,
             PropertyHint hint = PROPERTY_HINT_NONE, const String& hint_string = "",
             int usage = PROPERTY_USAGE_DEFAULT, bool restart_if_changed = false);
+
+    TypedArray<PackedScene> find_packedscenes_in(const Variant &variant_path, const String &name_contains);
 
     TypedArray<Resource> find_resources_in(const Variant &path, const String &name_contains = "");
 

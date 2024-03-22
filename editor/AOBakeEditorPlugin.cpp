@@ -439,7 +439,6 @@ AOBakeEditorPlugin * AOBakeEditorPlugin::get_singleton() {
 
 AOBakeEditorPlugin::AOBakeEditorPlugin() {
 	singleton = this;
-	if (EditorNode::get_singleton() == nullptr || !EditorNode::get_singleton()->is_editor_ready()) return;
     Ref<AOBakeInspectorPlugin> plugin;
     plugin.instantiate();
     add_inspector_plugin(plugin);

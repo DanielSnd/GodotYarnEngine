@@ -273,6 +273,7 @@ bool YSave::request_load() {
     auto dir = FileAccess::create_for_path(save_path);
     if (!dir->file_exists(save_path)) {
         print_line("Save doesn't exist at path ",save_path);
+        emit_signal(SNAME("loaded_save"),save_data);
         return false;
     }
     auto file = FileAccess::open(save_path, FileAccess::READ);
@@ -280,6 +281,7 @@ bool YSave::request_load() {
     file->close();
     if (file_string.is_empty()) {
         print_line("File string is empty");
+        emit_signal(SNAME("loaded_save"),save_data);
         return false;
     }
     Ref<JSON> jason;
@@ -288,6 +290,7 @@ bool YSave::request_load() {
     if(error != Error::OK) {
         jason.unref();
         print_line(vformat("Parse JSON failed. Error at line %d: %s", jason->get_error_line(), jason->get_error_message()));
+        emit_signal(SNAME("loaded_save"),save_data);
         return false;
     }
     save_data = jason->get_data();

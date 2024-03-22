@@ -73,6 +73,9 @@ public:
                 return true;
         }
         bool parse_property(Object *p_object, const Variant::Type p_type, const String &p_path, const PropertyHint p_hint, const String &p_hint_text, const BitField<PropertyUsageFlags> p_usage, const bool p_wide) override {
+                // if (p_type == Variant::Type::INT) {
+                //         print_line("parse property ",p_path," contains? ",p_path.contains("_btn_"));
+                // }
                 if (p_path.contains("_btn_")) {
                         YarnEditorFunctionButton* spawned_new_control = memnew(YarnEditorFunctionButton);
                         add_custom_control(spawned_new_control);
