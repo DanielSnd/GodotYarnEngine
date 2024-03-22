@@ -53,7 +53,7 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_all_state_parameters"), &YGameState::get_all_state_parameters);
     
     ClassDB::bind_method(D_METHOD("set_game_resource","param_id", "param_value"), &YGameState::set_game_resources);
-    ClassDB::bind_method(D_METHOD("get_game_resource","param_id","param_default"), &YGameState::get_game_resources);
+    ClassDB::bind_method(D_METHOD("get_game_resource","param_id"), &YGameState::get_game_resources);
     ClassDB::bind_method(D_METHOD("has_game_resource","param_id"), &YGameState::has_game_resources);
     ClassDB::bind_method(D_METHOD("remove_game_resource","param_id"), &YGameState::remove_game_resources);
     ClassDB::bind_method(D_METHOD("get_all_game_resources"), &YGameState::get_all_game_resources);

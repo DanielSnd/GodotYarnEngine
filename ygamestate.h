@@ -158,11 +158,10 @@ public:
     HashMap<int,Ref<Resource>> game_resources;
     void set_game_resources(int param, Ref<Resource> v) {game_resources[param] = v;}
     void remove_game_resources(int param) {game_resources.erase(param);}
-    Ref<Resource> get_game_resources(int param,const Ref<Resource>& def) {
+    Ref<Resource> get_game_resources(int param) {
         if (game_resources.has(param))
             return game_resources[param];
-        else
-            return def;
+        return nullptr;
     }
     bool has_game_resources(int param) const { return game_resources.has(param); }
 
