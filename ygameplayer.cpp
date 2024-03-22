@@ -28,6 +28,7 @@ void YGamePlayer::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_player_parameter","param_id", "param_value"), &YGamePlayer::set_player_parameter);
     ClassDB::bind_method(D_METHOD("get_player_parameter","param_id","param_default"), &YGamePlayer::get_player_parameter);
     ClassDB::bind_method(D_METHOD("has_player_parameter","param_id"), &YGamePlayer::has_player_parameter);
+    ClassDB::bind_method(D_METHOD("remove_player_parameter","param_id"), &YGamePlayer::remove_player_parameter);
     ClassDB::bind_method(D_METHOD("get_all_player_parameters"), &YGamePlayer::get_all_player_parameters);
 
     GDVIRTUAL_BIND(_on_player_registered)

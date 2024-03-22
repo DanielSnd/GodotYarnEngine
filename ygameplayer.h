@@ -32,6 +32,7 @@ public:
 
     HashMap<int,Variant> player_parameters;
     void set_player_parameter(int param, Variant v) {player_parameters[param] = v;}
+    void remove_player_parameter(int param) {player_parameters.erase(param);}
     Variant get_player_parameter(int param,const Variant& def) {
         if (player_parameters.has(param))
             return player_parameters[param];

@@ -22,6 +22,7 @@ protected:
 public:
     HashMap<int,Variant> action_parameters;
     void set_action_parameter(int param, Variant v) {action_parameters[param] = v;}
+    void remove_action_parameter(int param) {action_parameters.erase(param);}
     Variant get_action_parameter(int param,const Variant& def) {
         if (action_parameters.has(param))
             return action_parameters[param];

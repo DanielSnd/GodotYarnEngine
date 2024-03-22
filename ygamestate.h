@@ -78,8 +78,6 @@ public:
         return current_game_action;
     }
 
-
-
     int get_future_game_action_count() const {
         return future_game_actions.size();
     }
@@ -156,6 +154,46 @@ public:
         showed_out_of_actions_message=false;
     }
 
+    
+    HashMap<int,Ref<Resource>> game_resources;
+    void set_game_resources(int param, Ref<Resource> v) {game_resources[param] = v;}
+    void remove_game_resources(int param) {game_resources.erase(param);}
+    Ref<Resource> get_game_resources(int param,const Ref<Resource>& def) {
+        if (game_resources.has(param))
+            return game_resources[param];
+        else
+            return def;
+    }
+    bool has_game_resources(int param) const { return game_resources.has(param); }
+
+    Dictionary get_all_game_resources() {
+        Dictionary returndict;
+        for (auto actpq: game_resources) {
+            returndict[actpq.key] = actpq.value;
+        }
+        return returndict;
+    }
+    
+    HashMap<int,Variant> state_parameters;
+    void set_state_parameter(int param, Variant v) {state_parameters[param] = v;}
+    void remove_state_parameter(int param) {state_parameters.erase(param);}
+    Variant get_state_parameter(int param,const Variant& def) {
+        if (state_parameters.has(param))
+            return state_parameters[param];
+        else
+            return def;
+    }
+    bool has_state_parameter(int param) const { return state_parameters.has(param); }
+
+    Dictionary get_all_state_parameters() {
+        Dictionary returndict;
+        for (auto actpq: state_parameters) {
+            returndict[actpq.key] = actpq.value;
+        }
+        return returndict;
+    }
+
+    
     YGameState() {
         next_game_action_unique_id = 1;
         next_visual_action_unique_id = 1;

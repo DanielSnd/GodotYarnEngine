@@ -46,6 +46,18 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_past_game_action_by_index","index"), &YGameState::get_past_game_action_by_index);
     ClassDB::bind_method(D_METHOD("get_future_game_action_by_index","index"), &YGameState::get_future_game_action_by_index);
 
+    ClassDB::bind_method(D_METHOD("set_state_parameter","param_id", "param_value"), &YGameState::set_state_parameter);
+    ClassDB::bind_method(D_METHOD("get_state_parameter","param_id","param_default"), &YGameState::get_state_parameter);
+    ClassDB::bind_method(D_METHOD("has_state_parameter","param_id"), &YGameState::has_state_parameter);
+    ClassDB::bind_method(D_METHOD("remove_state_parameter","param_id"), &YGameState::remove_state_parameter);
+    ClassDB::bind_method(D_METHOD("get_all_state_parameters"), &YGameState::get_all_state_parameters);
+    
+    ClassDB::bind_method(D_METHOD("set_game_resource","param_id", "param_value"), &YGameState::set_game_resources);
+    ClassDB::bind_method(D_METHOD("get_game_resource","param_id","param_default"), &YGameState::get_game_resources);
+    ClassDB::bind_method(D_METHOD("has_game_resource","param_id"), &YGameState::has_game_resources);
+    ClassDB::bind_method(D_METHOD("remove_game_resource","param_id"), &YGameState::remove_game_resources);
+    ClassDB::bind_method(D_METHOD("get_all_game_resources"), &YGameState::get_all_game_resources);
+    
     ADD_SIGNAL(MethodInfo("ended_all_actions"));
 }
 
