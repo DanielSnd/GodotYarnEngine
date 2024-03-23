@@ -21,8 +21,8 @@ protected:
 
 public:
     HashMap<int,Variant> action_parameters;
-    void set_action_parameter(int param, Variant v) {action_parameters[param] = v;}
-    void remove_action_parameter(int param) {action_parameters.erase(param);}
+    YGameAction* set_action_parameter(int param, Variant v) {action_parameters[param] = v; return this;}
+    YGameAction* remove_action_parameter(int param) {action_parameters.erase(param); return this;}
     Variant get_action_parameter(int param,const Variant& def) {
         if (action_parameters.has(param))
             return action_parameters[param];
@@ -65,22 +65,24 @@ public:
     bool executed_exit_action_call=false;
     virtual void end_action();
 
-    void copy_parameters_from(const Ref<YGameAction> &other_action) {
+    YGameAction* copy_parameters_from(const Ref<YGameAction> &other_action) {
         if (other_action.is_valid()) {
             for (const auto& key_value: other_action->action_parameters) {
                 action_parameters[key_value.key] = key_value.value;
                 player_turn = other_action->player_turn;
             }
         }
+        return this;
     }
 
-    void copy_parameters_to(const Ref<YGameAction> &other_action) {
+    YGameAction* copy_parameters_to(const Ref<YGameAction> &other_action) {
         if (other_action.is_valid()) {
             for (const auto& key_value: action_parameters) {
                 other_action->action_parameters[key_value.key] = key_value.value;
                 other_action->player_turn = player_turn;
             }
         }
+        return this;
     }
     virtual void enter_action();
     virtual void step_action();

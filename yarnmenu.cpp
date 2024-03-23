@@ -43,7 +43,7 @@ void YMenu::_bind_methods() {
     GDVIRTUAL_BIND(_can_back_button_auto_close_menu)
     GDVIRTUAL_BIND(_on_back_button_pressed);
     GDVIRTUAL_BIND(_on_started_menu);
-
+    GDVIRTUAL_BIND(_on_fade_out)
 }
 
 void YMenu::_notification(int p_what) {
@@ -150,6 +150,13 @@ Vector2 YMenu::calculate_ideal_control_center(Vector2 size,Control *parent) {
         return {0.0,0.0};
     }
     return parent->get_size() * 0.5 - size * 0.5;
+}
+
+Ref<Tween> YMenu::fade_out() {
+    auto tween = YTween::get_singleton()->create_unique_tween(this);
+    tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,0.0},0.18)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);
+    GDVIRTUAL_CALL(_on_fade_out);
+    return tween;
 }
 
 Node* YMenu::instantiate_child_menu(Control *parent_node, const PackedScene *child_menu_scene, const bool auto_start) {

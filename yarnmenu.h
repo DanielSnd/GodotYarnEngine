@@ -69,17 +69,14 @@ public:
         return get_is_active() && yengine->ytime->has_pause_independent_time_elapsed(yengine->last_button_click_time,0.15) && get_modulate().a > 0.95;
     }
 
-    Ref<Tween> fade_out() {
-        auto tween = create_tween();
-        tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,0.0},0.18)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);
-        return tween;
-    }
+    Ref<Tween> fade_out();
 
     Node* instantiate_child_menu(Control *parent_node, const PackedScene *child_menu_scene, bool auto_start = true);
     Node* instantiate_replacement_menu(Control* parent_node, const PackedScene* child_menu_scene, bool auto_start = true);
 
     GDVIRTUAL0(_on_back_button_pressed)
     GDVIRTUAL0(_on_started_menu)
+    GDVIRTUAL0(_on_fade_out)
     GDVIRTUAL0(_on_back_to_menu)
     GDVIRTUAL0RC(bool,_can_back_button_auto_close_menu)
     YMenu();
