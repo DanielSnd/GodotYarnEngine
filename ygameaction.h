@@ -8,6 +8,8 @@
 #include "yarntime.h"
 #include "core/io/resource.h"
 #include "ygamestate.h"
+#include "core/variant/variant.h"
+#include "core/object/script_language.h"
 
 class YGameState;
 class YGamePlayer;
@@ -18,6 +20,7 @@ class YGameAction : public Resource {
 protected:
     void _notification(int p_what);
     static void _bind_methods();
+
 
 public:
     HashMap<int,Variant> action_parameters;
@@ -38,11 +41,26 @@ public:
         }
         return returndict;
     }
+
+    Vector<Variant> action_steps;
+    void set_action_steps(const Variant f) {action_steps = f;}
+    Variant get_action_steps() const {return action_steps;}
+
+    void register_step(const Variant v);
+
     bool started=false;
     bool finished=false;
     float time_started;
     void set_time_started(float f) {time_started = f;}
     float get_time_started() {return time_started;}
+
+    int steps_consumed;
+    void set_steps_consumed(int f) {
+        steps_consumed = f;
+    }
+    int get_steps_consumed() const {
+        return steps_consumed;
+    }
 
     int player_turn;
     void set_player_turn(int f) {
@@ -85,7 +103,7 @@ public:
         return this;
     }
     virtual void enter_action();
-    virtual void step_action();
+    virtual void step_action(Variant step_data, bool is_ending);
     virtual void exit_action();
     virtual bool process_action(float _delta);
     virtual bool slow_process_action(float _delta);
@@ -97,7 +115,7 @@ public:
 
     GDVIRTUAL0(_on_created)
     GDVIRTUAL0(_on_enter_action)
-    GDVIRTUAL0(_on_stepped_action)
+    GDVIRTUAL2(_on_stepped_action,Variant,bool)
     GDVIRTUAL0(_on_exit_action)
     GDVIRTUAL1RC(bool, _on_process_action,float)
     GDVIRTUAL1RC(bool, _on_slow_process_action,float)

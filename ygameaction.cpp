@@ -18,7 +18,8 @@ void YGameAction::_bind_methods() {
     ClassDB::bind_method(D_METHOD("has_action_parameter","param_id"), &YGameAction::has_action_parameter);
     ClassDB::bind_method(D_METHOD("get_all_action_parameters"), &YGameAction::get_all_action_parameters);
     ClassDB::bind_method(D_METHOD("end_action"), &YGameAction::end_action);
-    ClassDB::bind_method(D_METHOD("step_action"), &YGameAction::step_action);
+    ClassDB::bind_method(D_METHOD("register_step","step_data"), &YGameAction::register_step);
+    //ClassDB::bind_method(D_METHOD("add_action_step"), &YGameAction::add_step);
 
     ClassDB::bind_method(D_METHOD("copy_parameters_from","other_action"), &YGameAction::copy_parameters_from);
     ClassDB::bind_method(D_METHOD("copy_parameters_to","other_action"), &YGameAction::copy_parameters_to);
@@ -50,6 +51,11 @@ void YGameAction::_bind_methods() {
     GDVIRTUAL_BIND(_on_deserialize,"dict")
 }
 
+void YGameAction::register_step(const Variant v) {
+    action_steps.append(v);
+    step_action(v,false);
+}
+
 void YGameAction::end_action() {
     started=true;
     finished=true;
@@ -75,13 +81,21 @@ void YGameAction::enter_action() {
     started=true;
 }
 
-void YGameAction::step_action() {
-    GDVIRTUAL_CALL(_on_stepped_action);
+void YGameAction::step_action(Variant step_data,bool is_ending) {
+    steps_consumed += 1;
+    GDVIRTUAL_CALL(_on_stepped_action,step_data,is_ending);
 }
 
 void YGameAction::exit_action() {
     if(executed_exit_action_call) return;
     executed_exit_action_call=true;
+    for (int i = 0; i < action_steps.size(); ++i) {
+        if (i < steps_consumed) {
+            continue;
+        }
+        auto action_data = action_steps[i];
+        step_action(action_data,true);
+    }
     GDVIRTUAL_CALL(_on_exit_action);
     finished=true;
 }
@@ -109,6 +123,13 @@ Dictionary YGameAction::deserialize(Dictionary dict) {
 }
 
 void YGameAction::created() {
+    Ref<Script> _find_script = get_script();
+    if (_find_script.is_valid()) {
+        String string_global_name = _find_script->get_global_name();
+        if (!string_global_name.is_empty()) {
+            set_name(string_global_name);
+        }
+    }
     GDVIRTUAL_CALL(_on_created);
 }
 
