@@ -106,6 +106,50 @@ public:
     PackedStringArray find_resources_paths_in(const Variant &path, const String &name_contains);
 
     static YEngine* get_singleton();
+
+    String EKey(const Dictionary &dict,int val);
+    HashMap<int,HashMap<int,String>> game_resource_paths;
+    HashMap<int,HashMap<int,Ref<Resource>>> game_resources;
+
+    void set_game_resource_path(int resource_type, int resource_id, const String &respath) {
+        if (!game_resource_paths.has(resource_type)) {
+            game_resource_paths[resource_type] = {};
+        }
+        game_resource_paths[resource_type][resource_id] = respath;
+    }
+
+    void set_game_resource(int resource_type, int resource_id, Ref<Resource> v) {
+        if (!game_resources.has(resource_type)) {
+            game_resources[resource_type] = {};
+        }
+        game_resources[resource_type][resource_id] = v;
+    }
+
+    void remove_game_resource(int resource_type, int resource_id) {
+        if (game_resources.has(resource_type))
+            game_resources[resource_type].erase(resource_id);
+    }
+    Ref<Resource> get_game_resource(int resource_type, int resource_id);
+
+    bool has_game_resource(int resource_type, int param) ;
+
+    Array get_all_game_resources_types() {
+        Array _return_array;
+        for (auto actpq: game_resources) {
+            _return_array.append(actpq.key);
+        }
+        return _return_array;
+    }
+    Dictionary get_all_game_resources_of_type(int resource_type) {
+        Dictionary returndict;
+        if (game_resources.has(resource_type)) {
+            auto hashtable_resources = game_resources[resource_type];
+            for (auto actpq: hashtable_resources) {
+                returndict[actpq.key] = actpq.value;
+            }
+        }
+        return returndict;
+    }
 };
 
 #endif

@@ -14,6 +14,52 @@ YEngine * YEngine::get_singleton() {
     return singleton;
 }
 
+String YEngine::EKey(const Dictionary &dict, int val) {
+    return dict.find_key(val);
+}
+
+Ref<Resource> YEngine::get_game_resource(int resource_type, int resource_id) {
+        if (game_resources.has(resource_type)) {
+            auto hashtable_resources = game_resources[resource_type];
+            if (hashtable_resources.has(resource_id)) {
+                return hashtable_resources[resource_id];
+            }
+        }
+        if (game_resource_paths.has(resource_type)) {
+            auto respaths = game_resource_paths[resource_type];
+            if (respaths.has(resource_id)) {
+                auto res_loaded = ResourceLoader::load(respaths[resource_id]);
+                if (res_loaded.is_valid()) {
+                    if (!game_resources.has(resource_type)) game_resources[resource_type] = {};
+                    game_resources[resource_type][resource_id] = res_loaded;
+                } else {
+                    respaths.erase(resource_id);
+                }
+            }
+        }
+        return nullptr;
+}
+
+bool YEngine::has_game_resource(int resource_type, int resource_id) {
+    if (game_resources.has(resource_type)) {
+        return game_resources[resource_type].has(resource_id);
+    }
+    if (game_resource_paths.has(resource_type)) {
+        auto respaths = game_resource_paths[resource_type];
+        if (respaths.has(resource_id)) {
+            auto res_loaded = ResourceLoader::load(respaths[resource_id]);
+            if (res_loaded.is_valid()) {
+                if (!game_resources.has(resource_type)) game_resources[resource_type] = {};
+                game_resources[resource_type][resource_id] = res_loaded;
+                return true;
+            } else {
+                respaths.erase(resource_id);
+            }
+        }
+    }
+    return false;
+}
+
 void YEngine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_current_scene"), &YEngine::get_current_scene);
 
@@ -42,8 +88,17 @@ void YEngine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_menu_stack"), &YEngine::get_menu_stack);
     ClassDB::bind_method(D_METHOD("get_menu_stack_size"), &YEngine::get_menu_stack_size);
 
+    ClassDB::bind_method(D_METHOD("EKey","dict","value"), &YEngine::EKey);
     ClassDB::bind_method(D_METHOD("string_to_hash","input_string"), &YEngine::string_to_hash);
     ClassDB::bind_method(D_METHOD("seeded_shuffle","array","seed"), &YEngine::seeded_shuffle);
+
+    ClassDB::bind_method(D_METHOD("set_game_resource_path","resource_type","resource_id", "resource_path"), &YEngine::set_game_resource_path);
+    ClassDB::bind_method(D_METHOD("set_game_resource","resource_type","resource_id", "resource"), &YEngine::set_game_resource);
+    ClassDB::bind_method(D_METHOD("get_game_resource","resource_type","resource_id"), &YEngine::get_game_resource);
+    ClassDB::bind_method(D_METHOD("has_game_resource","resource_type","resource_id"), &YEngine::has_game_resource);
+    ClassDB::bind_method(D_METHOD("remove_game_resource","resource_type","resource_id"), &YEngine::remove_game_resource);
+    ClassDB::bind_method(D_METHOD("get_all_game_resources_of_type","resource_type"), &YEngine::get_all_game_resources_of_type);
+    ClassDB::bind_method(D_METHOD("get_all_game_resources_types"), &YEngine::get_all_game_resources_types);
 
     ADD_SIGNAL(MethodInfo("changed_pause", PropertyInfo(Variant::BOOL, "pause_value")));
 }
@@ -236,6 +291,7 @@ YEngine::YEngine() {
     singleton = this;
     last_button_click_time = 0.0;
     using_game_state = false;
+    can_button_click=true;
     ytween=nullptr;
     ysave=nullptr;
     ytime=nullptr;
@@ -331,8 +387,6 @@ TypedArray<Resource> YEngine::find_resources_in(const Variant &variant_path, con
     }
     return return_paths;
 }
-
-
 
 PackedStringArray YEngine::find_resources_paths_in(const Variant &variant_path, const String &name_contains) {
     PackedStringArray _paths;

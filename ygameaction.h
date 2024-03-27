@@ -14,6 +14,44 @@
 class YGameState;
 class YGamePlayer;
 
+class YActionStep : public RefCounted {
+    GDCLASS(YActionStep, RefCounted);
+
+protected:
+    static void _bind_methods();
+
+public:
+    int step_index;
+    int get_step_index() const {return step_index;}
+    bool step_taken;
+    bool get_step_taken() const{return step_taken;}
+    void set_step_taken(bool b ){ step_taken = b;}
+    bool step_taken_as_ending;
+    bool get_step_taken_as_ending() const{return step_taken_as_ending;}
+    void set_step_taken_as_ending(bool b ){ step_taken_as_ending = b;}
+    int step_identifier;
+    int get_step_identifier() const {return step_identifier;}
+    void set_step_identifier(int b ){ step_identifier = b;}
+    Variant step_data;
+    int get_step_data() const{return step_data;}
+    void set_step_data(Variant b ){ step_data = b;}
+
+    YActionStep() {
+        step_index=-1;
+        step_taken=false;
+        step_identifier=0;
+        step_taken_as_ending=false;
+        step_data ={};
+    }
+    YActionStep(int p_index,int p_identifier) {
+        step_index=p_index;
+        step_taken=false;
+        step_taken_as_ending=false;
+        step_identifier=p_identifier;
+        step_data ={};
+    }
+};
+
 class YGameAction : public Resource {
     GDCLASS(YGameAction, Resource);
 
@@ -21,10 +59,56 @@ protected:
     void _notification(int p_what);
     static void _bind_methods();
 
+    void release_step();
 
 public:
+    bool instant_execute=false;
+
+    void set_instant_execute(bool b) { instant_execute = false; }
+    bool get_instant_execute() const { return instant_execute; }
+
     HashMap<int,Variant> action_parameters;
-    YGameAction* set_action_parameter(int param, Variant v) {action_parameters[param] = v; return this;}
+    YGameAction* set_action_parameter(int param, const Variant& v) {action_parameters[param] = v; return this;}
+
+    YGameAction* erase_action_parameter(int param) {
+        if (action_parameters.has(param))
+            action_parameters.erase(param);
+        return this;
+    }
+
+    YGameAction* erase_action_parameter_array(Array v) {
+        for (int i = 0; i < v.size(); ++i) {
+            if (action_parameters.has(v[i]))
+                action_parameters.erase(v[i]);
+        }
+        return this;
+    }
+
+    YGameAction* set_action_parameter_array(int param, Array v) {
+        if (v.size() % 2 != 0) {
+            WARN_PRINT("Attempting to set action parameters with an array that's not even. It needs to follow action parameter then value format.");
+        } else {
+            for (int i = 0; i < v.size(); i+=2) {
+                if (i < v.size() && i+1 < v.size()) {
+                    action_parameters[v[i]] = v[i+1];
+                }
+            }
+            return this;
+        }
+        return this;
+    }
+    YGameAction* increment_action_parameter(int param, const Variant &v) {
+        if (action_parameters.has(param)) {
+            Variant current_value = action_parameters[param];
+            if (current_value.is_num()) {
+                action_parameters[param] = static_cast<float>(current_value) + static_cast<float>(v);
+                return this;
+            } else {
+                WARN_PRINT("Attempting to increment an action parameter that's not a number");
+            }
+        }
+        action_parameters[param] = v; return this;
+    }
     YGameAction* remove_action_parameter(int param) {action_parameters.erase(param); return this;}
     Variant get_action_parameter(int param,const Variant& def) {
         if (action_parameters.has(param))
@@ -36,30 +120,71 @@ public:
 
     Dictionary get_all_action_parameters() {
         Dictionary returndict;
-        for (auto actpq: action_parameters) {
+        for (const auto& actpq: action_parameters) {
             returndict[actpq.key] = actpq.value;
         }
         return returndict;
     }
 
-    Vector<Variant> action_steps;
-    void set_action_steps(const Variant f) {action_steps = f;}
-    Variant get_action_steps() const {return action_steps;}
+    Dictionary get_all_action_parameters_named(Dictionary naming_dictionary) {
+        Dictionary returndict;
+        for (const auto& actpq: action_parameters) {
+            if (naming_dictionary.values().has(actpq.key)) {
+                returndict[naming_dictionary.find_key(actpq.key)] = actpq.value;
+            } else {
+                returndict[actpq.key] = actpq.value;
+            }
+        }
+        return returndict;
+    }
 
-    void register_step(const Variant v);
+    Vector<Ref<YActionStep>> action_steps;
+
+    void register_step(int step_identifier, Variant v);
 
     bool started=false;
     bool finished=false;
+    bool waiting_for_step=false;
+    bool waiting_for_step_no_processing=false;
+
+    void wait_for_step(bool prevent_processing = false) ;
+
+    bool is_debugging = false;
+    void set_is_debugging(bool f) {is_debugging = f;}
+    bool get_is_debugging() const {return is_debugging;}
+
     float time_started;
     void set_time_started(float f) {time_started = f;}
-    float get_time_started() {return time_started;}
+    float get_time_started() const {return time_started;}
+
+    
+    int in_state_order = INT16_MAX;
+    void set_in_state_order(int f) { in_state_order = f; }
+    int get_in_state_order() const { return in_state_order; }
 
     int steps_consumed;
-    void set_steps_consumed(int f) {
-        steps_consumed = f;
+    void set_steps_consumed(int f) { steps_consumed = f; }
+    int get_steps_consumed() const { return steps_consumed; }
+
+    int get_all_steps_count() const {
+        return static_cast<int>(action_steps.size());
     }
-    int get_steps_consumed() const {
-        return steps_consumed;
+    Ref<YActionStep> get_step_by_index(int p_index) const {
+        for (const auto & action_step : action_steps) {
+            if (action_step != nullptr && action_step->step_index == p_index) {
+                return action_step;
+            }
+        }
+        return nullptr;
+    }
+
+    // ClassDB::bind_method(D_METHOD("get_step_by_index","step_index"), &YGameAction::get_step_by_index);
+    // ClassDB::bind_method(D_METHOD("get_all_steps_count"), &YGameAction::get_all_steps_count);
+
+
+    Ref<YGameAction> set_player_turn_id(const int f) {
+        player_turn = f;
+        return this;
     }
 
     int player_turn;
@@ -72,13 +197,13 @@ public:
 
     int unique_id;
     void set_unique_id(int f) {unique_id = f;}
-    int get_unique_id() {return unique_id;}
+    int get_unique_id() const {return unique_id;}
 
     float pause_independent_time_started;
     void set_pause_indp_time_started(float f) {pause_independent_time_started = f;}
-    float get_pause_indp_time_started() {return pause_independent_time_started;}
-    bool has_elapsed_since_started(float f) { return YTime::get_singleton()->has_time_elapsed(time_started,f);}
-    bool has_pause_indp_elapsed_since_started(float f) { return YTime::get_singleton()->has_time_elapsed(pause_independent_time_started,f);}
+    float get_pause_indp_time_started() const {return pause_independent_time_started;}
+    bool has_elapsed_since_started(float f) const { return YTime::get_singleton()->has_time_elapsed(time_started,f);}
+    bool has_pause_indp_elapsed_since_started(float f) const { return YTime::get_singleton()->has_time_elapsed(pause_independent_time_started,f);}
 
     bool executed_exit_action_call=false;
     virtual void end_action();
@@ -103,7 +228,7 @@ public:
         return this;
     }
     virtual void enter_action();
-    virtual void step_action(Variant step_data, bool is_ending);
+    virtual void step_action(Ref<YActionStep> step_data,bool is_ending);
     virtual void exit_action();
     virtual bool process_action(float _delta);
     virtual bool slow_process_action(float _delta);
@@ -115,7 +240,8 @@ public:
 
     GDVIRTUAL0(_on_created)
     GDVIRTUAL0(_on_enter_action)
-    GDVIRTUAL2(_on_stepped_action,Variant,bool)
+    GDVIRTUAL4(_on_stepped_action,int,int,Variant,bool)
+    GDVIRTUAL4(_on_waiting_step_released,int,int,Variant,bool)
     GDVIRTUAL0(_on_exit_action)
     GDVIRTUAL1RC(bool, _on_process_action,float)
     GDVIRTUAL1RC(bool, _on_slow_process_action,float)

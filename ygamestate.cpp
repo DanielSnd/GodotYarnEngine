@@ -16,13 +16,19 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_game_player_by_type", "player_type"), &YGameState::get_game_player_by_type);
     ClassDB::bind_method(D_METHOD("remove_player", "game_player"), &YGameState::remove_player);
     ClassDB::bind_method(D_METHOD("remove_player_with_id", "game_player_id"), &YGameState::remove_player_with_id);
+
     ClassDB::bind_method(D_METHOD("add_game_action", "game_action","desired_id"), &YGameState::add_game_action,DEFVAL(-1));
     ClassDB::bind_method(D_METHOD("add_override_game_action", "game_action","desired_id"), &YGameState::add_override_game_action,DEFVAL(-1));
+
+    ClassDB::bind_method(D_METHOD("add_game_action_with", "game_action","initial_parameter","param_value","desired_id"), &YGameState::add_game_action_with_param,DEFVAL(-1),DEFVAL(Variant{}),DEFVAL(-1));
+    ClassDB::bind_method(D_METHOD("add_override_game_action_with","initial_parameter","param_value", "game_action","desired_id"), &YGameState::add_override_game_action_with_param,DEFVAL(-1),DEFVAL(Variant{}),DEFVAL(-1));
 
     ClassDB::bind_method(D_METHOD("clear_all_players"), &YGameState::clear_all_players);
     ClassDB::bind_method(D_METHOD("clear_all_game_actions"), &YGameState::clear_all_game_actions);
 
     ClassDB::bind_method(D_METHOD("get_current_game_action"), &YGameState::get_current_game_action);
+    ClassDB::bind_method(D_METHOD("get_current_game_action_name"), &YGameState::get_current_game_action_name);
+
     ClassDB::bind_method(D_METHOD("has_current_game_action"), &YGameState::has_current_game_action);
     ClassDB::bind_method(D_METHOD("end_current_game_action"), &YGameState::end_current_game_action);
 
@@ -30,6 +36,10 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_current_turn_player"), &YGameState::get_current_turn_player);
     ClassDB::bind_method(D_METHOD("has_current_turn_player"), &YGameState::has_current_turn_player);
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "current_turn_player", PROPERTY_HINT_NODE_TYPE, "YGamePlayer",PROPERTY_USAGE_NO_EDITOR), "set_current_turn_player", "get_current_turn_player");
+
+    ClassDB::bind_method(D_METHOD("set_wait_before_going_to_next_step","time_to_wait"), &YGameState::set_wait_before_going_to_next_step);
+    ClassDB::bind_method(D_METHOD("get_wait_before_going_to_next_step"), &YGameState::get_wait_before_going_to_next_step);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "wait_before_going_to_next_step"), "set_wait_before_going_to_next_step", "get_wait_before_going_to_next_step");
 
     ClassDB::bind_method(D_METHOD("set_wait_before_going_to_next_action","time_to_wait"), &YGameState::set_wait_before_going_to_next_action);
     ClassDB::bind_method(D_METHOD("get_wait_before_going_to_next_action"), &YGameState::get_wait_before_going_to_next_action);
@@ -39,30 +49,39 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_prevent_proceed_to_next_action"), &YGameState::get_prevent_proceed_to_next_action);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "prevent_proceed_to_next_action"), "set_prevent_proceed_to_next_action", "get_prevent_proceed_to_next_action");
 
+    ClassDB::bind_method(D_METHOD("get_overridinge_game_action_count"), &YGameState::get_overridinge_game_action_count);
     ClassDB::bind_method(D_METHOD("get_future_game_action_count"), &YGameState::get_future_game_action_count);
     ClassDB::bind_method(D_METHOD("get_past_game_action_count"), &YGameState::get_past_game_action_count);
     ClassDB::bind_method(D_METHOD("get_previous_game_action"), &YGameState::get_previous_game_action);
     ClassDB::bind_method(D_METHOD("get_next_game_action"), &YGameState::get_next_game_action);
     ClassDB::bind_method(D_METHOD("get_past_game_action_by_index","index"), &YGameState::get_past_game_action_by_index);
     ClassDB::bind_method(D_METHOD("get_future_game_action_by_index","index"), &YGameState::get_future_game_action_by_index);
+    ClassDB::bind_method(D_METHOD("get_override_game_action_by_index","index"), &YGameState::get_overriding_game_action_by_index);
 
     ClassDB::bind_method(D_METHOD("set_state_parameter","param_id", "param_value"), &YGameState::set_state_parameter);
     ClassDB::bind_method(D_METHOD("get_state_parameter","param_id","param_default"), &YGameState::get_state_parameter);
     ClassDB::bind_method(D_METHOD("has_state_parameter","param_id"), &YGameState::has_state_parameter);
     ClassDB::bind_method(D_METHOD("remove_state_parameter","param_id"), &YGameState::remove_state_parameter);
     ClassDB::bind_method(D_METHOD("get_all_state_parameters"), &YGameState::get_all_state_parameters);
-    
-    ClassDB::bind_method(D_METHOD("set_game_resource","param_id", "param_value"), &YGameState::set_game_resources);
-    ClassDB::bind_method(D_METHOD("get_game_resource","param_id"), &YGameState::get_game_resources);
-    ClassDB::bind_method(D_METHOD("has_game_resource","param_id"), &YGameState::has_game_resources);
-    ClassDB::bind_method(D_METHOD("remove_game_resource","param_id"), &YGameState::remove_game_resources);
-    ClassDB::bind_method(D_METHOD("get_all_game_resources"), &YGameState::get_all_game_resources);
-    
+
+    ClassDB::bind_method(D_METHOD("restart_action_counting"), &YGameState::restart_action_counting);
+    ClassDB::bind_method(D_METHOD("get_game_actions_counted"), &YGameState::get_game_actions_counted);
+
+
+    ADD_SIGNAL(MethodInfo("registered_action",PropertyInfo(Variant::OBJECT, "new_action", PROPERTY_HINT_RESOURCE_TYPE, "YGameAction")));
+    ADD_SIGNAL(MethodInfo("changed_current_action",PropertyInfo(Variant::OBJECT, "new_action", PROPERTY_HINT_RESOURCE_TYPE, "YGameAction")));
+    ADD_SIGNAL(MethodInfo("changed_turn_player_id", PropertyInfo(Variant::INT, "player_turn_id_before"),
+                          PropertyInfo(Variant::INT, "player_turn_id_after")));
     ADD_SIGNAL(MethodInfo("ended_all_actions"));
 }
 
 YGameState *YGameState::get_singleton() {
     return *singleton;
+}
+
+String YGameState::get_current_game_action_name() {
+    if (current_game_action == nullptr) return "NULL";
+    return current_game_action->get_name();
 }
 
 int YGameState::register_player(YGamePlayer *ygp) {
@@ -169,26 +188,55 @@ void YGameState::do_process(double delta) {
     if (current_game_action.is_valid()) {
         //HAS A CURRENT GAMEACTION!!
         //Has it ended?
+
         if (current_game_action->finished) {
+            if (wait_before_going_to_next_action > 0.0) {
+                wait_before_going_to_next_action-=delta;
+                return;
+            }
             current_game_action->end_action();
+            game_actions_done_since_started_counting+=1;
             past_game_actions.push_back(current_game_action);
             current_game_action.unref();
             return;
         }
-        if(!current_game_action->process_action(static_cast<float>(delta))) {
-            current_game_action->end_action();
-            past_game_actions.push_back(current_game_action);
-            current_game_action.unref();
-            return;
+
+        //IF WAITING BEFORE GOING TO NEXT STEP THEN DON'T GO TO NEXT STEP!
+        if (wait_before_going_to_next_step > 0.0) {
+            wait_before_going_to_next_step -= delta;
+        } else {
+            //IF THERE'S A NEW STEP AND WE'RE NOT CURRENTLY WAITING FOR A STEP TO CONCLUDE THEN GO TO NEXT STEP!!
+            if (current_game_action->steps_consumed < current_game_action->action_steps.size() && !current_game_action->waiting_for_step) {
+                if (!current_game_action->action_steps[current_game_action->steps_consumed].is_valid()) {
+                    ERR_PRINT("YGameState Attempted to take an action step that wasn't valid");
+                    current_game_action->steps_consumed+=1;
+                } else {
+                    current_game_action->step_action(current_game_action->action_steps[current_game_action->steps_consumed],false);
+                }
+            }
         }
-        frame_count_before_doing_slow_process+=delta;
-        if (frame_count_before_doing_slow_process > 0.5) {
-            frame_count_before_doing_slow_process=0;
-            if(!current_game_action->slow_process_action(static_cast<float>(delta))) {
+
+        //IF WAITING FOR STEP AND NOT PROCESSING DON'T DO PROCESSING
+        if (!current_game_action->waiting_for_step_no_processing) {
+            if(!current_game_action->process_action(static_cast<float>(delta))) {
                 current_game_action->end_action();
+                game_actions_done_since_started_counting+=1;
                 past_game_actions.push_back(current_game_action);
                 current_game_action.unref();
                 return;
+            }
+
+            frame_count_before_doing_slow_process+=delta;
+
+            if (frame_count_before_doing_slow_process > 0.5) {
+                frame_count_before_doing_slow_process=0;
+                if(!current_game_action->slow_process_action(static_cast<float>(delta))) {
+                    current_game_action->end_action();
+                    game_actions_done_since_started_counting+=1;
+                    past_game_actions.push_back(current_game_action);
+                    current_game_action.unref();
+                    return;
+                }
             }
         }
     } else {
@@ -201,8 +249,14 @@ void YGameState::do_process(double delta) {
         if (overriding_game_actions.size() > 0) {
             current_game_action = overriding_game_actions[0];
             overriding_game_actions.remove_at(0);
-            if (current_game_action.is_valid())
+            if (current_game_action.is_valid()) {
+                if (last_turn_player_id != current_game_action->player_turn) {
+                    emit_signal("changed_turn_player_id",last_turn_player_id,current_game_action->player_turn);
+                    last_turn_player_id = current_game_action->player_turn;
+                }
                 current_game_action->enter_action();
+                emit_signal("changed_current_action",current_game_action);
+            }
             return;
         }
         if (future_game_actions.size() > 0) {
@@ -212,6 +266,7 @@ void YGameState::do_process(double delta) {
             //print_line("Popped the front of futuregameactions, is current game action valid? ",current_game_action," ",current_game_action.is_valid());
             if (current_game_action.is_valid()) {
                 current_game_action->enter_action();
+                emit_signal("changed_current_action",current_game_action);
                 return;
             }
         }
@@ -231,7 +286,13 @@ bool YGameState::end_current_game_action() const {
 }
 
 Ref<YGameAction> YGameState::add_game_action(const Ref<YGameAction> &ygs, int desired_game_state_id) {
+    return add_game_action_with_param(ygs,-1,Variant{},desired_game_state_id);
+}
+Ref<YGameAction> YGameState::add_game_action_with_param(const Ref<YGameAction> &ygs, int desired_initial_param, const Variant &desired_param_data, int desired_game_state_id) {
     showed_out_of_actions_message=false;
+    if (desired_initial_param != -1) {
+        ygs->set_action_parameter(desired_initial_param,desired_param_data);
+    }
     //print_line("Adding game action ",ygs," has started? ",has_started);
     if(!has_started) {
         YEngine::get_singleton()->game_state_starting(this);
@@ -244,12 +305,20 @@ Ref<YGameAction> YGameState::add_game_action(const Ref<YGameAction> &ygs, int de
     future_game_actions.push_back(ygs);
     ygs->set_unique_id(desired_game_state_id);
     ygs->created();
+    emit_signal("registered_action",ygs);
     //print_line("Added game action, future game actions now ",future_game_actions.size());
     return ygs;
 }
 
 Ref<YGameAction> YGameState::add_override_game_action(const Ref<YGameAction> &ygs, int desired_game_state_id) {
+    return add_override_game_action_with_param(ygs,-1,Variant{},desired_game_state_id);
+}
+
+Ref<YGameAction> YGameState::add_override_game_action_with_param(const Ref<YGameAction> &ygs, int desired_initial_param, const Variant &desired_param_data, int desired_game_state_id) {
     showed_out_of_actions_message=false;
+    if (desired_initial_param != -1) {
+        ygs->set_action_parameter(desired_initial_param,desired_param_data);
+    }
     if(!has_started) {
         YEngine::get_singleton()->game_state_starting(this);
         has_started=true;
@@ -264,5 +333,6 @@ Ref<YGameAction> YGameState::add_override_game_action(const Ref<YGameAction> &yg
         overriding_game_actions.append(ygs);
     ygs->set_unique_id(desired_game_state_id);
     ygs->created();
+    emit_signal("registered_action",ygs);
     return ygs;
 }

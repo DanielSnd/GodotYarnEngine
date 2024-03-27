@@ -14,6 +14,7 @@
 #include "yarnphysics.h"
 #include "yarnsave.h"
 #include "yarntime.h"
+#include "yboxcontainer.h"
 #include "yvisualelement3d.h"
 #include "ygamestate.h"
 #include "yvisualaction.h"
@@ -58,12 +59,16 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<YPhysics>();
  	ClassDB::register_class<YEngine>();
 	ClassDB::register_class<YMenu>();
+	ClassDB::register_class<YBoxContainer>();
+	ClassDB::register_class<YHBoxContainer>();
+	ClassDB::register_class<YVBoxContainer>();
 	ClassDB::register_class<YTweenWrap>();
 	ClassDB::register_class<YTween>();
 	ClassDB::register_class<YSpecialPoint3D>();
 	ClassDB::register_class<YVisualElement3D>();
 	ClassDB::register_class<YGamePlayer>();
 	ClassDB::register_class<YVisualAction>();
+	ClassDB::register_class<YActionStep>();
 	ClassDB::register_class<YGameAction>();
 	ClassDB::register_class<YGameState>();
 	ClassDB::register_class<YGameLog>();

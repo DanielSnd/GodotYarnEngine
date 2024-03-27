@@ -18,7 +18,7 @@ class YGameAction;
 class YGamePlayer;
 class YVisualAction;
 class YEngine;
-
+class YActionStep;
 ///////////////////////////////
 /// YGAMESTATE
 ///////////////////////////////
@@ -37,13 +37,21 @@ public:
         singleton = ref;
     }
     bool has_started=false;
+
+    int next_execution_order_number;
     int next_game_action_unique_id;
     int next_visual_action_unique_id;
     int next_player_unique_id;
     int next_visual_element_unique_id;
+    String get_current_game_action_name();
+
     double wait_before_going_to_next_action =0.0;
     void set_wait_before_going_to_next_action(double f) {wait_before_going_to_next_action = f;}
     double get_wait_before_going_to_next_action() const {return wait_before_going_to_next_action;}
+
+    double wait_before_going_to_next_step =0.0;
+    void set_wait_before_going_to_next_step(double f) {wait_before_going_to_next_step = f;}
+    double get_wait_before_going_to_next_step() const {return wait_before_going_to_next_step;}
 
     YGamePlayer* current_turn_player;
     Ref<YGameAction> current_game_action;
@@ -53,6 +61,11 @@ public:
     HashMap<int,YGamePlayer*> game_players;
     HashMap<int,YVisualElement3D*> visual_elements_3d;
 
+    int game_actions_done_since_started_counting = 0;
+    int get_game_actions_counted() const {return game_actions_done_since_started_counting;}
+    void restart_action_counting() {
+        game_actions_done_since_started_counting = 0;
+    }
     int prevent_proceed_to_next_action = 0;
     void set_prevent_proceed_to_next_action(int v) { prevent_proceed_to_next_action = MAX(v,0); }
     int get_prevent_proceed_to_next_action() const { return prevent_proceed_to_next_action; }
@@ -78,6 +91,9 @@ public:
         return current_game_action;
     }
 
+    int get_overridinge_game_action_count() const {
+        return overriding_game_actions.size();
+    }
     int get_future_game_action_count() const {
         return future_game_actions.size();
     }
@@ -109,15 +125,23 @@ public:
             return future_game_actions[future_index];
         return nullptr;
     }
+    Ref<YGameAction> get_overriding_game_action_by_index(int future_index) const {
+        if (future_index>=0 && future_index < overriding_game_actions.size())
+            return overriding_game_actions[future_index];
+        return nullptr;
+    }
     bool has_current_game_action() const {
         return !current_game_action.is_null() && current_game_action.is_valid();
     }
 
     bool end_current_game_action() const;
 
-    Ref<YGameAction> add_game_action(const Ref<YGameAction>& ygs, int desired_game_state_id = -1);
+    int last_turn_player_id=-1;
 
+    Ref<YGameAction> add_game_action(const Ref<YGameAction>& ygs, int desired_game_state_id = -1);
     Ref<YGameAction> add_override_game_action(const Ref<YGameAction>& ygs, int desired_game_state_id = -1);
+    Ref<YGameAction> add_game_action_with_param(const Ref<YGameAction>& ygs, int desired_initial_param, const Variant &desired_param_data, int desired_game_state_id = -1);
+    Ref<YGameAction> add_override_game_action_with_param(const Ref<YGameAction>& ygs, int desired_initial_param, const Variant &desired_param_data, int desired_game_state_id = -1);
 
     bool has_current_turn_player() const {return current_turn_player != nullptr;}
 
@@ -144,34 +168,18 @@ public:
         }
         game_players.clear();
     }
+
     void clear_all_game_actions() {
         if (!current_game_action.is_null() && current_game_action.is_valid()) {
             current_game_action.unref();
         }
+        last_turn_player_id = -1;
         overriding_game_actions.clear();
         future_game_actions.clear();
         past_game_actions.clear();
         showed_out_of_actions_message=false;
     }
 
-    
-    HashMap<int,Ref<Resource>> game_resources;
-    void set_game_resources(int param, Ref<Resource> v) {game_resources[param] = v;}
-    void remove_game_resources(int param) {game_resources.erase(param);}
-    Ref<Resource> get_game_resources(int param) {
-        if (game_resources.has(param))
-            return game_resources[param];
-        return nullptr;
-    }
-    bool has_game_resources(int param) const { return game_resources.has(param); }
-
-    Dictionary get_all_game_resources() {
-        Dictionary returndict;
-        for (auto actpq: game_resources) {
-            returndict[actpq.key] = actpq.value;
-        }
-        return returndict;
-    }
     
     HashMap<int,Variant> state_parameters;
     void set_state_parameter(int param, Variant v) {state_parameters[param] = v;}
@@ -194,11 +202,14 @@ public:
 
     
     YGameState() {
+        next_execution_order_number = 0;
         next_game_action_unique_id = 1;
         next_visual_action_unique_id = 1;
         next_player_unique_id = 1;
         next_visual_element_unique_id = 1;
         frame_count_before_doing_slow_process = 0;
+        wait_before_going_to_next_action = 0.0;
+        wait_before_going_to_next_step = 0.0;
         current_turn_player = nullptr;
         has_started = false;
     }
