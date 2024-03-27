@@ -411,7 +411,11 @@ Ref<Tween> YBoxContainer::animated_free_child(Control* child, Vector2 exiting_of
 			new_tween->set_parallel(true);
 			new_tween->tween_property(child,NodePath("position"),exiting_offset,duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type,tween_overshoot);
 			new_tween->tween_property(child,NodePath("modulate"),Color(1.0,1.0,1.0,0.0),duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type,tween_overshoot);
-			//new_tween->connect("finished_or_killed",callable_mp(child,&Control::queue_free));
+			auto control_as_node = Object::cast_to<Node>(child);
+			if (control_as_node != nullptr) {
+				new_tween->connect("finished_or_killed",callable_mp(control_as_node,&Node::queue_free));
+			}
+			return new_tween;
 		}
 	}
 	return nullptr;
