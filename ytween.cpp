@@ -17,7 +17,6 @@ void YTweenWrap::emitted_finished() {
     }
 }
 
-
 void YTween::_bind_methods() {
     ClassDB::bind_method(D_METHOD("kill_tweens","owner","tag"), &YTween::kill_tweens,DEFVAL(0));
     ClassDB::bind_method(D_METHOD("create_unique_tween","owner","tag"), &YTween::create_unique_tween,DEFVAL(0));

@@ -147,6 +147,8 @@ public:
     bool waiting_for_step=false;
     bool waiting_for_step_no_processing=false;
 
+    bool get_is_last_step(int step_index) const {return step_index == action_steps.size()-1;}
+    bool get_waiting_for_step() const {return waiting_for_step;}
     void wait_for_step(bool prevent_processing = false) ;
 
     bool is_debugging = false;

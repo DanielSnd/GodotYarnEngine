@@ -296,11 +296,17 @@ void YBoxContainer::position_child_in_rect(Control *p_child, const Rect2 &p_rect
 		tracking_objects.push_back(control_instance);
 	}
 	if (positioning == POSITION_MANUAL) {
-		emit_signal("child_position_change",p_child,r.position,r.size);
+		if (Engine::get_singleton()->is_editor_hint()) {
+			p_child->set_rect(r);
+			p_child->set_rotation(0);
+			p_child->set_scale(Vector2(1, 1));
+		} else {
+			emit_signal("child_position_change",p_child,r.position,r.size);
+		}
 	} else if (positioning == POSITION_YTWEEN) {
 		if (is_object_new) {
-			p_child->set_position(r.position);
-			p_child->set_size(r.size);
+			p_child->set_position(r.position+new_element_offset);
+			p_child->set_size(r.size*0.5);
 		}
 		if (YTween::get_singleton() != nullptr) {
 			auto tween_created = YTween::get_singleton()->create_unique_tween(p_child);
@@ -308,10 +314,9 @@ void YBoxContainer::position_child_in_rect(Control *p_child, const Rect2 &p_rect
 			tween_created->tween_property(p_child,NodePath("position"),r.position,tween_duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type,tween_overshoot);
 			tween_created->tween_property(p_child,NodePath("size"),r.size,tween_duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type,tween_overshoot);
 		} else {
-			auto tween_created = create_tween();
-			tween_created->set_parallel(true);
-			tween_created->tween_property(p_child,NodePath("position"),r.position,tween_duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type,tween_overshoot);
-			tween_created->tween_property(p_child,NodePath("size"),r.size,tween_duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type,tween_overshoot);
+			p_child->set_rect(r);
+			p_child->set_rotation(0);
+			p_child->set_scale(Vector2(1, 1));
 		}
 	} else {
 		p_child->set_rect(r);
@@ -407,9 +412,13 @@ YBoxContainer::AlignmentMode YBoxContainer::get_alignment() const {
 Ref<Tween> YBoxContainer::animated_free_child(Control* child, Vector2 exiting_offset, float duration) {
 	if (child != nullptr && child->is_inside_tree()) {
 		if (YTween::get_singleton() != nullptr) {
+			// if (child->get_parent_control() == this) {
+			// 	remove_child(child);
+			// 	get_parent(add_child(child));
+			// }
 			auto new_tween = YTween::get_singleton()->create_unique_tween(child);
 			new_tween->set_parallel(true);
-			new_tween->tween_property(child,NodePath("position"),exiting_offset,duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type,tween_overshoot);
+			new_tween->tween_property(child,NodePath("position"),child->get_position()+exiting_offset,duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type,tween_overshoot);
 			new_tween->tween_property(child,NodePath("modulate"),Color(1.0,1.0,1.0,0.0),duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type,tween_overshoot);
 			auto control_as_node = Object::cast_to<Node>(child);
 			if (control_as_node != nullptr) {
@@ -521,7 +530,7 @@ void YBoxContainer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "tween_transition", PROPERTY_HINT_ENUM, "Linear,Quint,Quart,Quad,Expo,Elastic,Cubic,Circ,Bounce,Back,Spring"), "set_tween_transition_type", "get_tween_transition_type");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "tween_ease_type", PROPERTY_HINT_ENUM, "EaseIn,EaseOut,EaseInOut,EaseOutIn"), "set_tween_ease_type", "get_tween_ease_type");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "vertical"), "set_vertical", "is_vertical");
-	ADD_SIGNAL(MethodInfo("child_position_change", PropertyInfo(Variant::OBJECT, "child", PROPERTY_HINT_RESOURCE_TYPE, "Node"),PropertyInfo(Variant::VECTOR3, "new_pos"),PropertyInfo(Variant::VECTOR3, "new_size")));
+	ADD_SIGNAL(MethodInfo("child_position_change", PropertyInfo(Variant::OBJECT, "child", PROPERTY_HINT_RESOURCE_TYPE, "Node"),PropertyInfo(Variant::VECTOR2, "new_pos"),PropertyInfo(Variant::VECTOR2, "new_size")));
 	BIND_THEME_ITEM(Theme::DATA_TYPE_CONSTANT, YBoxContainer, separation);
 }
 

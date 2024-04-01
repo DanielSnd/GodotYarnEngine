@@ -49,7 +49,7 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_prevent_proceed_to_next_action"), &YGameState::get_prevent_proceed_to_next_action);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "prevent_proceed_to_next_action"), "set_prevent_proceed_to_next_action", "get_prevent_proceed_to_next_action");
 
-    ClassDB::bind_method(D_METHOD("get_overridinge_game_action_count"), &YGameState::get_overridinge_game_action_count);
+    ClassDB::bind_method(D_METHOD("get_overriding_game_action_count"), &YGameState::get_overridinge_game_action_count);
     ClassDB::bind_method(D_METHOD("get_future_game_action_count"), &YGameState::get_future_game_action_count);
     ClassDB::bind_method(D_METHOD("get_past_game_action_count"), &YGameState::get_past_game_action_count);
     ClassDB::bind_method(D_METHOD("get_previous_game_action"), &YGameState::get_previous_game_action);
@@ -189,7 +189,7 @@ void YGameState::do_process(double delta) {
         //HAS A CURRENT GAMEACTION!!
         //Has it ended?
 
-        if (current_game_action->finished) {
+        if (current_game_action->finished  && !current_game_action->waiting_for_step) {
             if (wait_before_going_to_next_action > 0.0) {
                 wait_before_going_to_next_action-=delta;
                 return;
@@ -218,7 +218,7 @@ void YGameState::do_process(double delta) {
 
         //IF WAITING FOR STEP AND NOT PROCESSING DON'T DO PROCESSING
         if (!current_game_action->waiting_for_step_no_processing) {
-            if(!current_game_action->process_action(static_cast<float>(delta))) {
+            if(!current_game_action->process_action(static_cast<float>(delta)) && !current_game_action->waiting_for_step) {
                 current_game_action->end_action();
                 game_actions_done_since_started_counting+=1;
                 past_game_actions.push_back(current_game_action);
@@ -230,7 +230,7 @@ void YGameState::do_process(double delta) {
 
             if (frame_count_before_doing_slow_process > 0.5) {
                 frame_count_before_doing_slow_process=0;
-                if(!current_game_action->slow_process_action(static_cast<float>(delta))) {
+                if(!current_game_action->slow_process_action(static_cast<float>(delta)) && !current_game_action->waiting_for_step) {
                     current_game_action->end_action();
                     game_actions_done_since_started_counting+=1;
                     past_game_actions.push_back(current_game_action);
@@ -254,8 +254,8 @@ void YGameState::do_process(double delta) {
                     emit_signal("changed_turn_player_id",last_turn_player_id,current_game_action->player_turn);
                     last_turn_player_id = current_game_action->player_turn;
                 }
-                current_game_action->enter_action();
                 emit_signal("changed_current_action",current_game_action);
+                current_game_action->enter_action();
             }
             return;
         }
@@ -265,8 +265,8 @@ void YGameState::do_process(double delta) {
             future_game_actions.remove_at(0);
             //print_line("Popped the front of futuregameactions, is current game action valid? ",current_game_action," ",current_game_action.is_valid());
             if (current_game_action.is_valid()) {
-                current_game_action->enter_action();
                 emit_signal("changed_current_action",current_game_action);
+                current_game_action->enter_action();
                 return;
             }
         }

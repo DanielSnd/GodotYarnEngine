@@ -77,6 +77,8 @@ void YGameAction::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_player_turn"), &YGameAction::get_player_turn);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "turn_player_id"), "set_player_turn", "get_player_turn");
 
+    ClassDB::bind_method(D_METHOD("check_is_last_step","step_index"), &YGameAction::get_is_last_step);
+    ClassDB::bind_method(D_METHOD("check_waiting_for_step"), &YGameAction::get_waiting_for_step);
     ClassDB::bind_method(D_METHOD("wait_for_step","prevent_processing"), &YGameAction::wait_for_step);
     ClassDB::bind_method(D_METHOD("release_step"), &YGameAction::release_step);
 
@@ -98,6 +100,8 @@ void YGameAction::_bind_methods() {
 
 
 void YGameAction::release_step() {
+    if(!waiting_for_step)
+        return;
     waiting_for_step=false;
     waiting_for_step_no_processing = false;
     int current_action_steps_in_list = static_cast<int>(action_steps.size());
@@ -106,6 +110,9 @@ void YGameAction::release_step() {
             Ref<YActionStep> data = action_steps[i];
             GDVIRTUAL_CALL(_on_waiting_step_released,data->get_step_index(),data->get_step_identifier(),data->step_data,false);
             emit_signal("released_waited_step",data->step_index);
+            emit_signal("action_stepped",data->step_index);
+            steps_consumed+=1;
+            break;
         }
     }
 }
@@ -138,6 +145,9 @@ void YGameAction::wait_for_step(bool prevent_processing) {
 void YGameAction::end_action() {
     started=true;
     finished=true;
+    if (waiting_for_step) {
+        ERR_PRINT(vformat("YGameState Action %s called end action while waiting for a step."));
+    }
     if (is_debugging) {
         print_line(vformat("%s is calling end action",get_name()));
     }
@@ -182,7 +192,11 @@ void YGameAction::step_action(Ref<YActionStep> data,bool is_ending) {
         GDVIRTUAL_CALL(_on_stepped_action,data->get_step_index(),data->get_step_identifier(),data->step_data,is_ending);
         data->step_taken=true;
         data->step_taken_as_ending = is_ending;
-        emit_signal("action_stepped",data->step_index);
+        if (!waiting_for_step)
+            emit_signal("action_stepped",data->step_index);
+        else {
+            steps_consumed -= 1;
+        }
     }
 }
 
