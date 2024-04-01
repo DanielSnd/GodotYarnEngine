@@ -39,6 +39,8 @@ void YMenu::_bind_methods() {
     ClassDB::bind_static_method("YMenu", D_METHOD("calculate_ideal_control_center","control_size", "control_parent"), &YMenu::calculate_ideal_control_center);
     ADD_SIGNAL(MethodInfo("go_back_to_menu"));
     ADD_SIGNAL(MethodInfo("started_menu"));
+    ADD_SIGNAL(MethodInfo("on_back_to_menu"));
+    
 
     GDVIRTUAL_BIND(_can_back_button_auto_close_menu)
     GDVIRTUAL_BIND(_on_back_button_pressed);
