@@ -163,10 +163,15 @@ public:
     void clear_all_players() {
         for (auto gmp: game_players) {
             if (gmp.value != nullptr) {
+                if (current_turn_player != nullptr && current_turn_player == gmp.value)
+                    current_turn_player = nullptr;
                 gmp.value->queue_free();
             }
         }
         game_players.clear();
+        if (current_turn_player != nullptr) {
+            current_turn_player = nullptr;
+        }
     }
 
     void clear_all_game_actions() {
@@ -174,6 +179,9 @@ public:
             current_game_action.unref();
         }
         last_turn_player_id = -1;
+        if (current_turn_player != nullptr) {
+            current_turn_player = nullptr;
+        }
         overriding_game_actions.clear();
         future_game_actions.clear();
         past_game_actions.clear();
