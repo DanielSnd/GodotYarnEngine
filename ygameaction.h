@@ -23,6 +23,9 @@ protected:
 public:
     int step_index;
     int get_step_index() const {return step_index;}
+    bool step_waiting;
+    bool get_step_waiting() const{return step_waiting;}
+    void set_step_waiting(bool b ){ step_waiting = b;}
     bool step_taken;
     bool get_step_taken() const{return step_taken;}
     void set_step_taken(bool b ){ step_taken = b;}
@@ -66,7 +69,7 @@ public:
 
     void set_instant_execute(bool b) { instant_execute = false; }
     bool get_instant_execute() const { return instant_execute; }
-
+    int last_step_ran = 0;
     HashMap<int,Variant> action_parameters;
     YGameAction* set_action_parameter(int param, const Variant& v) {action_parameters[param] = v; return this;}
 

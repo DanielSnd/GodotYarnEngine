@@ -51,7 +51,7 @@ void YTween::kill_tweens(Node *p_owner, uint64_t p_tag) {
     uint64_t desired_key = p_tag;
     if (p_owner != nullptr) {
         uint64_t node_id = p_owner->get_instance_id();
-        node_id += p_tag;
+        desired_key += node_id;
     }
     if (tween_finder.has(desired_key)) {
         for (const auto& tween_wrap: tween_finder[desired_key]) {
@@ -164,7 +164,7 @@ Ref<YTweenWrap> YTween::create_tween(Node* node_owner, uint64_t tag) {
     uint64_t desired_key = tag;
     if (node_owner != nullptr) {
         uint64_t node_id = node_owner->get_instance_id();
-        node_id += tag;
+        desired_key += node_id;
     }
     Ref<YTweenWrap> tween = memnew(YTweenWrap(true));
     tween->connect("finished",callable_mp(tween.ptr(),&YTweenWrap::emitted_finished));
