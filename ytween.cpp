@@ -13,6 +13,7 @@ void YTweenWrap::_bind_methods() {
 void YTweenWrap::emitted_finished() {
     if (!emitted_finished_or_killed) {
         emitted_finished_or_killed=true;
+        //print_line("Emit finish signal");
         emit_signal("finished_or_killed");
     }
 }
@@ -49,21 +50,25 @@ void YTween::do_physics_process(double delta) {
 
 void YTween::kill_tweens(Node *p_owner, uint64_t p_tag) {
     uint64_t desired_key = p_tag;
-    if (p_owner != nullptr) {
+    if (p_owner != nullptr && p_owner->is_inside_tree()) {
         uint64_t node_id = p_owner->get_instance_id();
         desired_key += node_id;
     }
+    //print_line("Killing tweens with key ",desired_key," does tweenfinder have? ",tween_finder.has(desired_key));
     if (tween_finder.has(desired_key)) {
         for (const auto& tween_wrap: tween_finder[desired_key]) {
-            if (tween_wrap.is_valid()) {
-                tween_wrap->emitted_finished();
-                tween_wrap->kill();
+            if (!tween_wrap.is_null() && tween_wrap.is_valid()) {
+                if (!tween_wrap->emitted_finished_or_killed) {
+                    tween_wrap->emitted_finished();
+                    tween_wrap->kill();
+                    tweens.erase(tween_wrap);
+                }
                 tween_wrap->clear();
-                tweens.erase(tween_wrap);
             }
         }
         tween_finder.erase(desired_key);
     }
+   // print_line("Finished Killing tweens with key ",desired_key," does tweenfinder have? ",tween_finder.has(desired_key));
 }
 
 Ref<YTweenWrap> YTween::tween_scale_unique(Node *p_owner, float desired_size,float desired_duration,Tween::EaseType ease_type,Tween::TransitionType trans_type,float desired_delay, uint64_t p_tag) {
@@ -162,22 +167,24 @@ Ref<YTweenWrap> YTween::create_unique_tween(Node *node_owner, uint64_t tag) {
 
 Ref<YTweenWrap> YTween::create_tween(Node* node_owner, uint64_t tag) {
     uint64_t desired_key = tag;
-    if (node_owner != nullptr) {
+    //print_line("Create tween with tag ",tag);
+    if (node_owner != nullptr && node_owner->is_inside_tree()) {
         uint64_t node_id = node_owner->get_instance_id();
         desired_key += node_id;
     }
     Ref<YTweenWrap> tween = memnew(YTweenWrap(true));
-    tween->connect("finished",callable_mp(tween.ptr(),&YTweenWrap::emitted_finished));
+    tween->connect("finished",callable_mp(tween.ptr(),&YTweenWrap::emitted_finished), CONNECT_ONE_SHOT);
     tween->tween_list_id = desired_key;
+    //print_line("Creating a new tween with desired key ",desired_key," does tweenfinder have? ",tween_finder.has(desired_key));
     if (!tween_finder.has(desired_key)) {
         Vector<Ref<YTweenWrap>> new_list;
-        tween_finder[desired_key] = new_list;
         new_list.append(tween);
+        tween_finder[desired_key] = new_list;
     } else {
         tween_finder[desired_key].append(tween);
     }
-
     tweens.push_back(tween);
+    //print_line("Created a new tween with desired key ",desired_key);
     return tween;
 }
 

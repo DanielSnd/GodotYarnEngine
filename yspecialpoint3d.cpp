@@ -6,15 +6,15 @@
 
 void YSpecialPoint3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_point_priority"), &YSpecialPoint3D::get_point_priority);
-    ClassDB::bind_method(D_METHOD("set_point_priority","point_priority"), &YSpecialPoint3D::set_point_priority);
+    ClassDB::bind_method(D_METHOD("set_point_priority","point_priority"), &YSpecialPoint3D::set_point_priority,DEFVAL(0));
     ADD_PROPERTY(PropertyInfo(Variant::INT, "point_priority"), "set_point_priority", "get_point_priority");
 
     ClassDB::bind_method(D_METHOD("get_point_type"), &YSpecialPoint3D::get_point_type);
-    ClassDB::bind_method(D_METHOD("set_point_type","point_type"), &YSpecialPoint3D::set_point_type);
+    ClassDB::bind_method(D_METHOD("set_point_type","point_type"), &YSpecialPoint3D::set_point_type,DEFVAL(0));
     ADD_PROPERTY(PropertyInfo(Variant::INT, "point_type"), "set_point_type", "get_point_type");
     
     ClassDB::bind_method(D_METHOD("get_point_status"), &YSpecialPoint3D::get_point_status);
-    ClassDB::bind_method(D_METHOD("set_point_status","point_status"), &YSpecialPoint3D::set_point_status);
+    ClassDB::bind_method(D_METHOD("set_point_status","point_status"), &YSpecialPoint3D::set_point_status,DEFVAL(0));
     ADD_PROPERTY(PropertyInfo(Variant::INT, "point_status"), "set_point_status", "get_point_status");
 }
 

@@ -26,8 +26,6 @@ public:
 
     void emitted_finished();
 
-    void _start_tweeners();
-
     YTweenWrap() : Tween() {
         tween_list_id = 0;
     }
