@@ -14,7 +14,10 @@
 class YSpecialPoint3D;
 
 YSpecialPoint3DGizmoPlugin::YSpecialPoint3DGizmoPlugin() {
-    create_icon_material("yspecialpoint_gizmo_3d_icon", EditorNode::get_singleton()->get_editor_theme()->get_icon(SNAME("GizmoDecal"), EditorStringName(EditorIcons)));
+    Color desired_color = Color(1.0,1.0,1.0,1.0);
+    create_icon_material("yspecialpoint_gizmo_3d_icon",
+        EditorNode::get_singleton()->get_editor_theme()->
+        get_icon(SNAME("GizmoDecal"), EditorStringName(EditorIcons)),false,desired_color);
 }
 
 bool YSpecialPoint3DGizmoPlugin::has_gizmo(Node3D *p_spatial) {
@@ -30,8 +33,14 @@ int YSpecialPoint3DGizmoPlugin::get_priority() const {
 }
 
 void YSpecialPoint3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
-    const Ref<Material> icon = get_material("yspecialpoint_gizmo_3d_icon", p_gizmo);
+    YSpecialPoint3D *specialpoint = Object::cast_to<YSpecialPoint3D>(p_gizmo->get_node_3d());
+
+    const Ref<StandardMaterial3D> icon = get_material("yspecialpoint_gizmo_3d_icon", p_gizmo);
     p_gizmo->add_unscaled_billboard(icon, 0.03);
+
+    auto priority_point = specialpoint->get_point_priority();
+    icon->set_albedo(Color(0.2, 0.9, 0.98).lerp(Color(0.6, 0.7, 0.4),
+                                                Math::inverse_lerp(static_cast<float>(-1.0), static_cast<float>(20.0), static_cast<float>(priority_point))));
 }
 
 #endif
