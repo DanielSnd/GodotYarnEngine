@@ -211,7 +211,16 @@ void YGameState::do_process(double delta) {
                     ERR_PRINT("YGameState Attempted to take an action step that wasn't valid");
                     current_game_action->steps_consumed+=1;
                 } else {
-                    current_game_action->step_action(current_game_action->action_steps[current_game_action->steps_consumed],false);
+                    auto current_possible_step = current_game_action->action_steps[current_game_action->steps_consumed];
+                    if (current_possible_step.is_valid()) {
+                        // THIS STEP WAS ALREADY TAKEN, CONSUME!
+                        if (current_possible_step->get_step_taken()) {
+                            current_game_action->steps_consumed+=1;
+                        }
+                        else {
+                            current_game_action->step_action(current_game_action->action_steps[current_game_action->steps_consumed],false);
+                        }
+                    }
                 }
             }
         }

@@ -215,7 +215,9 @@ void YGameAction::exit_action() {
             continue;
         }
         auto action_data = action_steps[i];
-        step_action(action_data,true);
+        if (!action_data->get_step_taken()) {
+            step_action(action_data,true);
+        }
     }
     if (is_debugging) {
         print_line(vformat("%s is exiting action",get_name()));
