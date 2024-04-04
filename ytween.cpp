@@ -10,6 +10,21 @@ void YTweenWrap::_bind_methods() {
     ADD_SIGNAL(MethodInfo("finished_or_killed"));
 }
 
+void YTweenWrap::register_finished_extra_callback() {
+    connect("finished",callable_mp(this,&YTweenWrap::emitted_finished));
+}
+
+void YTweenWrap::register_node_kill_when(Node* p_node_owner) {
+    p_node_owner->connect("tree_exiting", callable_mp(this,&YTweenWrap::kill_due_to_node_tree_exiting));
+}
+
+void YTweenWrap::kill_due_to_node_tree_exiting() {
+    if (!emitted_finished_or_killed) {
+        kill();
+        clear();
+        YTween::get_singleton()->kill_specific_tween(this);
+    }
+}
 void YTweenWrap::emitted_finished() {
     if (!emitted_finished_or_killed) {
         emitted_finished_or_killed=true;
@@ -48,6 +63,24 @@ void YTween::do_physics_process(double delta) {
     process_tweens(delta,true);
 }
 
+void YTween::kill_specific_tween(Ref<YTweenWrap> specific_tween) {
+    if (!specific_tween.is_null() && specific_tween.is_valid()) {
+        auto _desired_list_id = specific_tween->tween_list_id;
+        if (tween_finder.has(_desired_list_id)) {
+            if (tween_finder[_desired_list_id].size() <= 1)
+                tween_finder.erase(_desired_list_id);
+            else
+                tween_finder[_desired_list_id].erase(specific_tween);
+        }
+        specific_tween->kill();
+        specific_tween->clear();
+        if (!specific_tween->emitted_finished_or_killed) {
+            specific_tween->emitted_finished();
+        }
+        tweens.erase(specific_tween);
+    }
+}
+
 void YTween::kill_tweens(Node *p_owner, uint64_t p_tag) {
     uint64_t desired_key = p_tag;
     if (p_owner != nullptr && p_owner->is_inside_tree()) {
@@ -60,9 +93,9 @@ void YTween::kill_tweens(Node *p_owner, uint64_t p_tag) {
             if (!tween_wrap.is_null() && tween_wrap.is_valid()) {
                 if (!tween_wrap->emitted_finished_or_killed) {
                     tween_wrap->emitted_finished();
-                    tween_wrap->kill();
-                    tweens.erase(tween_wrap);
                 }
+                tween_wrap->kill();
+                tweens.erase(tween_wrap);
                 tween_wrap->clear();
             }
         }
@@ -168,12 +201,14 @@ Ref<YTweenWrap> YTween::create_unique_tween(Node *node_owner, uint64_t tag) {
 Ref<YTweenWrap> YTween::create_tween(Node* node_owner, uint64_t tag) {
     uint64_t desired_key = tag;
     //print_line("Create tween with tag ",tag);
+    Ref<YTweenWrap> tween = memnew(YTweenWrap(true));
     if (node_owner != nullptr && node_owner->is_inside_tree()) {
         uint64_t node_id = node_owner->get_instance_id();
         desired_key += node_id;
+        tween->bind_node(node_owner);
+        tween->register_node_kill_when(node_owner);
     }
-    Ref<YTweenWrap> tween = memnew(YTweenWrap(true));
-    tween->connect("finished",callable_mp(tween.ptr(),&YTweenWrap::emitted_finished), CONNECT_ONE_SHOT);
+    tween->register_finished_extra_callback();
     tween->tween_list_id = desired_key;
     //print_line("Creating a new tween with desired key ",desired_key," does tweenfinder have? ",tween_finder.has(desired_key));
     if (!tween_finder.has(desired_key)) {
@@ -188,6 +223,32 @@ Ref<YTweenWrap> YTween::create_tween(Node* node_owner, uint64_t tag) {
     return tween;
 }
 
+// void SceneTree::process_tweens(double p_delta, bool p_physics) {
+//     _THREAD_SAFE_METHOD_
+//     // This methods works similarly to how SceneTreeTimers are handled.
+//     List<Ref<Tween>>::Element *L = tweens.back();
+//
+//     for (List<Ref<Tween>>::Element *E = tweens.front(); E;) {
+//         List<Ref<Tween>>::Element *N = E->next();
+//         // Don't process if paused or process mode doesn't match.
+//         if (!E->get()->can_process(paused) || (p_physics == (E->get()->get_process_mode() == Tween::TWEEN_PROCESS_IDLE))) {
+//             if (E == L) {
+//                 break;
+//             }
+//             E = N;
+//             continue;
+//         }
+//
+//         if (!E->get()->step(p_delta)) {
+//             E->get()->clear();
+//             tweens.erase(E);
+//         }
+//         if (E == L) {
+//             break;
+//         }
+//         E = N;
+//     }
+// }
 void YTween::process_tweens(double p_delta, bool p_physics) {
     // This methods works similarly to how SceneTreeTimers are handled.
     List<Ref<YTweenWrap>>::Element *L = tweens.back();
@@ -195,7 +256,8 @@ void YTween::process_tweens(double p_delta, bool p_physics) {
     for (List<Ref<YTweenWrap>>::Element *E = tweens.front(); E;) {
         List<Ref<YTweenWrap>>::Element *N = E->next();
         // Don't process if paused or process mode doesn't match.
-        if (!E->get()->can_process(paused) || (p_physics == (E->get()->get_process_mode() == Tween::TWEEN_PROCESS_IDLE))) {
+        //!E->get()->can_process(paused) ||
+        if ((p_physics == (E->get()->get_process_mode() == Tween::TWEEN_PROCESS_IDLE))) {
             if (E == L) {
                 break;
             }
@@ -204,11 +266,12 @@ void YTween::process_tweens(double p_delta, bool p_physics) {
         }
 
         if (!E->get()->step(p_delta)) {
-            if (!tween_finder.has(E->get()->tween_list_id)) {
-                if (tween_finder[E->get()->tween_list_id].size() <= 1)
-                    tween_finder.erase(E->get()->tween_list_id);
+            auto _desired_list_id = E->get()->tween_list_id;
+            if (tween_finder.has(_desired_list_id)) {
+                if (tween_finder[_desired_list_id].size() <= 1)
+                    tween_finder.erase(_desired_list_id);
                 else
-                    tween_finder[E->get()->tween_list_id].erase(E->get());
+                    tween_finder[_desired_list_id].erase(E->get());
             }
             E->get()->clear();
             tweens.erase(E);

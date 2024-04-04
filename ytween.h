@@ -20,10 +20,15 @@ class YTweenWrap : public Tween {
 protected:
     static void _bind_methods();
 
+
 public:
     uint64_t tween_list_id;
     bool emitted_finished_or_killed = false;
 
+    void kill_due_to_node_tree_exiting();
+    void register_finished_extra_callback();
+
+    void register_node_kill_when(Node *p_node_owner);
     void emitted_finished();
 
     YTweenWrap() : Tween() {
@@ -48,6 +53,8 @@ public:
     HashMap<uint64_t,Vector<Ref<YTweenWrap>>> tween_finder;
     void do_process(double delta);
     void do_physics_process(double delta);
+
+    void kill_specific_tween(Ref<YTweenWrap> specific_tween);
 
     void kill_tweens(Node* p_owner, uint64_t p_tag = 0);
 
