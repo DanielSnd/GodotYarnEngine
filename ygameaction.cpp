@@ -140,7 +140,7 @@ void YGameAction::wait_for_step(bool prevent_processing) {
     waiting_for_step_no_processing = prevent_processing;
     int current_action_steps_in_list = static_cast<int>(action_steps.size());
     for (int i = current_action_steps_in_list-1; i >= 0; --i) {
-        if (action_steps[i] != nullptr && action_steps[i].is_valid() && action_steps[i]->step_index == last_step_ran) {
+        if (action_steps[i] != nullptr && action_steps[i].is_valid()  && action_steps[i]->step_taken && action_steps[i]->step_index == last_step_ran) {
             Ref<YActionStep> data = action_steps[i];
             emit_signal("waiting_for_step",data->step_index);
             break;
