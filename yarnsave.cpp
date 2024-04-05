@@ -152,11 +152,12 @@ bool YSave::load_settings() {
         print_line(vformat("Parse JSON failed. Error at line %d: %s", jason->get_error_line(), jason->get_error_message()));
         return false;
     }
-    settings_path = jason->get_data();
+    settings_data = jason->get_data();
     return true;
 }
 
 YSave::YSave() {
+
 }
 
 YSave::~YSave() {
