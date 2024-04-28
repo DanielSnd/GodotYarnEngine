@@ -4,8 +4,8 @@
 
 #ifndef ASSETPLACER_H
 #define ASSETPLACER_H
-#include "scene/resources/style_box_flat.h"
 #if TOOLS_ENABLED
+#include "scene/resources/style_box_flat.h"
 #include "YSpecialPoint3DGizmoPlugin.h"
 #include "editor/plugins/node_3d_editor_plugin.h"
 #include "editor/themes/editor_scale.h"
@@ -41,7 +41,8 @@
 #include "../yarnphysics.h"
 #include "core/math/random_number_generator.h"
 #include "editor/editor_interface.h"
-
+#include "editor/filesystem_dock.h"
+#include "editor/editor_properties.h"
 class YSpecialPoint3D;
 namespace yarnengine {
     class AssetPanelEditorBottomPanel;
@@ -55,6 +56,8 @@ namespace yarnengine {
         Range *zoom;
 
     public:
+
+        Variant get_drag_data(const Point2 &p_point) override;
         void set_bottom_panel_owner(AssetPanelEditorBottomPanel* new_owner) {bottom_panel_owner = new_owner;}
         virtual bool can_drop_data(const Point2 &p_point, const Variant &p_data) const override;
         virtual void drop_data(const Point2 &p_point, const Variant &p_data) override;
@@ -101,13 +104,17 @@ protected:
     HSlider *zoom = nullptr;
     HSlider *radius = nullptr;
     HSlider *place_amount = nullptr;
+	PopupMenu *tree_popup = nullptr;
     Label* place_amount_label = nullptr;
     Label* place_radius_label = nullptr;
+    Label* lock_to_layer_text = nullptr;
+    Label* debug_text_label = nullptr;
     SpinBox* random_scale_min = nullptr;
     SpinBox* random_scale_max = nullptr;
     SpinBox* offset_spin_box_x = nullptr;
     SpinBox* offset_spin_box_y = nullptr;
     SpinBox* offset_spin_box_z = nullptr;
+    CheckButton* enabled_button = nullptr;
     CheckButton* align_with_check_button = nullptr;
     CheckButton* randomize_scale = nullptr;
     CheckButton* custom_offset = nullptr;
@@ -120,6 +127,7 @@ protected:
     SubViewport *preview_subviewport = nullptr;
     DirectionalLight3D *preview_directional_light = nullptr;
     Camera3D* preview_camera_3d = nullptr;
+    EditorPropertyLayersGrid* lock_to_ground_layers = nullptr;
 
     struct QueueItem {
         Ref<Resource> resource;
@@ -134,7 +142,7 @@ protected:
     bool is_rendering_preview=false;
 public:
 
-    uint32_t ground_layer = 2;
+    uint32_t ground_layer = 0;
     void add_packedscene(const String& scene_path);
 
     void generate_preview_image(const String &p_path, Object *p_receiver, const StringName &p_receiver_func, const Variant &p_userdata);
@@ -144,7 +152,9 @@ public:
 
     virtual bool can_drop_data(const Point2 &p_point, const Variant &p_data) const override;
     virtual void drop_data(const Point2 &p_point, const Variant &p_data) override;
-
+    void set_debug_text(const String &p_debug_text) {
+       // debug_text_label->set_text(p_debug_text);
+    }
     void _delete_pressed();
     void _save_list_pressed();
 
@@ -165,6 +175,20 @@ public:
         }
     }
 
+    Vector<String> all_selected_paths() {
+        //Vector<int> get_selected_items();
+        Vector<String> returning_paths;
+        if (item_list != nullptr) {
+            auto _selected_items = item_list->get_selected_items();
+            for (auto _selected_item: _selected_items) {
+                returning_paths.append(item_list->get_item_metadata(_selected_item));
+            }
+        }
+        return returning_paths;
+    }
+    bool should_be_enabled() {
+        return enabled_button != nullptr && enabled_button->is_pressed();
+    }
     bool should_align_to_ground() {
         return align_with_check_button != nullptr && align_with_check_button->is_pressed();
     }
@@ -194,7 +218,11 @@ public:
 
     void _item_selected(int index_selected);
 
+    void _multi_selected(int p_index, bool p_selected);
+
     void _item_activated(int index_activated);
+
+    void show_in_filesystem();
 
     void changed_one_of_the_other_randomizers(bool new_value);
 
@@ -230,6 +258,9 @@ public:
         }
         return Vector3(0.0,0.0,0.0);
     }
+
+    void _grid_changed(uint32_t p_grid);
+
     String current_activated_item_path;
     int current_activated_item_i = -1;
     Ref<Mesh> current_cativated_item_mesh;
@@ -247,6 +278,10 @@ public:
         delete_pscene = memnew(Button);
         delete_pscene->set_theme_type_variation("FlatButton");
         side_by_side_top->add_child(delete_pscene);
+
+        debug_text_label = memnew(Label);
+        side_by_side_top->add_child(debug_text_label);
+
         add_child(memnew(HSeparator));
 
         PanelContainer* left_panel_container = memnew(PanelContainer);
@@ -320,14 +355,28 @@ public:
 
         options_vbox->add_child(memnew(VSeparator));
 
+        HBoxContainer* enabled_and_align_hbox = memnew(HBoxContainer);
+        enabled_and_align_hbox->set_anchors_preset(LayoutPreset::PRESET_VCENTER_WIDE);
+        options_vbox->add_child(enabled_and_align_hbox);
+
+        enabled_button = memnew(CheckButton);
+        enabled_button->set_text("Enabled");
+        enabled_and_align_hbox->add_child(enabled_button);
+        enabled_button->connect("toggled",callable_mp(this,&AssetPanelEditorBottomPanel::changed_one_of_the_other_randomizers));
+
+        // Wide empty separation control. (like BoxContainer::add_spacer())
+        Control *enabled_and_align_emptyc = memnew(Control);
+        enabled_and_align_emptyc->set_mouse_filter(MOUSE_FILTER_PASS);
+        enabled_and_align_emptyc->set_h_size_flags(SIZE_EXPAND_FILL);
+        enabled_and_align_hbox->add_child(enabled_and_align_emptyc);
+
         align_with_check_button = memnew(CheckButton);
         align_with_check_button->set_text("Align With Ground");
-        options_vbox->add_child(align_with_check_button);
+        enabled_and_align_hbox->add_child(align_with_check_button);
         if (ProjectSettings::get_singleton()->has_setting("assetplacer/align_with_ground")) {
             align_with_check_button->set_pressed(GLOBAL_GET("assetplacer/align_with_ground"));
         }
         align_with_check_button->connect("toggled",callable_mp(this,&AssetPanelEditorBottomPanel::changed_one_of_the_other_randomizers));
-
 
         HBoxContainer* rotate_y_x_hbox = memnew(HBoxContainer);
         rotate_y_x_hbox->set_anchors_preset(LayoutPreset::PRESET_VCENTER_WIDE);
@@ -447,6 +496,44 @@ public:
         offset_vector_hbox->add_child(offset_spin_box_y);
         offset_vector_hbox->add_child(offset_spin_box_z);
         options_vbox->add_child(offset_vector_hbox);
+
+        lock_to_layer_text = memnew(Label);
+        lock_to_layer_text->set_text("Lock to physics layer: ");
+        options_vbox->add_child(lock_to_layer_text);
+
+        lock_to_ground_layers = memnew(EditorPropertyLayersGrid);
+        const String p_basename = "layer_names/3d_physics";
+        constexpr int p_layer_group_size = 4;
+        constexpr int p_layer_count = 32;
+        Vector<String> p_collision_names;
+        Vector<String> p_tooltips;
+        for (int i = 0; i < p_layer_count; i++) {
+            String p_name;
+
+            if (ProjectSettings::get_singleton()->has_setting(p_basename + vformat("/layer_%d", i + 1))) {
+                p_name = GLOBAL_GET(p_basename + vformat("/layer_%d", i + 1));
+            }
+            if (p_name.is_empty()) {
+                p_name = vformat(TTR("Layer %d"), i + 1);
+            }
+            p_collision_names.push_back(p_name);
+            p_tooltips.push_back(p_name + "\n" + vformat(TTR("Bit %d, value %d"), i, 1 << i));
+        }
+        lock_to_ground_layers->names = p_collision_names;
+        lock_to_ground_layers->tooltips = p_tooltips;
+        lock_to_ground_layers->layer_group_size = p_layer_group_size;
+        lock_to_ground_layers->layer_count = p_layer_count;
+        if (ProjectSettings::get_singleton()->has_setting("assetplacer/lock_to_layer")) {
+            ground_layer = GLOBAL_GET("assetplacer/lock_to_layer");
+        }
+        lock_to_ground_layers->set_flag(ground_layer);
+        lock_to_ground_layers->connect("flag_changed", callable_mp(this, &AssetPanelEditorBottomPanel::_grid_changed));
+        lock_to_ground_layers->set_h_size_flags(SIZE_EXPAND_FILL);
+        //lock_to_ground_layers->custom
+        options_vbox->add_child(lock_to_ground_layers);
+        lock_to_ground_layers->queue_redraw();
+
+
         // HSlider *radius = nullptr;
         // HSlider *quantity = nullptr;
         // HSlider *min_random_scale = nullptr;
@@ -464,9 +551,10 @@ public:
         // item_list->set_icon_scale(2.4);
         item_list->set_fixed_icon_size(Size2i(64,64));
         item_list->set_max_columns(8);
-        item_list->set_select_mode(ItemList::SelectMode::SELECT_SINGLE);
+        item_list->set_select_mode(ItemList::SelectMode::SELECT_MULTI);
         item_list->connect("item_activated",callable_mp(this,&AssetPanelEditorBottomPanel::_item_activated));
         item_list->connect("item_selected",callable_mp(this,&AssetPanelEditorBottomPanel::_item_selected));
+        item_list->connect("multi_selected",callable_mp(this,&AssetPanelEditorBottomPanel::_multi_selected));
         item_list->connect("item_clicked",callable_mp(this,&AssetPanelEditorBottomPanel::_item_clicked));
         item_list->connect("empty_clicked",callable_mp(this,&AssetPanelEditorBottomPanel::_empty_clicked));
         underneath_hbox->set_v_size_flags(SIZE_EXPAND_FILL);
@@ -551,7 +639,7 @@ class AssetPlacerPlugin : public EditorPlugin {
 
     void handle_holding_down_sculpt();
 
-    void do_or_undo_placement(const Ref<PackedScene> &p_packed_scene, Dictionary placement_info, bool do_or_undo);
+    void do_or_undo_placement(const Ref<PackedScene> &p_packed_scene, const Dictionary& placement_info, bool do_or_undo);
 
     String get_asset_name_from_resource_path(const String &p_res_path);
 

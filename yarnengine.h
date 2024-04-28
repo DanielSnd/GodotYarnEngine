@@ -5,6 +5,8 @@
 #include "yarntime.h"
 #include "ytween.h"
 #include "ygamestate.h"
+#include "core/math/random_number_generator.h"
+#include "scene/3d/mesh_instance_3d.h"
 #include "scene/main/node.h"
 #include "scene/main/window.h"
 #include "scene/resources/packed_scene.h"
@@ -132,6 +134,8 @@ public:
     Ref<Resource> get_game_resource(int resource_type, int resource_id);
 
     bool has_game_resource(int resource_type, int param) ;
+
+    Vector3 get_random_point_on_top_of_mesh(MeshInstance3D* p_meshInstance, Ref<RandomNumberGenerator> p_rng);
 
     Array get_all_game_resources_types() {
         Array _return_array;

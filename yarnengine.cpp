@@ -60,6 +60,25 @@ bool YEngine::has_game_resource(int resource_type, int resource_id) {
     return false;
 }
 
+Vector3 YEngine::get_random_point_on_top_of_mesh(MeshInstance3D *p_meshInstance, Ref<RandomNumberGenerator> p_rng) {
+    if (p_meshInstance == nullptr) {
+        return Vector3{0.0,0.0,0.0};
+    }
+    if (p_rng.is_null() || !p_rng.is_valid())
+        p_rng.instantiate();
+
+    AABB boundingBox = p_meshInstance->get_aabb();
+    Vector3 position = boundingBox.position;
+    Vector3 size = boundingBox.size;
+
+    Vector3 randomPoint;
+    randomPoint.x = p_rng->randf_range(position.x, position.x + size.x);
+    randomPoint.y = position.y + size.y;
+    randomPoint.z = p_rng->randf_range(position.z, position.z + size.z);
+
+    return p_meshInstance->to_global(randomPoint);;
+}
+
 void YEngine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_current_scene"), &YEngine::get_current_scene);
 
@@ -99,6 +118,8 @@ void YEngine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("remove_game_resource","resource_type","resource_id"), &YEngine::remove_game_resource);
     ClassDB::bind_method(D_METHOD("get_all_game_resources_of_type","resource_type"), &YEngine::get_all_game_resources_of_type);
     ClassDB::bind_method(D_METHOD("get_all_game_resources_types"), &YEngine::get_all_game_resources_types);
+
+    ClassDB::bind_method(D_METHOD("get_random_point_on_top_of_mesh","mesh_instance_3d","random_number_generator"), &YEngine::get_random_point_on_top_of_mesh);
 
     ADD_SIGNAL(MethodInfo("changed_pause", PropertyInfo(Variant::BOOL, "pause_value")));
 }

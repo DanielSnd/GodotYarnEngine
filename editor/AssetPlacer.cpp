@@ -7,6 +7,20 @@
 
 using namespace godot;
 
+Variant yarnengine::AsssetPanelItemList::get_drag_data(const Point2 &p_point) {
+    if (bottom_panel_owner != nullptr && bottom_panel_owner->current_activated_item_i >= 0 && !bottom_panel_owner->current_activated_item_path.is_empty() ) {
+        Dictionary returndict;
+        Array asset_path_return;
+        asset_path_return.push_back(bottom_panel_owner->current_activated_item_path);
+        returndict["files"] = asset_path_return;
+        returndict["type"] = "files";
+        returndict["from_slot"] = bottom_panel_owner->current_activated_item_i;
+        returndict["self_dragging"] = true;
+        return returndict;
+    }
+    return Control::get_drag_data(p_point);
+}
+
 bool yarnengine::AsssetPanelItemList::can_drop_data(const Point2 &p_point, const Variant &p_data) const {
     if (bottom_panel_owner != nullptr)
         return bottom_panel_owner->can_drop_data(p_point,p_data);
@@ -32,6 +46,12 @@ void yarnengine::AssetPanelEditorBottomPanel::changed_one_of_the_other_randomize
     if (align_with_check_button != nullptr) {
         ProjectSettings::get_singleton()->set("assetplacer/align_with_ground", align_with_check_button->is_pressed());
     }
+    EditorNode::get_singleton()->get_project_settings()->queue_save();
+}
+
+void yarnengine::AssetPanelEditorBottomPanel::_grid_changed(uint32_t p_grid) {
+    ground_layer = p_grid;
+    ProjectSettings::get_singleton()->set("assetplacer/lock_to_layer", ground_layer);
     EditorNode::get_singleton()->get_project_settings()->queue_save();
 }
 
@@ -241,7 +261,7 @@ void yarnengine::AssetPanelEditorBottomPanel::_itemlist_thumbnail_done(const Str
 bool yarnengine::AssetPanelEditorBottomPanel::can_drop_data(const Point2 &p_point, const Variant &p_data) const {
    // print_line("Can drop data? ",p_data);
     Dictionary as_dictionary = p_data;
-    if (as_dictionary.get("type","") == "files")
+    if (as_dictionary.get("type","") == "files" && as_dictionary.has("files") && !as_dictionary.has("self_dragging"))
         return true;
     return false;
 }
@@ -262,7 +282,8 @@ void yarnengine::AssetPanelEditorBottomPanel::_delete_pressed() {
     if (nb_selected_items <= 0) {
         return;
     }
-    for (int i = 0; i < selected_items.size(); ++i) {
+
+    for (int i = selected_items.size() - 1; i >= 0; --i) {
         item_list->remove_item(selected_items[i]);
     }
 }
@@ -333,6 +354,16 @@ void yarnengine::AssetPanelEditorBottomPanel::_item_selected(int index_selected)
         }
     }
     emit_signal("selected_pscene");
+}
+
+void yarnengine::AssetPanelEditorBottomPanel::_multi_selected(int p_index, bool p_selected) {
+    if (p_selected) {
+        _item_selected(p_index);
+    } else {
+        if (!item_list->is_anything_selected()) {
+            deselect_all_items();
+        }
+    }
 }
 
 void yarnengine::AssetPanelEditorBottomPanel::_item_activated(int index_activated) {
@@ -470,6 +501,11 @@ void fragment() {
     preview_radius->set_visible(false);
 }
 
+void yarnengine::AssetPanelEditorBottomPanel::show_in_filesystem() {
+    // Ref<Resource> current_res = _get_current_resource();
+    // ERR_FAIL_COND(current_res.is_null());
+    // FileSystemDock::get_singleton()->navigate_to_path(current_res->get_path());
+}
 void yarnengine::AssetPlacerPlugin::display_brush() {
     //print_line("is raycast hit? ",is_raycast_hit);
     if (is_raycast_hit && bottom_panel != nullptr) {
@@ -545,6 +581,10 @@ void yarnengine::AssetPlacerPlugin::handle_holding_down_sculpt() {
                     undo_redo->create_action(TTR("Asset Placer Placement"), UndoRedo::MERGE_DISABLE);
                     Dictionary info_for_placing;
                     info_for_placing["resource_path"] = bottom_panel->current_activated_item_path;
+                    Vector<String> multiple_paths = bottom_panel->all_selected_paths();
+                    if (multiple_paths.size() > 1) {
+                        info_for_placing["multiple_paths"] = multiple_paths;
+                    }
                     info_for_placing["hit_pos"] = raycast_hit_pos;
                     info_for_placing["hit_normal"] = raycast_hit_normal;
                     info_for_placing["align_to_ground"] = bottom_panel->should_align_to_ground();
@@ -554,6 +594,9 @@ void yarnengine::AssetPlacerPlugin::handle_holding_down_sculpt() {
                     info_for_placing["random_y_scale"] = bottom_panel->should_random_y_scale();
                     info_for_placing["random_z_rotate"] = bottom_panel->should_random_z_rotate();
                     info_for_placing["randomize_scale"] = bottom_panel->should_randomize_scale();
+                    if (bottom_panel != nullptr && bottom_panel->ground_layer != 0) {
+                        info_for_placing["lock_to_layer"] = bottom_panel->ground_layer;
+                    }
                     if (bottom_panel->should_randomize_scale()) {
                         info_for_placing["min_max_random_scale"] = bottom_panel->get_min_max_random_scale();
                     }
@@ -568,9 +611,12 @@ void yarnengine::AssetPlacerPlugin::handle_holding_down_sculpt() {
     }
 }
 
-void yarnengine::AssetPlacerPlugin::do_or_undo_placement(const Ref<PackedScene>& p_packed_scene, Dictionary placement_info, bool do_or_undo) {
+void yarnengine::AssetPlacerPlugin::do_or_undo_placement(const Ref<PackedScene>& p_packed_scene, const Dictionary& placement_info, bool do_or_undo) {
     int amount = placement_info.get("placing_amount",0);
     String resource_path = placement_info.get("resource_path","");
+    Vector<String> multiple_paths = placement_info.get("multiple_paths",Vector<String>{});
+    bool has_multiple_paths = placement_info.has("multiple_paths");
+
     int initial_id = placement_info.get("initial_id",0);
     if (do_or_undo) {
         float radius = placement_info.get("placing_radius",0.0);
@@ -582,23 +628,31 @@ void yarnengine::AssetPlacerPlugin::do_or_undo_placement(const Ref<PackedScene>&
         bool random_z_rotate = placement_info.get("random_z_rotate",false);
         bool random_y_scale = placement_info.get("random_y_scale",false);
         bool randomize_scale = placement_info.get("randomize_scale",false);
+        uint32_t p_ground_layer = placement_info.get("lock_to_layer",UINT32_MAX);
         Vector2 random_min_max_scale = placement_info.get("min_max_random_scale",Vector2(1.0,1.0));
         int seed_of_placement = initial_id + static_cast<int>(hit_pos.x + hit_pos.y + hit_pos.z + hit_normal.x + hit_normal.y + hit_normal.z);
         Ref<RandomNumberGenerator> rng;
         rng.instantiate();
         rng->set_seed(seed_of_placement);
+
+        Ref<RandomNumberGenerator> rng_for_path;
+        rng_for_path.instantiate();
+        rng_for_path->set_seed(seed_of_placement);
         auto yphysics_singleton = YPhysics::get_singleton();
         if (amount != 0) {
             for (int i = 0; i < amount; ++i) {
-                auto* spawned = cast_to<Node3D>(p_packed_scene->instantiate());
+                Ref<PackedScene> get_scene_from_path = p_packed_scene;
+                if (has_multiple_paths) {
+                    get_scene_from_path = ResourceLoader::load(multiple_paths[rng_for_path->randi_range(0,static_cast<int>(multiple_paths.size())-1)]);
+                }
+                auto* spawned = cast_to<Node3D>(get_scene_from_path->instantiate());
                // print_line("Spawning ",bottom_panel->current_activated_pscene->get_name());
                 if (spawned != nullptr) {
                     parent_node_3d_->add_child(spawned);
-
                     spawned->set_owner(parent_node_3d_->get_owner() != nullptr ? parent_node_3d_->get_owner() : parent_node_3d_);
                     Vector3 pos_offset_check = Vector3(rng->randf_range(-1.1,1.1),0.0,rng->randf_range(-1.1,1.1)).normalized() * rng->randf_range(-radius,radius);
                     pos_offset_check.y += 8.0;
-                    auto result_raycast = yphysics_singleton->raycast3d(hit_pos+ pos_offset_check,Vector3(0.0,-1.0,0.0),50.0,YPhysics::CollideType::COLLIDE_WITH_BODIES,2);
+                    auto result_raycast = yphysics_singleton->raycast3d(hit_pos+ pos_offset_check,Vector3(0.0,-1.0,0.0),50.0,YPhysics::CollideType::COLLIDE_WITH_BODIES,p_ground_layer);
                     if (!result_raycast.is_empty()) {
                         Vector3 new_hit_pos = result_raycast["position"];
                         Vector3 new_hit_normal = result_raycast["normal"];
@@ -628,7 +682,7 @@ void yarnengine::AssetPlacerPlugin::do_or_undo_placement(const Ref<PackedScene>&
                             spawned->set_scale(current_spawned_scale);
                         }
                     }
-                    spawned->set_name(vformat("%s_%d",get_asset_name_from_resource_path(bottom_panel->current_activated_item_path),initial_id + i));
+                    spawned->set_name(vformat("%s_%d",get_asset_name_from_resource_path(get_scene_from_path->get_path()),initial_id + i));
                 }
             }
         }
@@ -636,7 +690,17 @@ void yarnengine::AssetPlacerPlugin::do_or_undo_placement(const Ref<PackedScene>&
         TypedArray<Node> find_stuff = parent_node_3d_->get_children();
         Vector<String> names_to_delete;
         Vector<Node*> nodes_to_delete;
+
+        Vector3 hit_pos = placement_info.get("hit_pos",Vector3(0.0,0.0,0.0));
+        Vector3 hit_normal = placement_info.get("hit_normal",Vector3(0.0,1.0,0.0));
+        int seed_of_placement = initial_id + static_cast<int>(hit_pos.x + hit_pos.y + hit_pos.z + hit_normal.x + hit_normal.y + hit_normal.z);
+        Ref<RandomNumberGenerator> rng_for_path;
+        rng_for_path.instantiate();
+        rng_for_path->set_seed(seed_of_placement);
         for (int i = 0; i < amount; ++i) {
+            if (has_multiple_paths) {
+               resource_path = multiple_paths[rng_for_path->randi_range(0,static_cast<int>(multiple_paths.size())-1)];
+            }
             names_to_delete.push_back((vformat("%s_%d",get_asset_name_from_resource_path(resource_path),initial_id + i)));
             //print_line("Adding to names to delete: ",names_to_delete[names_to_delete.size()-1]);
         }
@@ -698,11 +762,17 @@ void yarnengine::AssetPlacerPlugin::_bind_methods() {
 }
 
 void yarnengine::AssetPlacerPlugin::raycast(Camera3D *p_camera, const Ref<InputEvent> &p_event) {
-	if (p_camera == nullptr)
-		return;
-
+	if (p_camera == nullptr) {
+	    if (bottom_panel != nullptr)
+	        //bottom_panel->set_debug_text("Disabled because camera is null");
+	    return;
+	}
 	Ref<InputEventMouseMotion> mm = p_event;
-	if (mm.is_null() || !mm.is_valid()) return;
+	if (mm.is_null() || !mm.is_valid()) {
+	    if (bottom_panel != nullptr)
+	        //bottom_panel->set_debug_text("Disabled because input event is invalid");
+	    return;
+	}
 	Vector3 ray_origin = p_camera->project_ray_origin(mm->get_position());
 	Vector3 ray_dir = p_camera->project_ray_normal(mm->get_position());
 	float ray_dist = p_camera->get_far();
@@ -711,8 +781,11 @@ void yarnengine::AssetPlacerPlugin::raycast(Camera3D *p_camera, const Ref<InputE
 	ERR_FAIL_COND(space_state == nullptr);
 	PhysicsDirectSpaceState3D::RayResult result;
 	PhysicsDirectSpaceState3D::RayParameters ray_params;
-    if (bottom_panel != nullptr)
+    if (bottom_panel != nullptr && bottom_panel->ground_layer != 0)
         ray_params.collision_mask = bottom_panel->ground_layer;
+    else {
+        ray_params.collision_mask = UINT32_MAX;
+    }
 	ray_params.from = ray_origin;
 	ray_params.to = ray_origin + ray_dir * ray_dist;
 	if (space_state->intersect_ray(ray_params, result)) {
@@ -733,12 +806,13 @@ void yarnengine::AssetPlacerPlugin::raycast(Camera3D *p_camera, const Ref<InputE
 
 EditorPlugin::AfterGUIInput yarnengine::AssetPlacerPlugin::forward_3d_gui_input(Camera3D *p_camera, const Ref<InputEvent> &p_event) {
     if (bottom_panel == nullptr || !is_panel_visible) return EditorPlugin::forward_3d_gui_input(p_camera, p_event);
-    if (bottom_panel->current_activated_item_i < 0) {
+    if (bottom_panel->current_activated_item_i < 0 || bottom_panel->should_be_enabled() == false) {
         is_raycast_hit = false;
         if (preview_brush != nullptr && preview_brush->is_visible()) {
             preview_brush->set_visible(false);
             preview_radius->set_visible(false);
         }
+        //bottom_panel->set_debug_text(vformat("Disabled because current activated item is %d or shouldn't be enabled",bottom_panel->current_activated_item_i));
         return EditorPlugin::forward_3d_gui_input(p_camera, p_event);
     }
     Ref<InputEventMouseMotion> motion = p_event;
@@ -761,6 +835,8 @@ EditorPlugin::AfterGUIInput yarnengine::AssetPlacerPlugin::forward_3d_gui_input(
                 preview_brush->set_visible(false);
                 preview_radius->set_visible(false);
             }
+
+            //bottom_panel->set_debug_text("Disabled because mouse isn't in a valid viewport position");
             return AFTER_GUI_INPUT_PASS;
         }
     }
@@ -790,6 +866,7 @@ EditorPlugin::AfterGUIInput yarnengine::AssetPlacerPlugin::forward_3d_gui_input(
          return handle_input_event(p_event);;
     } else {
         is_holding_left_click = false;
+        //bottom_panel->set_debug_text("Not a raycast hit");
     }
     return EditorPlugin::forward_3d_gui_input(p_camera, p_event);
 }
