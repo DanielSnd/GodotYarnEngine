@@ -78,7 +78,7 @@ void YTime::_bind_methods() {
     ADD_SIGNAL(MethodInfo("clock_day_changed"));
 }
 
-YTime::YTime() {
+YTime::YTime(): last_time_ended_pause(0), last_time_stepped_clock(0) {
     amount_time_last_frame = 0.0;
     amount_when_paused = 0.0;
     amount_when_unpaused = 0.0;

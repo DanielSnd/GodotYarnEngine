@@ -390,7 +390,7 @@ void YSave::register_event_callback(Node *p_reference, int _event_id, const Call
         reg_event_callbacks[_event_id] = RegEventCallback{_event_id};
     if (!count_node_callbacks.has(_node_id)) {
         count_node_callbacks[_node_id] = 0;
-        p_reference->connect("tree_exiting", callable_mp(this, &YSave::clear_registered_event_callbacks).bind(_node_id), CONNECT_ONE_SHOT);
+        p_reference->connect("tree_exiting", callable_mp(this, &YSave::clear_registered_event_callbacks).bind(_node_id,_event_id), CONNECT_ONE_SHOT);
     }
     count_node_callbacks[_node_id] += 1;
     reg_event_callbacks[_event_id].callbacks.append(RegEventCallback::RegEventCallbackInstance(_node_id,p_callable));

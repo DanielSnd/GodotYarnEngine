@@ -43,6 +43,8 @@ public:
 
     Object *check_collision_sphere(Vector3 p_world_position, real_t radius, uint32_t collision_mask);
 
+    bool free_sphere_check(Vector3 p_world_position, real_t radius, uint32_t collision_mask);
+
     Dictionary raycast2d(Vector2 ray_origin, Vector2 ray_dir, float ray_dist, CollideType _collide_type, uint32_t layer_mask = UINT32_MAX);
 
     YPhysics();

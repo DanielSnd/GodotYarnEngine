@@ -29,7 +29,7 @@ protected:
         int event_id;
         Vector<RegTimeCallbackInstance> callbacks;
         RegTimeCallback() : event_id(0) {}
-        explicit RegTimeCallback(int time) : event_id(event_id) {}
+        explicit RegTimeCallback(int time) : event_id(0) {}
     };
     HashMap<int,RegTimeCallback> reg_clock_callbacks;
     HashMap<ObjectID,int> count_node_callbacks;

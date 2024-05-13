@@ -108,6 +108,7 @@ void YMenu::_on_back_button_pressed() {
 void YMenu::menu_queue_free() {
     queue_free();
 }
+
 void YMenu::_on_started_menu() {
     auto_start_menu = false;
     YEngine::get_singleton()->last_button_click_time = YEngine::get_singleton()->ytime->pause_independent_time;

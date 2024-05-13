@@ -23,7 +23,9 @@
 #include "ystate.h"
 #include "ystateoverride.h"
 #include "ygamelog.h"
+#include "yscenespawner3d.h"
 #include "ytween.h"
+#include "ythreader.h"
 // This is your singleton reference.
 static YEngine* YEnginePtr;
 static Ref<YSave> yarn_save_ref;
@@ -77,6 +79,9 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<YStateOverride>();
 	ClassDB::register_class<CircleWithConeTexture2D>();
  	ClassDB::register_class<AOBakeableMeshInstance>();
+ 	ClassDB::register_class<YThreader>();
+ 	ClassDB::register_class<YThreaderInterrupter>();
+ 	ClassDB::register_class<YSceneSpawner3D>();
 
 	// Initialize your singleton.
 	YEnginePtr = memnew(YEngine);

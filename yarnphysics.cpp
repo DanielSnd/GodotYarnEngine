@@ -21,6 +21,7 @@ void YPhysics::_bind_methods() {
     ClassDB::bind_method(D_METHOD("raycast3d", "ray_origin", "ray_direction", "ray_distance", "collide_type", "collision_mask"), &YPhysics::raycast3d,DEFVAL(COLLIDE_WITH_BODIES),DEFVAL(UINT32_MAX));
     ClassDB::bind_method(D_METHOD("intersect_sphere", "world_position", "radius", "collide_type","max_results", "collision_mask"), &YPhysics::_intersect_sphere,DEFVAL(COLLIDE_WITH_BODIES),DEFVAL(32),DEFVAL(UINT32_MAX));
     ClassDB::bind_method(D_METHOD("check_collision_sphere", "world_position", "radius", "collision_mask"), &YPhysics::check_collision_sphere,DEFVAL(1.0),DEFVAL(UINT32_MAX));
+    ClassDB::bind_method(D_METHOD("free_sphere_check", "world_position", "radius", "collision_mask"), &YPhysics::check_collision_sphere,DEFVAL(1.0),DEFVAL(UINT32_MAX));
 
 //    TypedArray<Dictionary> YPhysics::_intersect_sphere(const Vector3 p_world_position, real_t radius, CollideType _collide_type, int p_max_results, uint32_t collision_mask) {
     BIND_ENUM_CONSTANT(COLLIDE_WITH_BODIES);
@@ -176,6 +177,27 @@ Object* YPhysics::check_collision_sphere(const Vector3 p_world_position, real_t 
         return sr[0].collider;
     }
     return nullptr;
+}
+
+bool YPhysics::free_sphere_check(const Vector3 p_world_position, real_t radius, uint32_t collision_mask) {
+    auto world_3d = SceneTree::get_singleton()->get_root()->get_world_3d();
+    if (!has_sphere_shape) {
+        sphere_rid = PhysicsServer3D::get_singleton()->sphere_shape_create();
+    }
+    Vector<PhysicsDirectSpaceState3D::ShapeResult> sr;
+    sr.resize(1);
+    PhysicsDirectSpaceState3D::ShapeParameters shape_params;
+    shape_params.collide_with_areas = false;
+    shape_params.collide_with_bodies = true;
+    shape_params.collision_mask = collision_mask;
+    shape_params.shape_rid = sphere_rid;
+    PhysicsServer3D::get_singleton()->shape_set_data(sphere_rid, radius);
+    shape_params.transform = Transform3D{Basis{},p_world_position};
+    int rc = world_3d->get_direct_space_state()->intersect_shape(shape_params, sr.ptrw(), 1);
+    if (rc > 0) {
+        return true;
+    }
+    return false;
 }
 
 YPhysics *YPhysics::get_singleton() {
