@@ -34,6 +34,7 @@ void YGameAction::_notification(int p_what) {
 
 void YGameAction::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_action_parameter","param_id", "param_value"), &YGameAction::set_action_parameter);
+    ClassDB::bind_method(D_METHOD("remove_action_parameter","param_id"), &YGameAction::remove_action_parameter);
     ClassDB::bind_method(D_METHOD("increment_action_parameter","param_id", "increment_amount"), &YGameAction::increment_action_parameter);
     ClassDB::bind_method(D_METHOD("set_action_parameters","parameters_in_array"), &YGameAction::set_action_parameter_array);
     ClassDB::bind_method(D_METHOD("erase_action_parameters","parameters_in_array"), &YGameAction::erase_action_parameter_array);

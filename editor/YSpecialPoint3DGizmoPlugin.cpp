@@ -40,7 +40,7 @@ void YSpecialPoint3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 
     auto priority_point = specialpoint->get_point_priority();
     icon->set_albedo(Color(0.2, 0.9, 0.98).lerp(Color(0.6, 0.7, 0.4),
-                                                Math::inverse_lerp(static_cast<float>(-1.0), static_cast<float>(20.0), static_cast<float>(priority_point))));
+                                                static_cast<float>(CLAMP(Math::inverse_lerp(static_cast<float>(-1.0), static_cast<float>(20.0), static_cast<float>(priority_point)),0.0,1.0))));
 }
 
 #endif
