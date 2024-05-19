@@ -41,7 +41,7 @@ void YSave::_bind_methods() {
     ClassDB::bind_method(D_METHOD("save_settings"), &YSave::save_settings);
     ClassDB::bind_method(D_METHOD("load_settings"), &YSave::load_settings);
 
-    ClassDB::bind_method(D_METHOD("load_save_details", "desired_path"), &YSave::set_save_detail,DEFVAL(""));
+    ClassDB::bind_method(D_METHOD("load_save_details", "desired_path"), &YSave::load_save_details,DEFVAL(""));
 
     ClassDB::bind_method(D_METHOD("set_save_detail", "save_detail","detail_value"), &YSave::set_save_detail);
 
@@ -179,7 +179,7 @@ YSave *YSave::set_to_save(const String &p_save_key, const Variant &p_save_value)
 
 Variant YSave::get_from_save_dictionary(const Dictionary &save_dictionary, const String &p_save_key,const Variant &p_save_default) {
     if (!p_save_key.contains("/")) return save_dictionary.get(p_save_key,p_save_default);
-    auto splitted = p_save_key.split("/");
+    auto splitted = p_save_key.split("/",false);
     Dictionary desired_dict = save_dictionary;
     for (int i = 0; i < splitted.size(); ++i) {
         if (i == splitted.size()-1) {
@@ -203,7 +203,7 @@ YSave *YSave::set_to_save_dictionary(Dictionary &save_dictionary,const  String &
         return this;
     }
     Dictionary desired_dict = save_dictionary;
-    auto splitted = p_save_key.split("/");
+    auto splitted = p_save_key.split("/",false);
     for (int i = 0; i < splitted.size(); ++i) {
         if (i == splitted.size()-1) {
             desired_dict[splitted[i]] = p_save_value;
@@ -221,7 +221,7 @@ YSave *YSave::set_to_save_dictionary(Dictionary &save_dictionary,const  String &
 
 YSave *YSave::add_to_save_data(String p_save_key, Variant p_save_value) {
     if (p_save_key.contains("/")) {
-        auto splitted = p_save_key.split("/");
+        auto splitted = p_save_key.split("/",false);
         Dictionary desired_dict = save_data;
         for (int i = 0; i < splitted.size(); ++i) {
             if (i == splitted.size()-1) {

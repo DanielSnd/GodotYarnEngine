@@ -201,16 +201,7 @@ void YTime::set_is_paused(bool val) {
     }
 }
 
-void YTime::set_clock_and_emit_signal(const int val)  {
-    const int previous_clock = clock;
-    clock = val;
-    emit_signal(SNAME("clock_time_changed"));
-    if (get_clock_hour(previous_clock) != get_clock_hour(clock)) {
-        emit_signal(SNAME("clock_hour_changed"));
-        if (get_clock_day(previous_clock) != get_clock_day(clock)) {
-            emit_signal(SNAME("clock_day_changed"));
-        }
-    }
+void YTime::handle_clock_callbacks_for(const int val) {
     if (reg_clock_callbacks.has(val)) {
         auto _reg_event_callbacks = reg_clock_callbacks[val];
         Vector<Callable> callables_to_call;
@@ -232,5 +223,33 @@ void YTime::set_clock_and_emit_signal(const int val)  {
         for (const auto& to_call: callables_to_call)
             if (!to_call.is_null() && to_call.is_valid())
                 to_call.call(val);
+    }
+}
+
+void YTime::set_clock_and_emit_signal(const int val)  {
+    const int previous_clock = clock;
+    clock = val;
+    emit_signal(SNAME("clock_time_changed"));
+    if (get_clock_hour(previous_clock) != get_clock_hour(clock)) {
+        emit_signal(SNAME("clock_hour_changed"));
+        if (get_clock_day(previous_clock) != get_clock_day(clock)) {
+            emit_signal(SNAME("clock_day_changed"));
+        }
+    }
+    if (ABS(previous_clock - val) > 1) {
+        Vector<int> _passed_times_to_callback;
+        for (auto errlist: reg_clock_callbacks) {
+            if (errlist.key < clock) {
+                _passed_times_to_callback.push_back(errlist.key);
+            }
+        }
+        if (_passed_times_to_callback.size() > 0) {
+            for (int i = 0; i < _passed_times_to_callback.size(); ++i) {
+                handle_clock_callbacks_for(_passed_times_to_callback[i]);
+            }
+        }
+    }
+    if (reg_clock_callbacks.has(val)) {
+        handle_clock_callbacks_for(val);
     }
 }

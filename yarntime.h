@@ -51,6 +51,8 @@ public:
     bool get_is_paused() {return is_paused;}
     void set_is_paused(bool val);
 
+    void handle_clock_callbacks_for(int val);
+
     float time;
     float get_time() {return time;}
     void set_time(const float val) {time = val;}
