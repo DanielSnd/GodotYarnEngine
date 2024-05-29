@@ -295,7 +295,7 @@ bool YSave::request_load() {
         return false;
     }
     save_data = jason->get_data();
-    print_line("Jason loaded data ",save_data);
+    // print_line("Jason loaded data ",save_data);
     emit_signal(SNAME("loaded_save"),save_data);
     return true;
 }

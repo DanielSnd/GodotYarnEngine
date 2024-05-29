@@ -48,24 +48,46 @@ public:
     };
 
     LocalVector<SpawnableScene> spawnable_scenes;
+    Vector<Node*> spawned_nodes;
 
     float placing_radius = 10.0;
     bool auto_spawn_on_ready = false;
+    bool despawn_when_destroyed = false;
     bool spawn_one_of_each = false;
     bool align_to_ground = false;
     bool debug_show_spawn_area = false;
+    bool debug_spawn_messages = false;
     Vector2i spawn_amount = Vector2i{1,1};
     bool random_y_rotate = false;
     bool random_z_rotate = false;
     uint32_t lock_to_layer;
     bool random_y_scale = false;
     bool randomize_scale = false;
-    Vector2i min_max_random_scale = Vector2i{1,1};
+    Vector2 min_max_random_scale = Vector2{1,1};
     float prevent_stacking_radius = 0.0;
     uint32_t prevent_stacking_layer;
     bool prevent_spawn_under = false;
     bool force_spawn_under = false;
     float under_value = 0.0;
+
+    int respawn_only_until_maximum = 0;
+    int respawns_after_time = 0;
+
+    // debug_spawn_messages
+    bool get_debug_spawn_messages() const { return debug_spawn_messages; }
+    void set_debug_spawn_messages(bool value) { debug_spawn_messages = value; }
+
+    // despawn_when_destroyed
+    bool get_despawn_when_destroyed() const { return despawn_when_destroyed; }
+    void set_despawn_when_destroyed(bool value) { despawn_when_destroyed = value; }
+
+    // respawn_only_until_maximum
+    int get_respawn_only_until_maximum() const { return respawn_only_until_maximum; }
+    void set_respawn_only_until_maximum(int value) { respawn_only_until_maximum = value; }
+
+    // respawns_after_time
+    int get_respawns_after_time() const { return respawns_after_time; }
+    void set_respawns_after_time(int value) { respawns_after_time = value; }
 
     // placing_radius
     float get_placing_radius() const { return placing_radius; }
@@ -128,8 +150,8 @@ public:
     void set_randomize_scale(bool b) { randomize_scale = b; }
 
     // min_max_random_scale
-    Vector2i get_min_max_random_scale() const { return min_max_random_scale; }
-    void set_min_max_random_scale(Vector2i v) { min_max_random_scale = v; }
+    Vector2 get_min_max_random_scale() const { return min_max_random_scale; }
+    void set_min_max_random_scale(Vector2 v) { min_max_random_scale = v; }
 
     Ref<RandomNumberGenerator> spawning_rng;
     Node3D* spawn_single(const Ref<PackedScene> &spawn_scene,Vector3 spawn_pos, Vector3 spawn_normal = Vector3{0.0,0.0,0.0});

@@ -4,6 +4,8 @@
 
 #include "ystate.h"
 
+#include "yarnengine.h"
+
 void YState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_node_owner"), &YState::get_node_owner);
 
@@ -119,6 +121,12 @@ void YStateMachine::_bind_methods() {
     //
     ClassDB::bind_method(D_METHOD("process","delta"), &YStateMachine::process);
 
+
+    ClassDB::bind_method(D_METHOD("get_run_on_server_only"), &YStateMachine::get_run_on_server_only);
+    ClassDB::bind_method(D_METHOD("set_run_on_server_only","run_on_server_only"), &YStateMachine::set_run_on_server_only);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "run_on_server_only"), "set_run_on_server_only", "get_run_on_server_only");
+
+
     GDVIRTUAL_BIND(_on_state_machine_started,"node_owner")
     // GDVIRTUAL_BIND(_end_state_machine)
     GDVIRTUAL_BIND(_on_process,"delta")
@@ -130,6 +138,8 @@ void YStateMachine::_bind_methods() {
 }
 
 void YStateMachine::start_state_machine(Node *p_owner) {
+    if (run_on_server_only && !YEngine::get_singleton()->get_multiplayer()->is_server())
+        return;
     //print_line("Start state machine called");
     if (p_owner != nullptr) {
         fsm_owner = p_owner;
@@ -170,6 +180,8 @@ void YStateMachine::end_state_machine() {
 }
 
 void YStateMachine::process(float p_delta) {
+    if (run_on_server_only && !YEngine::get_singleton()->get_multiplayer()->is_server())
+        return;
     _counting++;
     if (override_with_state != nullptr && override_with_state != current_state) {
         transition(override_with_state);
@@ -206,6 +218,8 @@ void YStateMachine::process(float p_delta) {
 }
 
 void YStateMachine::transition(YState *p_state) {
+    if (run_on_server_only && !YEngine::get_singleton()->get_multiplayer()->is_server())
+        return;
     if (current_state != nullptr) {
         current_state->exit_state();
     }

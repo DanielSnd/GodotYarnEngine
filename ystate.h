@@ -5,6 +5,7 @@
 #ifndef YSTATE_H
 #define YSTATE_H
 #include "scene/main/node.h"
+#include "scene/main/multiplayer_api.h"
 #include "ystateoverride.h"
 
 class YStateOverride;
@@ -94,6 +95,10 @@ public:
 
     bool has_overriders = false;
     bool block_other_overrides = false;
+
+    bool run_on_server_only = false;
+    bool get_run_on_server_only() { return run_on_server_only; }
+    void set_run_on_server_only(bool v) { run_on_server_only = v; }
 
     YState* get_current_state() const {return current_state;}
     void set_current_state(YState* val)  { transition(val); }

@@ -12,10 +12,10 @@ void YSceneSpawner3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_placing_radius"), &YSceneSpawner3D::get_placing_radius);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "placing_radius"), "set_placing_radius", "get_placing_radius");
 
-    // debug_show_spawn_area
-    ClassDB::bind_method(D_METHOD("set_debug_show_spawn_area", "debug_show_spawn_area"), &YSceneSpawner3D::set_debug_show_spawn_area);
-    ClassDB::bind_method(D_METHOD("get_debug_show_spawn_area"), &YSceneSpawner3D::get_debug_show_spawn_area);
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "debug_show_spawn_area"), "set_debug_show_spawn_area", "get_debug_show_spawn_area");
+    // spawn_amount
+    ClassDB::bind_method(D_METHOD("set_spawn_amount", "spawn_amount"), &YSceneSpawner3D::set_spawn_amount);
+    ClassDB::bind_method(D_METHOD("get_spawn_amount"), &YSceneSpawner3D::get_spawn_amount);
+    ADD_PROPERTY(PropertyInfo(Variant::VECTOR2I, "spawn_amount"), "set_spawn_amount", "get_spawn_amount");
 
     // auto_spawn_on_ready
     ClassDB::bind_method(D_METHOD("set_auto_spawn_on_ready", "auto_spawn_on_ready"), &YSceneSpawner3D::set_auto_spawn_on_ready);
@@ -27,10 +27,20 @@ void YSceneSpawner3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_align_to_ground"), &YSceneSpawner3D::get_align_to_ground);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "align_to_ground"), "set_align_to_ground", "get_align_to_ground");
 
-    // spawn_amount
-    ClassDB::bind_method(D_METHOD("set_spawn_amount", "spawn_amount"), &YSceneSpawner3D::set_spawn_amount);
-    ClassDB::bind_method(D_METHOD("get_spawn_amount"), &YSceneSpawner3D::get_spawn_amount);
-    ADD_PROPERTY(PropertyInfo(Variant::VECTOR2I, "spawn_amount"), "set_spawn_amount", "get_spawn_amount");
+    // debug_show_spawn_area
+    ClassDB::bind_method(D_METHOD("set_debug_show_spawn_area", "debug_show_spawn_area"), &YSceneSpawner3D::set_debug_show_spawn_area);
+    ClassDB::bind_method(D_METHOD("get_debug_show_spawn_area"), &YSceneSpawner3D::get_debug_show_spawn_area);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "debug_show_spawn_area"), "set_debug_show_spawn_area", "get_debug_show_spawn_area");
+
+    // debug_spawn_messages
+    ClassDB::bind_method(D_METHOD("set_debug_spawn_messages", "debug_spawn_messages"), &YSceneSpawner3D::set_debug_spawn_messages);
+    ClassDB::bind_method(D_METHOD("get_debug_spawn_messages"), &YSceneSpawner3D::get_debug_spawn_messages);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "debug_spawn_messages"), "set_debug_spawn_messages", "get_debug_spawn_messages");
+
+    // despawn_when_destroyed
+    ClassDB::bind_method(D_METHOD("set_despawn_when_destroyed", "despawn_when_destroyed"), &YSceneSpawner3D::set_despawn_when_destroyed);
+    ClassDB::bind_method(D_METHOD("get_despawn_when_destroyed"), &YSceneSpawner3D::get_despawn_when_destroyed);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "despawn_when_destroyed"), "set_despawn_when_destroyed", "get_despawn_when_destroyed");
 
     // random_y_rotate
     ClassDB::bind_method(D_METHOD("set_random_y_rotate", "random_y_rotate"), &YSceneSpawner3D::set_random_y_rotate);
@@ -60,11 +70,21 @@ void YSceneSpawner3D::_bind_methods() {
     // min_max_random_scale
     ClassDB::bind_method(D_METHOD("set_min_max_random_scale", "min_max_random_scale"), &YSceneSpawner3D::set_min_max_random_scale);
     ClassDB::bind_method(D_METHOD("get_min_max_random_scale"), &YSceneSpawner3D::get_min_max_random_scale);
-    ADD_PROPERTY(PropertyInfo(Variant::VECTOR2I, "min_max_random_scale"), "set_min_max_random_scale", "get_min_max_random_scale");
+    ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "min_max_random_scale"), "set_min_max_random_scale", "get_min_max_random_scale");
 
     ClassDB::bind_method(D_METHOD("set_prevent_stacking_radius", "prevent_stacking_layer"), &YSceneSpawner3D::set_prevent_stacking_radius);
     ClassDB::bind_method(D_METHOD("get_prevent_stacking_radius"), &YSceneSpawner3D::get_prevent_stacking_radius);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "prevent_stacking_radius"), "set_prevent_stacking_radius", "get_prevent_stacking_radius");
+
+    // respawns_after_time
+    ClassDB::bind_method(D_METHOD("set_respawns_after_time", "respawns_after_time"), &YSceneSpawner3D::set_respawns_after_time);
+    ClassDB::bind_method(D_METHOD("get_respawns_after_time"), &YSceneSpawner3D::get_respawns_after_time);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "respawns_after_time"), "set_respawns_after_time", "get_respawns_after_time");
+
+    // respawn_only_until_maximum
+    ClassDB::bind_method(D_METHOD("set_respawn_only_until_maximum", "respawn_only_until_maximum"), &YSceneSpawner3D::set_respawn_only_until_maximum);
+    ClassDB::bind_method(D_METHOD("get_respawn_only_until_maximum"), &YSceneSpawner3D::get_respawn_only_until_maximum);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "respawn_only_until_maximum"), "set_respawn_only_until_maximum", "get_respawn_only_until_maximum");
 
     // prevent_stacking
     ClassDB::bind_method(D_METHOD("set_prevent_stacking_layer", "prevent_stacking_layer"), &YSceneSpawner3D::set_prevent_stacking_layer);
@@ -93,6 +113,7 @@ void YSceneSpawner3D::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("_get_spawnable_scenes"), &YSceneSpawner3D::_get_spawnable_scenes);
     ClassDB::bind_method(D_METHOD("_set_spawnable_scenes", "scenes"), &YSceneSpawner3D::_set_spawnable_scenes);
+
 
     ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "_spawnable_scenes", PROPERTY_HINT_NONE, "", (PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_INTERNAL)), "_set_spawnable_scenes", "_get_spawnable_scenes");
 
@@ -194,7 +215,9 @@ void YSceneSpawner3D::_notification(int p_what) {
     switch (p_what) {
         case NOTIFICATION_READY: {
             if (!Engine::get_singleton()->is_editor_hint()) {
-                get_tree()->create_timer(0.1)->connect("timeout",callable_mp(this,&YSceneSpawner3D::spawn_objects),CONNECT_ONE_SHOT);
+                Ref<RandomNumberGenerator> p_rng;
+                p_rng.instantiate();
+                get_tree()->create_timer(p_rng->randf_range(0.04,0.125))->connect("timeout",callable_mp(this,&YSceneSpawner3D::spawn_objects),CONNECT_ONE_SHOT);
             }
         } break;
     }
@@ -202,10 +225,12 @@ void YSceneSpawner3D::_notification(int p_what) {
 
 void YSceneSpawner3D::spawn_objects()
 {
-    print_line("Spawn objects visible?",is_visible()," empty spawnable? ",spawnable_scenes.is_empty());
+    if (debug_spawn_messages)
+        print_line("Spawn objects visible?",is_visible()," empty spawnable? ",spawnable_scenes.is_empty());
     if (!is_visible() || spawnable_scenes.is_empty()) return;
 
-    print_line("Actually spawn objects");
+    if (debug_spawn_messages)
+        print_line("Actually spawn objects");
     //Debug.Log("Spawn custom spawner");
     const int randomAmount = spawning_rng->randi_range(spawn_amount.x, spawn_amount.y);
     LocalVector<SpawnableScene> spawnObjects;
