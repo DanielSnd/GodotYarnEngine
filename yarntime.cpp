@@ -19,6 +19,10 @@ void YTime::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_is_paused"), &YTime::get_is_paused);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "is_paused"), "set_is_paused", "get_is_paused");
 
+    ClassDB::bind_method(D_METHOD("set_is_debugging", "is_debugging"), &YTime::set_is_debugging);
+    ClassDB::bind_method(D_METHOD("get_is_debugging"), &YTime::get_is_debugging);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "is_debugging"), "set_is_debugging", "get_is_debugging");
+
     ClassDB::bind_method(D_METHOD("set_time", "time"), &YTime::set_time);
     ClassDB::bind_method(D_METHOD("get_time"), &YTime::get_time);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "time"), "set_time", "get_time");
@@ -86,6 +90,7 @@ YTime::YTime(): last_time_ended_pause(0), last_time_stepped_clock(0) {
     time = 0.0;
     clock = 0u;
     is_paused = false;
+    is_debugging = false;
 }
 
 YTime::~YTime() {
@@ -124,7 +129,8 @@ void YTime::register_clock_callback(Node *p_reference, int _clock_time, const Ca
         reg_clock_callbacks[_clock_time] = RegTimeCallback{_clock_time};
     if (!count_node_callbacks.has(_node_id)) {
         count_node_callbacks[_node_id] = 0;
-        p_reference->connect("tree_exiting", callable_mp(this, &YTime::clear_clock_callbacks).bind(_node_id), CONNECT_ONE_SHOT);
+        if (!p_reference->is_connected("tree_exiting", callable_mp(this, &YTime::clear_clock_callbacks).bind(_node_id)))
+            p_reference->connect("tree_exiting", callable_mp(this, &YTime::clear_clock_callbacks).bind(_node_id), CONNECT_ONE_SHOT);
     }
     count_node_callbacks[_node_id] += 1;
     reg_clock_callbacks[_clock_time].callbacks.append(RegTimeCallback::RegTimeCallbackInstance(_node_id,p_callable));
@@ -201,6 +207,10 @@ void YTime::set_is_paused(bool val) {
     }
 }
 
+void YTime::set_is_debugging(bool val) {
+    is_debugging = val;
+}
+
 void YTime::handle_clock_callbacks_for(const int val) {
     if (reg_clock_callbacks.has(val)) {
         auto _reg_event_callbacks = reg_clock_callbacks[val];
@@ -222,7 +232,7 @@ void YTime::handle_clock_callbacks_for(const int val) {
         reg_clock_callbacks.erase(val);
         for (const auto& to_call: callables_to_call)
             if (!to_call.is_null() && to_call.is_valid())
-                to_call.call(val);
+                const auto result = to_call.call();
     }
 }
 
@@ -238,16 +248,20 @@ void YTime::set_clock_and_emit_signal(const int val)  {
     }
     if (ABS(previous_clock - val) > 1) {
         Vector<int> _passed_times_to_callback;
-        for (auto errlist: reg_clock_callbacks) {
+        for (const auto& errlist: reg_clock_callbacks) {
             if (errlist.key < clock) {
                 _passed_times_to_callback.push_back(errlist.key);
             }
         }
         if (_passed_times_to_callback.size() > 0) {
-            for (int i = 0; i < _passed_times_to_callback.size(); ++i) {
-                handle_clock_callbacks_for(_passed_times_to_callback[i]);
+            for (int i : _passed_times_to_callback) {
+                handle_clock_callbacks_for(i);
             }
         }
+    }
+    if (is_debugging) {
+        print_line(vformat("[YTime] Clock changed from %d to %d. Registered clock callbacks %d. Callbacks have new time? %s"
+            ,previous_clock,val,static_cast<int>(reg_clock_callbacks.size()), reg_clock_callbacks.has(val)));
     }
     if (reg_clock_callbacks.has(val)) {
         handle_clock_callbacks_for(val);

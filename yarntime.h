@@ -51,6 +51,10 @@ public:
     bool get_is_paused() {return is_paused;}
     void set_is_paused(bool val);
 
+    bool is_debugging = false;
+    bool get_is_debugging() {return is_debugging;}
+    void set_is_debugging(bool val);
+
     void handle_clock_callbacks_for(int val);
 
     float time;

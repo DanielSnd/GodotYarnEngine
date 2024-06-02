@@ -109,6 +109,8 @@ void YSceneSpawner3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_spawnable_scene", "index"), &YSceneSpawner3D::get_spawnable_scene);
     ClassDB::bind_method(D_METHOD("clear_spawnable_scenes"), &YSceneSpawner3D::clear_spawnable_scenes);
 
+    ClassDB::bind_method(D_METHOD("free_spawned_objects"), &YSceneSpawner3D::clear_spawned_objects);
+
     ClassDB::bind_method(D_METHOD("_get_spawnable_scenes"), &YSceneSpawner3D::_get_spawnable_scenes);
     ClassDB::bind_method(D_METHOD("_set_spawnable_scenes", "scenes"), &YSceneSpawner3D::_set_spawnable_scenes);
 
@@ -223,12 +225,15 @@ void YSceneSpawner3D::_notification(int p_what) {
 
 void YSceneSpawner3D::attempt_respawn_objects() {
     const int _current_spawned_amount = static_cast<int>(spawned_nodes.size());
+    if (debug_spawn_messages)
+        print_line(vformat("[SceneSpawner %d] Calling attempt_respawn_objects from time elapsed. Current spawned amount %d < only until maximum %d", get_instance_id(), _current_spawned_amount, respawn_only_until_maximum));
     if (_current_spawned_amount < respawn_only_until_maximum || respawn_only_until_maximum <= 0) {
         if (debug_spawn_messages)
             print_line(vformat("[SceneSpawner %d] Calling respawn from time elapsed", get_instance_id()));
         spawn_objects();
     } else {
-        print_line(vformat("[SceneSpawner %d] Called respawn from time elapsed but still have enough spawned so won't spawn more.", get_instance_id()));
+        if (debug_spawn_messages)
+            print_line(vformat("[SceneSpawner %d] Called respawn from time elapsed but still have enough spawned so won't spawn more.", get_instance_id()));
         if (respawns_after_time > 0) {
             YTime* ytime_singleton = YTime::get_singleton();
             ytime_singleton->register_clock_callback(this, ytime_singleton->clock + respawns_after_time, callable_mp(this, &YSceneSpawner3D::attempt_respawn_objects));
@@ -239,7 +244,7 @@ void YSceneSpawner3D::attempt_respawn_objects() {
 void YSceneSpawner3D::spawn_objects()
 {
     if (debug_spawn_messages)
-        print_line(vformat("[SceneSpawner %d] Spawn objects visible? %s empty spawnable? ", get_instance_id(),is_visible(),spawnable_scenes.is_empty()));
+        print_line(vformat("[SceneSpawner %d] Spawn objects visible? %s empty spawnable? %s", get_instance_id(),is_visible(),spawnable_scenes.is_empty()));
 
     if (respawns_after_time > 0) {
         YTime* ytime_singleton = YTime::get_singleton();
@@ -302,7 +307,7 @@ void YSceneSpawner3D::clear_spawned_objects() const {
 }
 
 void YSceneSpawner3D::do_spawn(const Vector<Ref<PackedScene>> &spawn_list) {
-    clear_spawned_objects();
+    //clear_spawned_objects();
     // addedRecently.Clear();
     // if (PreventStacking) PopulateAddedRecentlyWithAll();
     //Debug.Log("Spawner "+gameObject.name.ColorString(Color.cyan));
@@ -381,7 +386,7 @@ Node3D* YSceneSpawner3D::spawn_single(const Ref<PackedScene> &spawn_scene, Vecto
         spawned_instance->set_global_position(spawn_pos);
         const ObjectID spawned_object_id = spawned_instance->get_instance_id();
         if (debug_spawn_messages)
-            print_line(vformat("[SceneSpawner %d] Spawned instance %s instnace id %d at pos %s",get_instance_id(), spawned_instance->get_name(), spawned_object_id, spawn_pos));
+            print_line(vformat("[SceneSpawner %d] Spawned instance %s instance id %d at pos %s",get_instance_id(), spawned_instance->get_name(), spawned_object_id, spawn_pos));
         auto quaternion = spawned_instance->get_quaternion();
         if (align_to_ground)
             quaternion = Quaternion(Vector3(0.0,1.0,0.0),spawn_normal) * quaternion;
@@ -418,4 +423,23 @@ void YSceneSpawner3D::remove_from_spawned_nodes(ObjectID removing_id) {
 YSceneSpawner3D::YSceneSpawner3D(): lock_to_layer(0), prevent_stacking_radius(0), prevent_stacking_layer(0) {
     spawning_rng.instantiate();
     registered_next_spawn_time = false;
+    placing_radius = 10.0;
+    auto_spawn_on_ready = false;
+    despawn_when_destroyed = false;
+    spawn_one_of_each = false;
+    align_to_ground = false;
+    debug_show_spawn_area = false;
+    debug_spawn_messages = false;
+    spawn_amount = Vector2i{1,1};
+    random_y_rotate = false;
+    random_z_rotate = false;
+    random_y_scale = false;
+    randomize_scale = false;
+    min_max_random_scale = Vector2{1,1};
+    prevent_spawn_under = false;
+    force_spawn_under = false;
+    under_value = 0.0;
+
+    respawn_only_until_maximum = 0;
+    respawns_after_time = 0;
 }
