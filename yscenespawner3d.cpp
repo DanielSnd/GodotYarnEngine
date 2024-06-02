@@ -4,8 +4,6 @@
 
 #include "yscenespawner3d.h"
 
-#include "yarnphysics.h"
-
 
 void YSceneSpawner3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_placing_radius", "placing_radius"), &YSceneSpawner3D::set_placing_radius);
@@ -214,7 +212,7 @@ void YSceneSpawner3D::_set_spawnable_scenes(const Vector<String> &p_scenes) {
 void YSceneSpawner3D::_notification(int p_what) {
     switch (p_what) {
         case NOTIFICATION_READY: {
-            if (!Engine::get_singleton()->is_editor_hint()) {
+            if (!Engine::get_singleton()->is_editor_hint() && auto_spawn_on_ready) {
                 Ref<RandomNumberGenerator> p_rng;
                 p_rng.instantiate();
                 get_tree()->create_timer(p_rng->randf_range(0.04,0.125))->connect("timeout",callable_mp(this,&YSceneSpawner3D::spawn_objects),CONNECT_ONE_SHOT);
@@ -223,16 +221,47 @@ void YSceneSpawner3D::_notification(int p_what) {
     }
 }
 
+void YSceneSpawner3D::attempt_respawn_objects() {
+    const int _current_spawned_amount = static_cast<int>(spawned_nodes.size());
+    if (_current_spawned_amount < respawn_only_until_maximum || respawn_only_until_maximum <= 0) {
+        if (debug_spawn_messages)
+            print_line(vformat("[SceneSpawner %d] Calling respawn from time elapsed", get_instance_id()));
+        spawn_objects();
+    } else {
+        print_line(vformat("[SceneSpawner %d] Called respawn from time elapsed but still have enough spawned so won't spawn more.", get_instance_id()));
+        if (respawns_after_time > 0) {
+            YTime* ytime_singleton = YTime::get_singleton();
+            ytime_singleton->register_clock_callback(this, ytime_singleton->clock + respawns_after_time, callable_mp(this, &YSceneSpawner3D::attempt_respawn_objects));
+        }
+    }
+}
+
 void YSceneSpawner3D::spawn_objects()
 {
     if (debug_spawn_messages)
-        print_line("Spawn objects visible?",is_visible()," empty spawnable? ",spawnable_scenes.is_empty());
+        print_line(vformat("[SceneSpawner %d] Spawn objects visible? %s empty spawnable? ", get_instance_id(),is_visible(),spawnable_scenes.is_empty()));
+
+    if (respawns_after_time > 0) {
+        YTime* ytime_singleton = YTime::get_singleton();
+        ytime_singleton->register_clock_callback(this, ytime_singleton->clock + respawns_after_time, callable_mp(this, &YSceneSpawner3D::attempt_respawn_objects));
+        if (debug_spawn_messages)
+            print_line(vformat("[SceneSpawner %d] Current time %d Registered respawns for time %d", get_instance_id(), ytime_singleton->clock, ytime_singleton->clock + respawns_after_time));
+    }
+
     if (!is_visible() || spawnable_scenes.is_empty()) return;
 
     if (debug_spawn_messages)
-        print_line("Actually spawn objects");
-    //Debug.Log("Spawn custom spawner");
-    const int randomAmount = spawning_rng->randi_range(spawn_amount.x, spawn_amount.y);
+        print_line(vformat("[SceneSpawner %d] Actually spawn objects", get_instance_id()));
+
+    const int _current_spawned_amount = static_cast<int>(spawned_nodes.size());
+    if (_current_spawned_amount > spawn_amount.y) {
+        return;
+    }
+
+    const int randomAmount = spawning_rng->randi_range(MAX(spawn_amount.x - _current_spawned_amount,0), MAX(spawn_amount.y - _current_spawned_amount,0));
+    if (randomAmount <= 0)
+        return;
+
     LocalVector<SpawnableScene> spawnObjects;
     for (int i = 0; i < randomAmount; i++) {
         int max_spawnable_scenes = static_cast<int>(spawnable_scenes.size());
@@ -252,7 +281,7 @@ void YSceneSpawner3D::spawn_objects()
     for (size_t i = 0; i < spawnObjects.size(); i++) {
         SpawnableScene &sc = spawnObjects[i];
 
-        print_line(vformat("Check if cache is null for %s has cached? %s",sc.path,!sc.cache.is_null()));
+        //print_line(vformat("Check if cache is null for %s has cached? %s",sc.path,!sc.cache.is_null()));
         if (sc.cache.is_null()) {
             sc.cache = ResourceLoader::load(sc.path);
 
@@ -277,7 +306,8 @@ void YSceneSpawner3D::do_spawn(const Vector<Ref<PackedScene>> &spawn_list) {
     // addedRecently.Clear();
     // if (PreventStacking) PopulateAddedRecentlyWithAll();
     //Debug.Log("Spawner "+gameObject.name.ColorString(Color.cyan));
-    print_line(vformat("Called do spawn with list with amount %d",spawn_list.size()));
+    if (debug_spawn_messages)
+        print_line(vformat("Called do spawn with list with amount %d",spawn_list.size()));
     for (int i = 0; i < static_cast<int>(spawn_list.size()); i++) {
         add_object_random_position(spawn_list[i]);
     }
@@ -332,10 +362,11 @@ Node3D* YSceneSpawner3D::add_object_random_position(const Ref<PackedScene> &p_pa
         // }
         count++;
     }
-    print_line("Ended the attempts with count",count);
+    if (debug_spawn_messages)
+        print_line("Ended the attempts with count",count);
     if (!pos.is_zero_approx() && !raycast_results.is_empty()) {
         //item.prefabName
-        print_line("Spawn single packed scene");
+        //print_line("Spawn single packed scene");
         return spawn_single(p_packed_scene, pos,raycast_results.get("normal",Vector3{0.0,1.0,0.0}));
     }
     return nullptr;
@@ -348,6 +379,9 @@ Node3D* YSceneSpawner3D::spawn_single(const Ref<PackedScene> &spawn_scene, Vecto
         add_child(spawned_instance);
         spawned_instance->set_owner(get_owner());
         spawned_instance->set_global_position(spawn_pos);
+        const ObjectID spawned_object_id = spawned_instance->get_instance_id();
+        if (debug_spawn_messages)
+            print_line(vformat("[SceneSpawner %d] Spawned instance %s instnace id %d at pos %s",get_instance_id(), spawned_instance->get_name(), spawned_object_id, spawn_pos));
         auto quaternion = spawned_instance->get_quaternion();
         if (align_to_ground)
             quaternion = Quaternion(Vector3(0.0,1.0,0.0),spawn_normal) * quaternion;
@@ -366,10 +400,22 @@ Node3D* YSceneSpawner3D::spawn_single(const Ref<PackedScene> &spawn_scene, Vecto
             current_spawned_scale.y = current_spawned_scale.y + spawning_rng->randf_range(-1 * (initial_scale_y * 0.166f),(initial_scale_y * 0.166f));
             spawned_instance->set_scale(current_spawned_scale);
         }
+        spawned_nodes.push_back(spawned_instance->get_instance_id());
+        spawned_instance->connect("tree_exiting", callable_mp(this,&YSceneSpawner3D::remove_from_spawned_nodes).bind(spawned_object_id));
     }
     return spawned_instance;
 }
 
+void YSceneSpawner3D::remove_from_spawned_nodes(ObjectID removing_id) {
+    if (spawned_nodes.has(removing_id)) {
+        spawned_nodes.erase(removing_id);
+        if (debug_spawn_messages) {
+            print_line(vformat("[SceneSpawner %d] Removing from spawned nodes instance id %d",get_instance_id(), removing_id));
+        }
+    }
+}
+
 YSceneSpawner3D::YSceneSpawner3D(): lock_to_layer(0), prevent_stacking_radius(0), prevent_stacking_layer(0) {
     spawning_rng.instantiate();
+    registered_next_spawn_time = false;
 }

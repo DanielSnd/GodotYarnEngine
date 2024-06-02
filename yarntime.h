@@ -102,9 +102,9 @@ public:
         return vformat("%02d/%02d/%02d %02d:%02d",get_clock_day(val),current_month,get_clock_year(val),get_clock_hour(val),get_clock_minute(val));
     }
 
-    void register_clock_callback(Node* _reference, int _event_id, const Callable &callable);
-    void clear_clock_callbacks(ObjectID p_node_inst_id, int _event_id);
-    void clear_clock_callbacks_node(Node* _reference, int _event_id);
+    void register_clock_callback(Node* _reference, int _clock_time, const Callable &callable);
+    void clear_clock_callbacks(ObjectID p_node_inst_id, int _clock_time);
+    void clear_clock_callbacks_node(Node* _reference, int _clock_time);
 
     bool has_clock_time_passed(int from_time,int check_interval) {return from_time + check_interval < clock;}
 

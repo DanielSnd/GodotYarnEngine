@@ -54,24 +54,24 @@ public:
     TypedArray<Node> get_menu_stack() {
         TypedArray<Node> btns;
         for (int i = 0; i < menu_stack.size(); ++i) {
-            btns.append(menu_stack[i]);
+            btns.append(menu_stack.get(i));
         }
         return btns;
     }
 
     bool is_top_of_menu_stack(Node* test_menu) const {
-        return menu_stack.size() > 0 && test_menu != nullptr && menu_stack[menu_stack.size()-1] == test_menu;
+        return menu_stack.size() > 0 && test_menu != nullptr && menu_stack.get(menu_stack.size()-1) == test_menu;
     }
 
     void add_to_menu_stack(Node* adding_menu) {
         for (int i = 0; i < menu_stack.size(); ++i)
-            if (menu_stack[i] == adding_menu) return;
+            if (menu_stack.get(i) == adding_menu) return;
         menu_stack.push_back(adding_menu);
     }
 
     void remove_from_menu_stack(Node* removing_menu) {
         for (int i = 0; i < menu_stack.size(); ++i)
-            if (menu_stack[i] == removing_menu) {
+            if (menu_stack.get(i) == removing_menu) {
                 menu_stack.erase(removing_menu);
                 return;
             }

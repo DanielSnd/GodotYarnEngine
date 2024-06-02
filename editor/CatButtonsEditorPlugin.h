@@ -6,7 +6,7 @@
 #define CATBUTTONSEDITORPLUGIN_H
 
 #ifdef TOOLS_ENABLED
-#include "editor/editor_plugin.h"
+#include "editor/plugins/editor_plugin.h"
 #include "editor/editor_inspector.h"
 #include "scene/gui/separator.h"
 #include "scene/gui/button.h"

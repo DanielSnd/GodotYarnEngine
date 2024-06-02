@@ -9,6 +9,8 @@
 #include "core/templates/local_vector.h"
 #include "core/variant/typed_array.h"
 #include "scene/resources/packed_scene.h"
+#include "yarnphysics.h"
+#include "yarntime.h"
 
 class YSceneSpawner3D : public Node3D {
     GDCLASS(YSceneSpawner3D , Node3D);
@@ -17,6 +19,8 @@ private:
     static void _bind_methods();
 
     void _notification(int p_what);
+
+    void attempt_respawn_objects();
 
     void spawn_objects();
 
@@ -48,7 +52,7 @@ public:
     };
 
     LocalVector<SpawnableScene> spawnable_scenes;
-    Vector<Node*> spawned_nodes;
+    Vector<ObjectID> spawned_nodes;
 
     float placing_radius = 10.0;
     bool auto_spawn_on_ready = false;
@@ -155,9 +159,14 @@ public:
 
     Ref<RandomNumberGenerator> spawning_rng;
     Node3D* spawn_single(const Ref<PackedScene> &spawn_scene,Vector3 spawn_pos, Vector3 spawn_normal = Vector3{0.0,0.0,0.0});
+
+    void remove_from_spawned_nodes(ObjectID removing_id);
+
     void do_spawn(const Vector<Ref<PackedScene>> &spawn_list);
     Node3D* add_object_random_position(const Ref<PackedScene> &p_packed_scene);
     Dictionary random_position_on_registred_surface() const;
+
+    bool registered_next_spawn_time = false;
 
     YSceneSpawner3D();
 };
