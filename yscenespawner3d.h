@@ -41,9 +41,9 @@ protected:
 
     void clear_spawnable_scenes();
 
-    Vector<String> _get_spawnable_scenes() const;
+    TypedArray<String> _get_spawnable_scenes() const;
 
-    void _set_spawnable_scenes(const Vector<String> &p_scenes);
+    void _set_spawnable_scenes(const TypedArray<String> &p_scenes);
 
 public:
     struct SpawnableScene {

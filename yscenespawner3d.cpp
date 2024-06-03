@@ -114,8 +114,7 @@ void YSceneSpawner3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("_get_spawnable_scenes"), &YSceneSpawner3D::_get_spawnable_scenes);
     ClassDB::bind_method(D_METHOD("_set_spawnable_scenes", "scenes"), &YSceneSpawner3D::_set_spawnable_scenes);
 
-
-    ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "_spawnable_scenes", PROPERTY_HINT_NONE, "", (PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_INTERNAL)), "_set_spawnable_scenes", "_get_spawnable_scenes");
+    ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "_spawnable_scenes", PROPERTY_HINT_ARRAY_TYPE, vformat("%s/%s:",Variant::Type::STRING, PROPERTY_HINT_FILE)), "_set_spawnable_scenes", "_get_spawnable_scenes");
 
 
 }
@@ -177,7 +176,7 @@ void YSceneSpawner3D::add_spawnable_scene(const String &p_path) {
     SpawnableScene sc;
     sc.path = p_path;
     if (Engine::get_singleton()->is_editor_hint()) {
-        ERR_FAIL_COND(!FileAccess::exists(p_path));
+        ERR_FAIL_COND(!ResourceLoader::exists(p_path));
     }
     spawnable_scenes.push_back(sc);
 }
@@ -195,19 +194,23 @@ void YSceneSpawner3D::clear_spawnable_scenes() {
     spawnable_scenes.clear();
 }
 
-Vector<String> YSceneSpawner3D::_get_spawnable_scenes() const {
-    Vector<String> ss;
-    ss.resize(spawnable_scenes.size());
-    for (int i = 0; i < ss.size(); i++) {
-        ss.write[i] = spawnable_scenes[i].path;
+TypedArray<String> YSceneSpawner3D::_get_spawnable_scenes() const {
+    TypedArray<String> ss;
+    for (const auto & spawnable_scene : spawnable_scenes) {
+        ss.push_back(spawnable_scene.path);
     }
     return ss;
 }
 
-void YSceneSpawner3D::_set_spawnable_scenes(const Vector<String> &p_scenes) {
+void YSceneSpawner3D::_set_spawnable_scenes(const TypedArray<String> &p_scenes) {
     clear_spawnable_scenes();
     for (int i = 0; i < p_scenes.size(); i++) {
-        add_spawnable_scene(p_scenes[i]);
+        SpawnableScene sc;
+        sc.path = p_scenes[i];
+        if (Engine::get_singleton()->is_editor_hint() && !sc.path.is_empty()) {
+            ERR_FAIL_COND(!ResourceLoader::exists(sc.path));
+        }
+        spawnable_scenes.push_back(sc);
     }
 }
 

@@ -7,9 +7,11 @@
 #include "editor/AOBakeEditorPlugin.h"
 #include "editor/CatButtonsEditorPlugin.h"
 #include "editor/AssetPlacer.h"
+#include "editor/GSheetImporterEditorPlugin.h"
 #endif
 #include "AOBakeableMeshInstance.h"
 #include "CircleWithConeTexture2D.h"
+#include "gsheetimporter.h"
 #include "yarnmenu.h"
 #include "yarnphysics.h"
 #include "yarnsave.h"
@@ -45,10 +47,12 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 		ClassDB::register_class<yarnengine::YarnEditorCategory>();
 		ClassDB::register_class<yarnengine::YarnEditorSeparator>();
 		ClassDB::register_class<AOBakeEditorPlugin>();
+		ClassDB::register_class<GSheetImporterEditorPlugin>();
 		ClassDB::register_class<yarnengine::AssetPanelEditorBottomPanel>();
 		EditorPlugins::add_by_type<yarnengine::CatButtonsEditorPlugin>();
 		EditorPlugins::add_by_type<yarnengine::AssetPlacerPlugin>();
 		EditorPlugins::add_by_type<AOBakeEditorPlugin>();
+		EditorPlugins::add_by_type<GSheetImporterEditorPlugin>();
 	}
 #endif
 
@@ -56,6 +60,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
  			return;
 	}
 
+	ClassDB::register_class<GSheetImporter>();
 	ClassDB::register_class<YTime>();
 	ClassDB::register_class<YSave>();
 	ClassDB::register_class<YPhysics>();

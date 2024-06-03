@@ -91,6 +91,10 @@ public:
     void do_process();
     int string_to_hash(const String& str);
 
+    void setting_position_in_parent(Node *node_entered_tree, const Variant &p_spawn_pos);
+
+    Node *spawn(const Ref<PackedScene> &p_spawnable_scene, Node* p_desired_parent, const Variant &p_spawn_pos, bool p_force_readable_name);
+
     YEngine();
     ~YEngine();
 

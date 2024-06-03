@@ -107,6 +107,8 @@ void YEngine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_menu_stack"), &YEngine::get_menu_stack);
     ClassDB::bind_method(D_METHOD("get_menu_stack_size"), &YEngine::get_menu_stack_size);
 
+    ClassDB::bind_method(D_METHOD("spawn","packed_scene","parent","global_pos","force_readable_name"), &YEngine::spawn, DEFVAL(false));
+
     ClassDB::bind_method(D_METHOD("EKey","dict","value"), &YEngine::EKey);
     ClassDB::bind_method(D_METHOD("string_to_hash","input_string"), &YEngine::string_to_hash);
     ClassDB::bind_method(D_METHOD("seeded_shuffle","array","seed"), &YEngine::seeded_shuffle);
@@ -122,6 +124,7 @@ void YEngine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_random_point_on_top_of_mesh","mesh_instance_3d","random_number_generator"), &YEngine::get_random_point_on_top_of_mesh);
 
     ADD_SIGNAL(MethodInfo("changed_pause", PropertyInfo(Variant::BOOL, "pause_value")));
+    ADD_SIGNAL(MethodInfo("initialized"));
 }
 
 Variant YEngine::execute_button_click_callable_if_modulate(const Callable &p_callable,Control* p_control) {
@@ -209,6 +212,7 @@ void YEngine::_notification(int p_what) {
             }
         }
         case NOTIFICATION_READY: {
+            emit_signal("initialized");
             set_process(true);
             set_physics_process(true);
         } break;
@@ -298,6 +302,22 @@ int YEngine::string_to_hash(const String &str) {
         c = *chr++;
     }
     return static_cast<int>(~crc);
+}
+
+void YEngine::setting_position_in_parent(Node *node_entered_tree, const Variant &p_spawn_pos) {
+    if (node_entered_tree != nullptr) {
+        node_entered_tree->call("set_global_position",p_spawn_pos);
+    }
+}
+
+Node * YEngine::spawn(const Ref<PackedScene> &p_spawnable_scene, Node *p_desired_parent, const Variant &p_spawn_pos, bool p_force_readable_name) {
+    ERR_FAIL_COND_V_MSG(p_spawnable_scene.is_null() || !p_spawnable_scene.is_valid(), nullptr, "ERROR: Spawnable scene is not valid");
+    ERR_FAIL_COND_V_MSG(p_desired_parent == nullptr, nullptr, "ERROR: Parent node is not valid");
+    auto spawned_instance = p_spawnable_scene->instantiate();
+    ERR_FAIL_COND_V_MSG(spawned_instance == nullptr, nullptr, "ERROR: Spawned Instance is null");
+    p_desired_parent->connect("child_entered_tree",callable_mp(this,&YEngine::setting_position_in_parent).bind(p_spawn_pos), CONNECT_ONE_SHOT);
+    p_desired_parent->add_child(spawned_instance,p_force_readable_name);
+    return spawned_instance;
 }
 
 //
