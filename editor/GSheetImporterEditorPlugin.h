@@ -21,12 +21,12 @@ public:
 
     void FindImporterScripts();
 
-    void add_menu_item(const String &menu_name, const Ref<GSheetImporter> &script_desired);
+    void add_menu_item(const String &menu_prefix, const String &menu_name, const Ref<GSheetImporter> &script_desired);
 
     void clicked_menu_item(const String &import_name, const Ref<GSheetImporter> &script_desired);
 
     Dictionary menu_scripts;
-    Vector<Ref<GSheetImporter>> currently_importing;
+    Vector<String> added_menu_texts;
 
     GSheetImporterEditorPlugin();
 
