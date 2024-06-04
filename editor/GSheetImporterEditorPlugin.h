@@ -4,10 +4,12 @@
 
 #ifndef GSHEETIMPORTEREDITORPLUGIN_H
 #define GSHEETIMPORTEREDITORPLUGIN_H
+
+#ifdef TOOLS_ENABLED
+
 #include "../gsheetimporter.h"
 #include "editor/plugins/editor_plugin.h"
 
-#ifdef TOOLS_ENABLED
 
 class GSheetImporterEditorPlugin : public EditorPlugin {
     GDCLASS(GSheetImporterEditorPlugin, EditorPlugin);

@@ -4,6 +4,7 @@
 
 #include "GSheetImporterEditorPlugin.h"
 
+#ifdef TOOLS_ENABLED
 #include "core/io/dir_access.h"
 
 GSheetImporterEditorPlugin * GSheetImporterEditorPlugin::get_singleton() {
@@ -94,3 +95,4 @@ GSheetImporterEditorPlugin::~GSheetImporterEditorPlugin() {
         singleton = nullptr;
     }
 }
+#endif
