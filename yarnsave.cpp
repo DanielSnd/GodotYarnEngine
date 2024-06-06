@@ -62,6 +62,9 @@ void YSave::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_registered_event_time","event_id","time_happened"), &YSave::set_registered_event_time);
     ClassDB::bind_method(D_METHOD("remove_registered_event","event_id"), &YSave::remove_registered_event);
     ClassDB::bind_method(D_METHOD("has_time_elapsed_since_registered_event","event_id","current_time","elapsed_time"), &YSave::has_time_elapsed_since_registered_event);
+    ClassDB::bind_method(D_METHOD("has_registered_event","event_id"), &YSave::has_registered_event);
+    ClassDB::bind_method(D_METHOD("serialize_registered_events"), &YSave::serialize_registered_events);
+    ClassDB::bind_method(D_METHOD("deserialize_registered_events","registered_events_array"), &YSave::deserialize_registered_events);
 
 
     ClassDB::bind_method(D_METHOD("register_event_callback","node","event_id","callback"), &YSave::register_event_callback);
@@ -300,30 +303,38 @@ bool YSave::request_load() {
     return true;
 }
 
-void YSave::load_registered_events_from_save_data() {
+void YSave::deserialize_registered_events(Array _events_save) {
     registered_events.clear();
-    if (!save_data.has("regevents")) return;
-    Array _events_save = save_data["regevents"];
+    _events_save = _events_save.duplicate();
     while (_events_save.size() > 0) {
         if (_events_save.size() <= 1)
             _events_save.clear();
         else {
             const int key = _events_save.pop_front();
             const int val = _events_save.pop_front();
-            //WARN_PRINT(vformat("Loading events save %d : %d",key,val));
             registered_events[key] = val;
         }
     }
-   // WARN_PRINT(vformat("Result loading events save %d",registered_events.size()));
+}
+
+void YSave::load_registered_events_from_save_data() {
+    registered_events.clear();
+    if (!save_data.has("regevents")) return;
+    Array _events_save = save_data["regevents"];
+    deserialize_registered_events(_events_save);
 }
 
 void YSave::set_registered_events_to_save_data() {
+    save_data["regevents"] = serialize_registered_events();
+}
+
+Array YSave::serialize_registered_events() {
     Array _events_save;
-    for (auto registered_event: registered_events) {
+    for (const auto& registered_event: registered_events) {
         _events_save.append(registered_event.key);
         _events_save.append(registered_event.value);
     }
-    save_data["regevents"] = _events_save;
+    return _events_save;
 }
 
 void YSave::clear_registered_event_callbacks_node(Node *_reference, int _event_id) {

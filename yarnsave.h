@@ -94,8 +94,12 @@ public:
 
     bool request_load();
 
+    void deserialize_registered_events(Array _events_save);
+
     void load_registered_events_from_save_data();
     void set_registered_events_to_save_data();
+
+    Array serialize_registered_events();
 
     void register_event_callback(Node* _reference, int _event_id, const Callable &callable);
     void clear_registered_event_callbacks(ObjectID p_node_inst_id, int _event_id);
@@ -137,6 +141,9 @@ public:
     bool has_time_elapsed_since_registered_event(int event_id, int current_time, int elapsed_time) {
         int event_happened_time = registered_events.has(event_id) ? registered_events[event_id] : -1;
         return event_happened_time == -1 ? false : event_happened_time + elapsed_time < current_time;
+    }
+    bool has_registered_event(int event_id) const {
+        return registered_events.has(event_id);
     }
 
     Array get_registered_events() {
