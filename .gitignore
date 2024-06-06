@@ -8,6 +8,8 @@ export_presets.cfg
 
 # Imported translations (automatically generated from CSV files)
 *.translation
+*.arm64.d
+*.arm64.simulator.d
 
 # Mono-specific ignores
 .mono/
