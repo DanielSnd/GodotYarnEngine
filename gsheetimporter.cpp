@@ -75,9 +75,7 @@ void GSheetImporter::on_import_completed(int p_status, int p_code, const PackedS
         if (line.is_empty() || line.length() <= 1){
             columnNames.append(Variant(i));
         } else if (line.length() > 1) {
-            if (line.find(" ") != -1) {
-                line = line.replace(" ", "");
-            }
+            line = line.replace(" ", "").replace("\n","");
             columnNames.append(line);
             if (columnNames[0].operator String() == "0" && columnNames[1].operator String() == "1" && columnNames[2].operator String() == "2") {
                 columnNames.clear();
