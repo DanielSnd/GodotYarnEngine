@@ -106,6 +106,7 @@ void YEngine::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("get_menu_stack"), &YEngine::get_menu_stack);
     ClassDB::bind_method(D_METHOD("get_menu_stack_size"), &YEngine::get_menu_stack_size);
+    ClassDB::bind_method(D_METHOD("is_top_of_menu_stack","menu_to_check"), &YEngine::is_top_of_menu_stack);
 
     ClassDB::bind_method(D_METHOD("spawn","packed_scene","parent","global_pos","force_readable_name"), &YEngine::spawn, DEFVAL(false));
 

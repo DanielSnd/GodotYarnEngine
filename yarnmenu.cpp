@@ -24,6 +24,7 @@ void YMenu::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("add_to_menu_stack"), &YMenu::add_to_menu_stack);
     ClassDB::bind_method(D_METHOD("remove_from_menu_stack"), &YMenu::remove_from_menu_stack);
+    ClassDB::bind_method(D_METHOD("is_top_of_menu_stack"), &YMenu::is_top_of_menu_stack);
 
     ClassDB::bind_method(D_METHOD("set_back_button","back_button"), &YMenu::set_back_button);
 
