@@ -45,6 +45,7 @@ void YMenu::_bind_methods() {
 
     GDVIRTUAL_BIND(_can_back_button_auto_close_menu)
     GDVIRTUAL_BIND(_on_back_button_pressed);
+    GDVIRTUAL_BIND(_on_back_to_menu);
     GDVIRTUAL_BIND(_on_started_menu);
     GDVIRTUAL_BIND(_on_fade_out)
 }
