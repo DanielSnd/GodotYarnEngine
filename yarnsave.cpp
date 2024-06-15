@@ -71,6 +71,7 @@ void YSave::_bind_methods() {
     ClassDB::bind_method(D_METHOD("clear_registered_event_callbacks","node","event_id"), &YSave::clear_registered_event_callbacks_node,DEFVAL(-1));
 
     ADD_SIGNAL(MethodInfo("executed_save_reset"));
+    ADD_SIGNAL(MethodInfo("before_prepare_save"));
     ADD_SIGNAL(MethodInfo("prepare_save"));
     ADD_SIGNAL(MethodInfo("saved", PropertyInfo(Variant::STRING, "save_path")));
     ADD_SIGNAL(MethodInfo("loaded_save", PropertyInfo(Variant::DICTIONARY, "save_data")));
@@ -256,6 +257,7 @@ YSave *YSave::add_to_save_data(String p_save_key, Variant p_save_value) {
 
 
 void YSave::execute_save() {
+    emit_signal(SNAME("before_prepare_save"));
     emit_signal(SNAME("prepare_save"));
     save_next_frame = true;
 }
@@ -428,6 +430,7 @@ Dictionary YSave::load_save_details(const String &_path) {
 void YSave::request_save(bool immediate = false) {
     if (!has_started) return;
     if(immediate) {
+        emit_signal(SNAME("before_prepare_save"));
         emit_signal(SNAME("prepare_save"));
         actually_save();
     } else {

@@ -16,6 +16,7 @@
 #include "yarnphysics.h"
 #include "yarnsave.h"
 #include "yarntime.h"
+#include "ybone_attachment_3d.h"
 #include "yboxcontainer.h"
 #include "yvisualelement3d.h"
 #include "ygamestate.h"
@@ -87,6 +88,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
  	ClassDB::register_class<YThreader>();
  	ClassDB::register_class<YThreaderInterrupter>();
  	ClassDB::register_class<YSceneSpawner3D>();
+ 	ClassDB::register_class<YBoneAttachment3D>();
 
 	// Initialize your singleton.
 	YEnginePtr = memnew(YEngine);
