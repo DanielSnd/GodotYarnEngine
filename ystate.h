@@ -90,14 +90,16 @@ public:
     YState* current_state;
     Node* fsm_owner;
     YState* override_with_state;
-    int attempt_transition_interval = 2;
-    int _counting = 0;
+    int attempt_transition_interval;
+    int get_overrider_check_interval() const { return attempt_transition_interval; }
+    void set_overrider_check_interval(int v) { attempt_transition_interval = v; }
+    int _counting;
 
-    bool has_overriders = false;
-    bool block_other_overrides = false;
+    bool has_overriders;
+    bool block_other_overrides;
 
-    bool run_on_server_only = false;
-    bool get_run_on_server_only() { return run_on_server_only; }
+    bool run_on_server_only;
+    bool get_run_on_server_only() const { return run_on_server_only; }
     void set_run_on_server_only(bool v) { run_on_server_only = v; }
 
     YState* get_current_state() const {return current_state;}
@@ -105,9 +107,14 @@ public:
     Node* get_fsm_owner() const {return fsm_owner;}
 
     YStateMachine() {
+        has_overriders = false;
+        block_other_overrides = false;
+        run_on_server_only = false;
         current_state = nullptr;
         fsm_owner = nullptr;
         override_with_state = nullptr;
+        attempt_transition_interval = 2;
+        _counting = 0;
     }
     ~YStateMachine() {
         current_state = nullptr;

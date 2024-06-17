@@ -20,9 +20,11 @@ void YStateOverride::_bind_methods() {
 
 void YStateOverride::state_machine_setup(const Ref<YStateMachine> &p_owner) {
     fsm_owner = p_owner;
-    if (p_owner.is_valid())
+    if (p_owner.is_valid()) {
         p_owner->connect("attempt_override",callable_mp(this,&YStateOverride::attempt_override));
-    GDVIRTUAL_CALL(_on_state_machine_setup,p_owner);
+        GDVIRTUAL_CALL(_on_state_machine_setup,p_owner);
+        p_owner->has_overriders = true;
+    }
 }
 
 bool YStateOverride::override_condition() const {

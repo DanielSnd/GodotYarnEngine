@@ -126,7 +126,10 @@ void YStateMachine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_run_on_server_only","run_on_server_only"), &YStateMachine::set_run_on_server_only);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "run_on_server_only"), "set_run_on_server_only", "get_run_on_server_only");
 
-
+    ClassDB::bind_method(D_METHOD("get_overrider_check_interval"), &YStateMachine::get_overrider_check_interval);
+    ClassDB::bind_method(D_METHOD("set_overrider_check_interval","overrider_check_interval"), &YStateMachine::set_overrider_check_interval);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "overrider_check_interval"), "set_overrider_check_interval", "get_overrider_check_interval");
+    
     GDVIRTUAL_BIND(_on_state_machine_started,"node_owner")
     // GDVIRTUAL_BIND(_end_state_machine)
     GDVIRTUAL_BIND(_on_process,"delta")
@@ -159,7 +162,7 @@ void YStateMachine::start_state_machine(Node *p_owner) {
                 auto* overrider_child = Object::cast_to<YStateOverride>(children[i].operator Object*());
                 if (overrider_child != nullptr) {
                     overrider_child->state_machine_setup(this);
-                    has_overriders = true;
+                    // print_line("Found overrider child, has overriders?",has_overriders);
                 }
             }
         }
@@ -188,8 +191,9 @@ void YStateMachine::process(float p_delta) {
         override_with_state = nullptr;
         block_other_overrides = false;
         _counting = 0;
-        //print_line("Did an override transition, currnet override with state? ",override_with_state," block others? ",block_other_overrides," counting? ",_counting);
+        // print_line("Did an override transition, currnet override with state? ",override_with_state," block others? ",block_other_overrides," counting? ",_counting);
     }
+    // print_line(vformat("Counting %d attempt interval %d has overriders %s", _counting, attempt_transition_interval, has_overriders));
     if (_counting >= attempt_transition_interval) {
         _counting = 0;
         block_other_overrides = false;
