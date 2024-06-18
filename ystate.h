@@ -7,6 +7,7 @@
 #include "scene/main/node.h"
 #include "scene/main/multiplayer_api.h"
 #include "ystateoverride.h"
+#include "scene/2d/node_2d.h"
 
 class YStateOverride;
 class YStateMachine;
@@ -21,12 +22,14 @@ protected:
 public:
     enum CheckType {
         NONE = 0,
-        EQUAL = 1,
-        NOT_EQUAL = 2,
-        BIGGER_THAN = 3,
-        SMALLER_THAN = 4,
-        BIGGER_THAN_OR_EQUAL = 5,
-        SMALLER_THAN_OR_EQUAL = 6
+        TRUE = 1,
+        FALSE = 2,
+        EQUAL = 3,
+        NOT_EQUAL = 4,
+        BIGGER_THAN = 5,
+        SMALLER_THAN = 6,
+        BIGGER_THAN_OR_EQUAL = 7,
+        SMALLER_THAN_OR_EQUAL = 8
     };
 
     YState* pass_condition_state;
@@ -59,6 +62,8 @@ public:
     bool auto_override;
     void set_auto_override(bool val);
 
+    PackedStringArray get_configuration_warnings() const;
+
     bool has_valid_auto_override();
 
     bool can_auto_override() const;
@@ -88,15 +93,19 @@ public:
     TypedArray<NodePath> get_autooverride_ignore_if_states() const {return autooverride_ignore_if_states;}
 
     CheckType autooverride_check_type;
-    void set_autooverride_check_type(const CheckType val);
+    void set_autooverride_check_type(CheckType val);
     CheckType get_autooverride_check_type() const {return autooverride_check_type;}
 
     Node* autooverride_check_node;
-    void set_autooverride_check_node(Node* val) { autooverride_check_node = val;}
+    void set_autooverride_check_node(Node* val) {
+        autooverride_check_node = val;
+    update_configuration_warnings();
+    }
     Node* get_autooverride_check_node() const {return autooverride_check_node;}
 
     String autooverride_check_property;
-    void set_autooverride_check_property(const String &val) { autooverride_check_property = val;}
+    void set_autooverride_check_property(const String &val) { autooverride_check_property = val;
+    update_configuration_warnings();}
     String get_autooverride_check_property() const {return autooverride_check_property;}
 
     float autooverride_check_value;
@@ -191,7 +200,20 @@ public:
     void set_current_state(YState* val)  { transition(val); }
     Node* get_fsm_owner() const {return fsm_owner;}
 
-    YStateMachine() {
+    Node* state_target;
+    Node3D* state_target_3d;
+    Node2D* state_target_2d;
+
+    Node3D* get_state_target_3d() const { return state_target_3d; }
+    Node2D* get_state_target_2d() const { return state_target_2d; }
+
+    float get_state_target_distance();
+    Node* get_state_target();
+    void clear_state_target();
+    void set_state_target(Node* new_target);
+
+
+    YStateMachine(): state_target(nullptr), state_target_3d(nullptr), state_target_2d(nullptr) {
         transitions_count = 0;
         overrides_count = 0;
         has_overriders = false;
@@ -203,7 +225,11 @@ public:
         attempt_transition_interval = 2;
         _counting = 0;
     }
+
     ~YStateMachine() {
+        state_target = nullptr;
+        state_target_3d = nullptr;
+        state_target_2d = nullptr;
         current_state = nullptr;
         fsm_owner = nullptr;
         override_with_state = nullptr;

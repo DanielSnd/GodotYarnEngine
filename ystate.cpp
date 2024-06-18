@@ -59,7 +59,7 @@ void YState::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("get_autooverride_check_type"), &YState::get_autooverride_check_type);
     ClassDB::bind_method(D_METHOD("set_autooverride_check_type", "autooverride_check_type"), &YState::set_autooverride_check_type);
-    ADD_PROPERTY(PropertyInfo(Variant::INT, "check_type", PROPERTY_HINT_ENUM, "None,Equal,NotEqual,BiggerThan,SmallerThan,BiggerThanOrEqual,SmallerThanOrEqual"), "set_autooverride_check_type", "get_autooverride_check_type");
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "check_type", PROPERTY_HINT_ENUM, "None,True,False,Equal,NotEqual,BiggerThan,SmallerThan,BiggerThanOrEqual,SmallerThanOrEqual"), "set_autooverride_check_type", "get_autooverride_check_type");
 
     ClassDB::bind_method(D_METHOD("get_autooverride_check_node"), &YState::get_autooverride_check_node);
     ClassDB::bind_method(D_METHOD("set_autooverride_check_node", "autooverride_check_node"), &YState::set_autooverride_check_node);
@@ -87,6 +87,8 @@ void YState::_bind_methods() {
     GDVIRTUAL_BIND(_pass_condition)
 
     BIND_ENUM_CONSTANT(NONE);
+    BIND_ENUM_CONSTANT(TRUE);
+    BIND_ENUM_CONSTANT(FALSE);
     BIND_ENUM_CONSTANT(EQUAL);
     BIND_ENUM_CONSTANT(NOT_EQUAL);
     BIND_ENUM_CONSTANT(BIGGER_THAN);
@@ -102,6 +104,9 @@ void YState::_validate_property(PropertyInfo &p_property) const {
     if (auto_override) {
         if (autooverride_check_type == YState::CheckType::NONE && p_property.name != "check_type" &&
             p_property.name.begins_with("check_")) {
+            p_property.usage = PROPERTY_USAGE_NO_EDITOR;
+        }
+        if ((autooverride_check_type == CheckType::FALSE || autooverride_check_type == CheckType::TRUE) && p_property.name == "check_value") {
             p_property.usage = PROPERTY_USAGE_NO_EDITOR;
         }
     } else {
@@ -175,6 +180,77 @@ void YState::set_auto_override(bool val) {
     }
     auto_override = val;
     notify_property_list_changed();
+    update_configuration_warnings();
+}
+
+PackedStringArray YState::get_configuration_warnings() const {
+    PackedStringArray warnings = Node::get_configuration_warnings();
+
+    if (auto_override && autooverride_check_type != CheckType::NONE) {
+        if (autooverride_check_node == nullptr) {
+            warnings.push_back(RTR("This YState has an auto override with a check type but no node to check the value of."));
+        } else if(autooverride_check_property.is_empty()) {
+            warnings.push_back(RTR("This YState has an auto override with a check type and a node but no written property to check."));
+        }else {
+            bool p_has_property = false;
+            List<PropertyInfo> pinfo;
+            autooverride_check_node->get_property_list(&pinfo);
+            for (const PropertyInfo &pi : pinfo) {
+                if (pi.name == autooverride_check_property) {
+                    if ((autooverride_check_type == CheckType::FALSE || autooverride_check_type == CheckType::TRUE)) {
+                        if (pi.type != Variant::BOOL) {
+                            warnings.push_back(RTR("This YState has an auto override with a check type, a node and a property but the property is not a boolean."));
+                        } else {
+                            p_has_property = true;
+                        }
+                    } else {
+                        if (pi.type == Variant::INT || pi.type == Variant::FLOAT) {
+                            p_has_property = true;
+                        } else {
+                            warnings.push_back(RTR("This YState has an auto override with a check type, a node and a property but the property is not a number."));
+                        }
+                    }
+                    break;
+                }
+            }
+            if (!p_has_property) {
+#ifdef TOOLS_ENABLED
+                if (Engine::get_singleton()->is_editor_hint()) {
+                    if (ScriptInstance* _script_instance = (autooverride_check_node->get_script_instance()); _script_instance != nullptr) {
+                        auto script_found = _script_instance->get_script();
+                        if (script_found.is_valid()) {
+
+                            List<PropertyInfo> ppinfo;
+                            script_found->get_script_property_list(&ppinfo);
+                            for (const PropertyInfo &pi : ppinfo) {
+                                if (pi.name == autooverride_check_property) {
+                                    if ((autooverride_check_type == CheckType::FALSE || autooverride_check_type == CheckType::TRUE)) {
+                                        if (pi.type != Variant::BOOL) {
+                                            warnings.push_back(RTR("This YState has an auto override with a check type, a node and a property but the property is not a boolean."));
+                                        } else {
+                                            p_has_property = true;
+                                        }
+                                    } else {
+                                        if (pi.type == Variant::INT || pi.type == Variant::FLOAT) {
+                                            p_has_property = true;
+                                        } else {
+                                            warnings.push_back(RTR("This YState has an auto override with a check type, a node and a property but the property is not a number."));
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+#endif
+                if(!p_has_property)
+                    warnings.push_back(RTR("This YState has an auto override with a check type, a node and a property but the property could not be found on the node."));
+            }
+        }
+    }
+
+    return warnings;
 }
 
 bool YState::has_valid_auto_override() {
@@ -190,17 +266,25 @@ bool YState::has_valid_auto_override() {
     autooverride_check_node->get_property_list(&pinfo);
     for (const PropertyInfo &pi : pinfo) {
         if (pi.name == autooverride_check_property) {
+            if ((autooverride_check_type == CheckType::FALSE || autooverride_check_type == CheckType::TRUE)) {
+                if (pi.type != Variant::BOOL) {
+                    ERR_PRINT(vformat("[YState] Property %s was not a bool. (found in node %s when checking for auto override in %s)", autooverride_check_property, autooverride_check_node->get_name(), get_name()));
+                    return false;
+                } else {
+                    return true;
+                }
+            }
             if (pi.type == Variant::INT || pi.type == Variant::FLOAT) {
                 p_has_property = true;
             } else {
-                ERR_PRINT(vformat("Property %s was not a number. (found in node %s when checking for auto override in %s)", autooverride_check_property, autooverride_check_node->get_name(), get_name()));
+                ERR_PRINT(vformat("[YState] Property %s was not a number. (found in node %s when checking for auto override in %s)", autooverride_check_property, autooverride_check_node->get_name(), get_name()));
                 return false;
             }
             break;
         }
     }
     if (!p_has_property) {
-        ERR_PRINT(vformat("Property %s not found in node %s when checking for auto override in %s", autooverride_check_property, autooverride_check_node->get_name(),get_name()));
+        ERR_PRINT(vformat("[YState] Property %s not found in node %s when checking for auto override in %s", autooverride_check_property, autooverride_check_node->get_name(),get_name()));
         return false;
     }
     return true;
@@ -222,6 +306,13 @@ bool YState::can_auto_override() const {
         return true;
     if (autooverride_check_node != nullptr) {
         if (autooverride_cooldown > 0.0001 && !YTime::get_singleton()->has_time_elapsed(last_time_state_started,autooverride_cooldown)) {
+            return false;
+        }
+        if (autooverride_check_type == CheckType::FALSE || autooverride_check_type == CheckType::TRUE) {
+            const bool current_bool_value = static_cast<bool>(autooverride_check_node->get(autooverride_check_property));
+            if ((autooverride_check_type == CheckType::FALSE && !current_bool_value) || (autooverride_check_type == CheckType::TRUE && current_bool_value)) {
+                return true;
+            }
             return false;
         }
         const float current_value = static_cast<float>(autooverride_check_node->get(autooverride_check_property));
@@ -251,6 +342,7 @@ bool YState::can_auto_override() const {
                 const float epsilon = 0.00001f;
                 found_result = current_value < autooverride_check_value || (abs(current_value- autooverride_check_value) < epsilon);
             }break;
+            default: ;
         }
         // print_line("Checking can transition, found result ",found_result," current value ",current_value);
         return found_result;
@@ -275,6 +367,7 @@ void YState::execute_auto_override() {
 void YState::set_autooverride_check_type(const CheckType val) {
     autooverride_check_type = val;
     notify_property_list_changed();
+    update_configuration_warnings();
 }
 
 void YState::attempt_override() {
@@ -342,10 +435,20 @@ void YStateMachine::_bind_methods() {
     // GDVIRTUAL_BIND(_end_state_machine)
     GDVIRTUAL_BIND(_on_process,"delta")
     GDVIRTUAL_BIND(_on_transition,"new_state")
-    // GDVIRTUAL_BIND(_finished_navigation)
-    //
+
+
+    ClassDB::bind_method(D_METHOD("get_state_target"), &YStateMachine::get_state_target);
+    ClassDB::bind_method(D_METHOD("set_state_target","new_target"), &YStateMachine::set_state_target);
+    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "state_target",  PROPERTY_HINT_NODE_TYPE, "Node",PROPERTY_USAGE_NO_EDITOR), "set_state_target", "get_state_target");
+
+    ClassDB::bind_method(D_METHOD("get_state_target_distance"), &YStateMachine::get_state_target_distance);
+    ClassDB::bind_method(D_METHOD("get_state_target_2d"), &YStateMachine::get_state_target_2d);
+    ClassDB::bind_method(D_METHOD("get_state_target_3d"), &YStateMachine::get_state_target_3d);
+
+
     ADD_SIGNAL(MethodInfo("attempt_override"));
     ADD_SIGNAL(MethodInfo("state_transitioned"));
+    ADD_SIGNAL(MethodInfo("state_target_changed"));
 }
 
 void YStateMachine::start_state_machine(Node *p_owner) {
@@ -427,7 +530,7 @@ void YStateMachine::process(float p_delta) {
                 } else {
                     // Calculate total weight
                     int totalWeight = 0;
-                    for (int i = 0; i < valid_auto_overrides.size(); i++) {
+                    for (int i = 0; i < static_cast<int>(valid_auto_overrides.size()); i++) {
                         if (valid_auto_overrides[i] == nullptr)
                             continue;
                         totalWeight += valid_auto_overrides[i]->autooverride_weight;
@@ -436,7 +539,7 @@ void YStateMachine::process(float p_delta) {
                     int randomValue = Math::random(0, totalWeight-1);
                     // Find the element that this random value falls into
                     int weightSum = 0;
-                    for (int i = 0; i < valid_auto_overrides.size(); i++) {
+                    for (int i = 0; i < static_cast<int>(valid_auto_overrides.size()); i++) {
                         if (valid_auto_overrides[i] == nullptr)
                             continue;
                         weightSum += valid_auto_overrides[i]->autooverride_weight;
@@ -493,4 +596,44 @@ void YStateMachine::finished_navigation() {
     //     current_state->_finished_navigation();
     // }
    // GDVIRTUAL_CALL(_finished_navigation);
+}
+
+float YStateMachine::get_state_target_distance() {
+    if (fsm_owner == nullptr || !fsm_owner->has_method("get_global_position"))
+        return -1.0;
+
+    if (state_target_2d != nullptr) {
+        return state_target_2d->get_global_position().distance_to(fsm_owner->call("get_global_position"));
+    } else if (state_target_3d != nullptr) {
+        return state_target_3d->get_global_position().distance_to(fsm_owner->call("get_global_position"));
+    }
+    return -1.0f;
+}
+
+Node * YStateMachine::get_state_target() {
+    return state_target;
+}
+
+void YStateMachine::clear_state_target() {
+    state_target = nullptr;
+    state_target_3d = nullptr;
+    state_target_2d = nullptr;
+}
+void YStateMachine::set_state_target(Node *new_target) {
+    if (new_target != state_target) {
+        if (state_target != nullptr) {
+            if (state_target->is_connected(SceneStringName(tree_exited), callable_mp(this, &YStateMachine::clear_state_target)))
+                state_target->disconnect(SceneStringName(tree_exited), callable_mp(this, &YStateMachine::clear_state_target));
+            clear_state_target();
+        }
+        state_target = new_target;
+        if (state_target != nullptr) {
+            if (!state_target->is_connected(SceneStringName(tree_exited), callable_mp(this, &YStateMachine::clear_state_target)))
+                state_target->connect(SceneStringName(tree_exited), callable_mp(this, &YStateMachine::clear_state_target), CONNECT_ONE_SHOT);
+
+            state_target_3d = Object::cast_to<Node3D>(state_target);
+            state_target_2d = Object::cast_to<Node2D>(state_target);
+        }
+        emit_signal("state_target_changed");
+    }
 }
