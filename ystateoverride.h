@@ -24,6 +24,7 @@ public:
     void state_machine_setup(const Ref<YStateMachine> &p_owner);
     bool override_condition() const;
     void attempt_override();
+    bool wants_to_override = false;
 
     GDVIRTUAL0RC(bool,_override_condition)
     GDVIRTUAL1(_on_state_machine_setup,Ref<YStateMachine>)
@@ -35,7 +36,6 @@ public:
     void set_ignore_if_state(YState* val) {ignore_if_state = val;}
     void set_override_with_state(YState* val) {override_with_state = val;}
 
-    bool wants_to_override = false;
 
     YStateOverride() {
         override_with_state = nullptr;

@@ -31,6 +31,48 @@ void YState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("can_move"), &YState::can_move);
     ClassDB::bind_method(D_METHOD("override_animation"), &YState::override_animation);
 
+    ADD_SUBGROUP("Auto Override","");
+
+    ClassDB::bind_method(D_METHOD("get_auto_override"), &YState::get_auto_override);
+    ClassDB::bind_method(D_METHOD("set_auto_override","auto_override"), &YState::set_auto_override);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "auto_override"), "set_auto_override", "get_auto_override");
+
+    ClassDB::bind_method(D_METHOD("get_autooverride_cooldown"), &YState::get_autooverride_cooldown);
+    ClassDB::bind_method(D_METHOD("set_autooverride_cooldown", "autooverride_cooldown"), &YState::set_autooverride_cooldown);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "cooldown"), "set_autooverride_cooldown", "get_autooverride_cooldown");
+
+    ClassDB::bind_method(D_METHOD("get_autooverride_weight"), &YState::get_autooverride_weight);
+    ClassDB::bind_method(D_METHOD("set_autooverride_weight", "autooverride_weight"), &YState::set_autooverride_weight, DEFVAL(1));
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "weight"), "set_autooverride_weight", "get_autooverride_weight");
+
+    ClassDB::bind_method(D_METHOD("get_autooverride_prevent_repeat"), &YState::get_autooverride_prevent_repeat);
+    ClassDB::bind_method(D_METHOD("set_autooverride_prevent_repeat", "autooverride_prevent_repeat"), &YState::set_autooverride_prevent_repeat);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "prevent_repeat"), "set_autooverride_prevent_repeat", "get_autooverride_prevent_repeat");
+
+    ClassDB::bind_method(D_METHOD("get_autooverride_only_if_states"), &YState::get_autooverride_only_if_states);
+    ClassDB::bind_method(D_METHOD("set_autooverride_only_if_states","ignore_if_states"), &YState::set_autooverride_only_if_states);
+    ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "only_if_states",  PROPERTY_HINT_ARRAY_TYPE, "NodePath"), "set_autooverride_only_if_states", "get_autooverride_only_if_states");
+
+    ClassDB::bind_method(D_METHOD("get_autooverride_ignore_if_states"), &YState::get_autooverride_ignore_if_states);
+    ClassDB::bind_method(D_METHOD("set_autooverride_ignore_if_states","ignore_if_states"), &YState::set_autooverride_ignore_if_states);
+    ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "ignore_if_states",  PROPERTY_HINT_ARRAY_TYPE, "NodePath"), "set_autooverride_ignore_if_states", "get_autooverride_ignore_if_states");
+
+    ClassDB::bind_method(D_METHOD("get_autooverride_check_type"), &YState::get_autooverride_check_type);
+    ClassDB::bind_method(D_METHOD("set_autooverride_check_type", "autooverride_check_type"), &YState::set_autooverride_check_type);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "check_type", PROPERTY_HINT_ENUM, "None,Equal,NotEqual,BiggerThan,SmallerThan,BiggerThanOrEqual,SmallerThanOrEqual"), "set_autooverride_check_type", "get_autooverride_check_type");
+
+    ClassDB::bind_method(D_METHOD("get_autooverride_check_node"), &YState::get_autooverride_check_node);
+    ClassDB::bind_method(D_METHOD("set_autooverride_check_node", "autooverride_check_node"), &YState::set_autooverride_check_node);
+    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "check_node",  PROPERTY_HINT_NODE_TYPE, "Node"), "set_autooverride_check_node", "get_autooverride_check_node");
+
+    ClassDB::bind_method(D_METHOD("get_autooverride_check_property"), &YState::get_autooverride_check_property);
+    ClassDB::bind_method(D_METHOD("set_autooverride_check_property", "autooverride_check_property"), &YState::set_autooverride_check_property);
+    ADD_PROPERTY(PropertyInfo(Variant::STRING, "check_property"), "set_autooverride_check_property", "get_autooverride_check_property");
+
+    ClassDB::bind_method(D_METHOD("get_autooverride_check_value"), &YState::get_autooverride_check_value);
+    ClassDB::bind_method(D_METHOD("set_autooverride_check_value", "autooverride_check_value"), &YState::set_autooverride_check_value);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "check_value"), "set_autooverride_check_value", "get_autooverride_check_value");
+
     GDVIRTUAL_BIND(_on_state_machine_setup,"fsm")
     GDVIRTUAL_BIND(_on_ready,"fsm")
     GDVIRTUAL_BIND(_on_enter_state)
@@ -44,8 +86,30 @@ void YState::_bind_methods() {
     GDVIRTUAL_BIND(_fail_condition)
     GDVIRTUAL_BIND(_pass_condition)
 
+    BIND_ENUM_CONSTANT(NONE);
+    BIND_ENUM_CONSTANT(EQUAL);
+    BIND_ENUM_CONSTANT(NOT_EQUAL);
+    BIND_ENUM_CONSTANT(BIGGER_THAN);
+    BIND_ENUM_CONSTANT(SMALLER_THAN);
+    BIND_ENUM_CONSTANT(BIGGER_THAN_OR_EQUAL);
+    BIND_ENUM_CONSTANT(SMALLER_THAN_OR_EQUAL);
     // ADD_SIGNAL(MethodInfo("attempt_override"));
     // ADD_SIGNAL(MethodInfo("state_transitioned"));
+}
+
+
+void YState::_validate_property(PropertyInfo &p_property) const {
+    if (auto_override) {
+        if (autooverride_check_type == YState::CheckType::NONE && p_property.name != "check_type" &&
+            p_property.name.begins_with("check_")) {
+            p_property.usage = PROPERTY_USAGE_NO_EDITOR;
+        }
+    } else {
+        if (p_property.name.begins_with("autooverride") || p_property.name.begins_with("check_") || p_property.name.ends_with("_if_states") ||
+            p_property.name == "weight" || p_property.name == "cooldown" || p_property.name == "prevent_repeat") {
+            p_property.usage = PROPERTY_USAGE_NO_EDITOR;
+        }
+    }
 }
 
 bool YState::pass_condition() {
@@ -70,6 +134,7 @@ void YState::state_machine_setup(Ref<YStateMachine> fsm) {
 }
 
 void YState::enter_state() {
+    last_time_state_started = YTime::get_singleton()->time;
     //print_line("Called enter state on cpp");
     GDVIRTUAL_CALL(_on_enter_state);
 }
@@ -104,8 +169,151 @@ bool YState::override_animation() {
     return ret;
 }
 
+void YState::set_auto_override(bool val) {
+    if (val == auto_override) {
+        return;
+    }
+    auto_override = val;
+    notify_property_list_changed();
+}
+
+bool YState::has_valid_auto_override() {
+    // print_line("Checking if has valid auto override, is check node null? ",autooverride_check_node == nullptr);
+    if (autooverride_check_type == CheckType::NONE)
+        return true;
+    if (autooverride_check_node == nullptr)
+        return false;
+    if (autooverride_check_property.is_empty())
+        return false;
+    bool p_has_property = false;
+    List<PropertyInfo> pinfo;
+    autooverride_check_node->get_property_list(&pinfo);
+    for (const PropertyInfo &pi : pinfo) {
+        if (pi.name == autooverride_check_property) {
+            if (pi.type == Variant::INT || pi.type == Variant::FLOAT) {
+                p_has_property = true;
+            } else {
+                ERR_PRINT(vformat("Property %s was not a number. (found in node %s when checking for auto override in %s)", autooverride_check_property, autooverride_check_node->get_name(), get_name()));
+                return false;
+            }
+            break;
+        }
+    }
+    if (!p_has_property) {
+        ERR_PRINT(vformat("Property %s not found in node %s when checking for auto override in %s", autooverride_check_property, autooverride_check_node->get_name(),get_name()));
+        return false;
+    }
+    return true;
+}
+
+bool YState::can_auto_override() const {
+    // print_line("can auto override? ");
+    if (!auto_override)
+        return false;
+    const bool can_based_on_ignore_and_only_if = ((ignore_if_objectids.is_empty() || !ignore_if_objectids.has(fsm_machine->current_state->get_instance_id()))
+        && (only_if_objectids.is_empty() || (only_if_objectids.has(fsm_machine->current_state->get_instance_id()))));
+
+    if (!can_based_on_ignore_and_only_if) return false;
+
+    if (autooverride_prevent_repeat && fsm_machine.is_valid() && (fsm_machine->overrides_count == last_overrided_with_count + 1 || fsm_machine->transitions_count == last_started_count + 1)) {
+        return false;
+    }
+    if (autooverride_check_type == CheckType::NONE)
+        return true;
+    if (autooverride_check_node != nullptr) {
+        if (autooverride_cooldown > 0.0001 && !YTime::get_singleton()->has_time_elapsed(last_time_state_started,autooverride_cooldown)) {
+            return false;
+        }
+        const float current_value = static_cast<float>(autooverride_check_node->get(autooverride_check_property));
+        bool found_result = false;
+        switch (autooverride_check_type) {
+            case NONE:
+                break;
+            case EQUAL: {
+                const float epsilon = 0.00001f;
+                found_result = abs(current_value- autooverride_check_value) < epsilon;
+            }break;
+            case NOT_EQUAL: {
+                const float epsilon = 0.00001f;
+                found_result = abs(current_value- autooverride_check_value) > epsilon;
+            }break;
+            case BIGGER_THAN:
+                found_result = current_value > autooverride_check_value;
+                break;
+            case SMALLER_THAN:
+                found_result = current_value < autooverride_check_value;
+                break;
+            case BIGGER_THAN_OR_EQUAL: {
+                const float epsilon = 0.00001f;
+                found_result = current_value > autooverride_check_value || (abs(current_value- autooverride_check_value) < epsilon);
+            }break;
+            case SMALLER_THAN_OR_EQUAL:{
+                const float epsilon = 0.00001f;
+                found_result = current_value < autooverride_check_value || (abs(current_value- autooverride_check_value) < epsilon);
+            }break;
+        }
+        // print_line("Checking can transition, found result ",found_result," current value ",current_value);
+        return found_result;
+    }
+    return false;
+}
+
+void YState::execute_auto_override() {
+    if (auto_override) {
+        if (!fsm_machine.is_valid()) return;
+        //print_line("Attempt override called, not blocking others? ",!fsm_owner->block_other_overrides," my override not null? ",override_with_state != nullptr ," their override with state null? ",fsm_owner->override_with_state == nullptr);
+        if (!fsm_machine->block_other_overrides && fsm_machine != nullptr) {
+            if (fsm_machine->current_state != this) {
+                //print_line("Set override with state");
+                fsm_machine->override_with_state = this;
+            }
+            fsm_machine->block_other_overrides = true;
+        }
+    }
+}
+
+void YState::set_autooverride_check_type(const CheckType val) {
+    autooverride_check_type = val;
+    notify_property_list_changed();
+}
+
+void YState::attempt_override() {
+    if (auto_override) {
+        if (!fsm_machine.is_valid()) return;
+        //print_line("Attempt override called, not blocking others? ",!fsm_owner->block_other_overrides," my override not null? ",override_with_state != nullptr ," their override with state null? ",fsm_owner->override_with_state == nullptr);
+        if (!fsm_machine->block_other_overrides && fsm_machine != nullptr) {
+            //print_line("Getting here? ignore_if_state == nullptr ",ignore_if_state == nullptr, " not current ignoring ",fsm_owner->current_state != ignore_if_state);
+            if ((ignore_if_objectids.is_empty() || !ignore_if_objectids.has(fsm_machine->current_state->get_instance_id()))
+                && (only_if_objectids.is_empty() || (only_if_objectids.has(fsm_machine->current_state->get_instance_id())))
+                && can_auto_override()) {
+                if (fsm_machine->current_state != this) {
+                    //print_line("Set override with state");
+                    fsm_machine->override_with_state = this;
+                }
+                fsm_machine->block_other_overrides = true;
+            }
+        }
+    }
+}
+
 void YState::ready() {
     GDVIRTUAL_CALL(_on_ready,fsm_machine);
+    if (auto_override) {
+        for (NodePath ignoreif: autooverride_ignore_if_states) {
+            auto ignoreystate = Object::cast_to<YState>(get_node(ignoreif));
+            // print_line(vformat("ignore if y state path %s is node null? %s", ignoreif, ignoreystate == nullptr));
+            if (ignoreystate != nullptr) {
+                ignore_if_objectids.push_back(ignoreystate->get_instance_id());
+            }
+        }
+        for (NodePath ignoreif: autooverride_only_if_states) {
+            auto ignoreystate = Object::cast_to<YState>(get_node(ignoreif));
+            // print_line(vformat("only if y state path %s is node null? %s", ignoreif, ignoreystate == nullptr));
+            if (ignoreystate != nullptr) {
+                only_if_objectids.push_back(ignoreystate->get_instance_id());
+            }
+        }
+    }
 }
 
 void YStateMachine::_bind_methods() {
@@ -157,6 +365,9 @@ void YStateMachine::start_state_machine(Node *p_owner) {
                 if (current_state == nullptr) {
                     current_state = child;
                 }
+                if (child->auto_override && child->has_valid_auto_override()) {
+                    auto_overridable_states.push_back(child);
+                }
             }
             else {
                 auto* overrider_child = Object::cast_to<YStateOverride>(children[i].operator Object*());
@@ -185,19 +396,59 @@ void YStateMachine::end_state_machine() {
 void YStateMachine::process(float p_delta) {
     if (run_on_server_only && !YEngine::get_singleton()->get_multiplayer()->is_server())
         return;
+
     _counting++;
+
     if (override_with_state != nullptr && override_with_state != current_state) {
         transition(override_with_state);
+        overrides_count++;
+        override_with_state->last_overrided_with_count = overrides_count;
         override_with_state = nullptr;
         block_other_overrides = false;
         _counting = 0;
         // print_line("Did an override transition, currnet override with state? ",override_with_state," block others? ",block_other_overrides," counting? ",_counting);
     }
+
     // print_line(vformat("Counting %d attempt interval %d has overriders %s", _counting, attempt_transition_interval, has_overriders));
     if (_counting >= attempt_transition_interval) {
         _counting = 0;
         block_other_overrides = false;
-        if (has_overriders) {
+        // print_line("auto_overridable_states ",auto_overridable_states.size());
+        if (!auto_overridable_states.is_empty()) {
+            LocalVector<YState*> valid_auto_overrides;
+            for (auto ystate: auto_overridable_states) {
+                if (ystate != nullptr && ystate->auto_override && ystate->can_auto_override()) {
+                    valid_auto_overrides.push_back(ystate);
+                }
+            }
+            if (!valid_auto_overrides.is_empty()) {
+                if (valid_auto_overrides.size() == 1) {
+                    valid_auto_overrides[0]->execute_auto_override();
+                } else {
+                    // Calculate total weight
+                    int totalWeight = 0;
+                    for (int i = 0; i < valid_auto_overrides.size(); i++) {
+                        if (valid_auto_overrides[i] == nullptr)
+                            continue;
+                        totalWeight += valid_auto_overrides[i]->autooverride_weight;
+                    }
+                    // Generate a random int from 0 to totalWeight
+                    int randomValue = Math::random(0, totalWeight-1);
+                    // Find the element that this random value falls into
+                    int weightSum = 0;
+                    for (int i = 0; i < valid_auto_overrides.size(); i++) {
+                        if (valid_auto_overrides[i] == nullptr)
+                            continue;
+                        weightSum += valid_auto_overrides[i]->autooverride_weight;
+                        if (randomValue < weightSum) {
+                            valid_auto_overrides[i]->execute_auto_override();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        if (has_overriders && !block_other_overrides) {
             emit_signal("attempt_override");
         }
     }
@@ -227,11 +478,12 @@ void YStateMachine::transition(YState *p_state) {
     if (current_state != nullptr) {
         current_state->exit_state();
     }
-
     current_state = p_state;
     if (current_state != nullptr) {
         current_state->enter_state();
+        current_state->last_started_count = transitions_count + 1;
     }
+    transitions_count++;
     emit_signal("state_transitioned");
     GDVIRTUAL_CALL(_on_transition,p_state);
 }
