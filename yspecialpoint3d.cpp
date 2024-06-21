@@ -218,3 +218,6 @@ YSpecialPoint3D * YSpecialPoint3D::get_point_with_index(int index) {
         if (index < 0 || index >= get_point_count()) return nullptr;
         return all_points[index];
 }
+
+YSpecialPoint3D::YSpecialPoint3D(): point_priority(0), point_type(0), point_status(0) {
+}

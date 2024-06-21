@@ -81,7 +81,7 @@ public:
 
     static int get_point_count();
     static YSpecialPoint3D* get_point_with_index(int index);
-    YSpecialPoint3D() = default;
+    YSpecialPoint3D();
 };
 
 

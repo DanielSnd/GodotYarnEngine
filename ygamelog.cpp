@@ -11,6 +11,16 @@ void YGameLog::_bind_methods() {
     ADD_SIGNAL(MethodInfo("system_log_printed", PropertyInfo(Variant::STRING, "printed")));
     ADD_SIGNAL(MethodInfo("system_error_printed", PropertyInfo(Variant::STRING, "printed")));
     ADD_SIGNAL(MethodInfo("system_warning_printed", PropertyInfo(Variant::STRING, "printed")));
+    
+    ClassDB::bind_method(D_METHOD("get_log_count"), &YGameLog::get_log_count);
+    ClassDB::bind_method(D_METHOD("get_logged"), &YGameLog::get_logged);
+    ClassDB::bind_method(D_METHOD("set_logged", "logged"), &YGameLog::set_logged);
+    ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "logged"), "set_logged", "get_logged");
+
+    ClassDB::bind_method(D_METHOD("log_message", "new_message"), &YGameLog::log_message);
+    ClassDB::bind_method(D_METHOD("clear_log"), &YGameLog::clear_log);
+
+    ADD_SIGNAL(MethodInfo("on_message_logged", PropertyInfo(Variant::STRING, "message")));
 }
 
 YGameLog *YGameLog::get_singleton() {

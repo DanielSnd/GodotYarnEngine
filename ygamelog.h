@@ -31,6 +31,14 @@ public:
 
     Vector<String> logged;
 
+    int get_log_count() {return static_cast<int>(logged.size());}
+    Vector<String> get_logged() {return logged;}
+    void set_logged(const Vector<String> &p_logged) {logged = p_logged;}
+
+    void log_message(String new_message) { logged.push_back(new_message); }
+
+    void clear_log() { logged.clear(); }
+
     YGameLog() { }
 
     ~YGameLog() {
