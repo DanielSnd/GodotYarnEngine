@@ -11,7 +11,7 @@ void YGameLog::_bind_methods() {
     ADD_SIGNAL(MethodInfo("system_log_printed", PropertyInfo(Variant::STRING, "printed")));
     ADD_SIGNAL(MethodInfo("system_error_printed", PropertyInfo(Variant::STRING, "printed")));
     ADD_SIGNAL(MethodInfo("system_warning_printed", PropertyInfo(Variant::STRING, "printed")));
-    
+
     ClassDB::bind_method(D_METHOD("get_log_count"), &YGameLog::get_log_count);
     ClassDB::bind_method(D_METHOD("get_logged"), &YGameLog::get_logged);
     ClassDB::bind_method(D_METHOD("set_logged", "logged"), &YGameLog::set_logged);

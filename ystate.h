@@ -8,6 +8,7 @@
 #include "scene/main/multiplayer_api.h"
 #include "ystateoverride.h"
 #include "scene/2d/node_2d.h"
+#include "scene/3d/node_3d.h"
 
 class YStateOverride;
 class YStateMachine;
