@@ -255,9 +255,12 @@ void YTween::process_tweens(double p_delta, bool p_physics) {
     bool paused = YTime::get_singleton()->is_paused;
     for (List<Ref<YTweenWrap>>::Element *E = tweens.front(); E;) {
         List<Ref<YTweenWrap>>::Element *N = E->next();
+
         // Don't process if paused or process mode doesn't match.
-        //!E->get()->can_process(paused) ||
-        if ((p_physics == (E->get()->get_process_mode() == Tween::TWEEN_PROCESS_IDLE))) {
+        //
+
+        if ((!E->get().is_valid() || E->get().is_null()) || !E->get()->can_process(paused) ||
+            p_physics == (E->get()->get_process_mode() == Tween::TWEEN_PROCESS_IDLE)) {
             if (E == L) {
                 break;
             }

@@ -25,6 +25,8 @@ public:
     uint64_t tween_list_id;
     bool emitted_finished_or_killed = false;
 
+    // TweenProcessMode ytween_process_mode = TweenProcessMode::TWEEN_PROCESS_IDLE;
+
     void kill_due_to_node_tree_exiting();
     void register_finished_extra_callback();
 
