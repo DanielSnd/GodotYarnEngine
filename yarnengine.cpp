@@ -216,6 +216,11 @@ void YEngine::_notification(int p_what) {
             emit_signal("initialized");
             set_process(true);
             set_physics_process(true);
+            TypedArray<Dictionary> global_class_list = ProjectSettings::get_singleton()->get_global_class_list();
+            for (Dictionary p_class_list: global_class_list) {
+                if (p_class_list.has("class") && p_class_list.has("path"))
+                    class_name_to_script_path[p_class_list["class"]] = p_class_list["path"];
+            }
         } break;
         case NOTIFICATION_PHYSICS_PROCESS: {
             if (!Engine::get_singleton()->is_editor_hint() && OS::get_singleton() != nullptr) {

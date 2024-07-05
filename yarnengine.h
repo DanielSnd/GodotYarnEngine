@@ -22,6 +22,7 @@ protected:
 
     static void _bind_methods();
 
+
     Variant execute_button_click_callable_if_modulate(const Callable &p_callable, Control *p_control);
 
     Variant execute_button_click_callable(const Callable &p_callable);
@@ -42,6 +43,8 @@ protected:
 public:
     bool using_game_state=false;
     bool already_setup_in_tree = false;
+
+    HashMap<StringName,String> class_name_to_script_path;
 
     void game_state_starting(const Ref<YGameState> &ygs);
     Callable button_click_callable(const Callable &p_callable);

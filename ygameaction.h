@@ -238,7 +238,7 @@ public:
     virtual bool process_action(float _delta);
     virtual bool slow_process_action(float _delta);
 
-    virtual Dictionary serialize(Dictionary dict);
+    virtual Dictionary serialize();
     virtual Dictionary deserialize(Dictionary dict);
 
     void created();

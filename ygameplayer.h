@@ -13,6 +13,7 @@ protected:
     static void _bind_methods();
 
 public:
+    String player_class;
     int player_id;
     void set_player_id(int v) {}
     int get_player_id() const {return player_id;}
@@ -53,7 +54,7 @@ public:
     void turn_started();
     void turn_ended();
 
-    Dictionary serialize(Dictionary dict);
+    Dictionary serialize();
 
     Dictionary deserialize(Dictionary dict);
 

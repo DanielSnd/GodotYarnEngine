@@ -11,6 +11,7 @@
 #endif
 #include "AOBakeableMeshInstance.h"
 #include "CircleWithConeTexture2D.h"
+#include "CombinedTexture2D.h"
 #include "gsheetimporter.h"
 #include "yarnmenu.h"
 #include "yarnphysics.h"
@@ -89,6 +90,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
  	ClassDB::register_class<YThreaderInterrupter>();
  	ClassDB::register_class<YSceneSpawner3D>();
  	ClassDB::register_class<YBoneAttachment3D>();
+	ClassDB::register_class<CombinedTexture2D>();
 
 	// Initialize your singleton.
 	YEnginePtr = memnew(YEngine);

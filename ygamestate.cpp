@@ -4,6 +4,8 @@
 
 #include "ygamestate.h"
 
+#include "core/config/project_settings.h"
+
 Ref<YGameState> YGameState::singleton;
 
 void YGameState::_bind_methods() {
@@ -49,6 +51,10 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_prevent_proceed_to_next_action"), &YGameState::get_prevent_proceed_to_next_action);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "prevent_proceed_to_next_action"), "set_prevent_proceed_to_next_action", "get_prevent_proceed_to_next_action");
 
+    ClassDB::bind_method(D_METHOD("set_is_playing_back", "is_playing_back"), &YGameState::set_is_playing_back);
+    ClassDB::bind_method(D_METHOD("get_is_playing_back"), &YGameState::get_is_playing_back);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "is_playing_back"), "set_is_playing_back", "get_is_playing_back");
+
     ClassDB::bind_method(D_METHOD("get_overriding_game_action_count"), &YGameState::get_overridinge_game_action_count);
     ClassDB::bind_method(D_METHOD("get_future_game_action_count"), &YGameState::get_future_game_action_count);
     ClassDB::bind_method(D_METHOD("get_past_game_action_count"), &YGameState::get_past_game_action_count);
@@ -67,6 +73,8 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("restart_action_counting"), &YGameState::restart_action_counting);
     ClassDB::bind_method(D_METHOD("get_game_actions_counted"), &YGameState::get_game_actions_counted);
 
+    ClassDB::bind_method(D_METHOD("serialize"), &YGameState::serialize);
+    ClassDB::bind_method(D_METHOD("deserialize", "data","playback_after","instant_playback"), &YGameState::deserialize,DEFVAL(false),DEFVAL(false));
 
     ADD_SIGNAL(MethodInfo("registered_action",PropertyInfo(Variant::OBJECT, "new_action", PROPERTY_HINT_RESOURCE_TYPE, "YGameAction")));
     ADD_SIGNAL(MethodInfo("changed_current_action",PropertyInfo(Variant::OBJECT, "new_action", PROPERTY_HINT_RESOURCE_TYPE, "YGameAction")));
@@ -255,7 +263,13 @@ void YGameState::do_process(double delta) {
             wait_before_going_to_next_action-=delta;
             return;
         }
-        if (overriding_game_actions.size() > 0) {
+        int overriding_game_actions_remaining = static_cast<int>(overriding_game_actions.size());
+        int future_game_actions_remaining = static_cast<int>(future_game_actions.size());
+
+        if (is_playing_back && overriding_game_actions_remaining + future_game_actions_remaining == 1)
+            is_playing_back = false;
+
+        if (overriding_game_actions_remaining > 0) {
             current_game_action = overriding_game_actions[0];
             overriding_game_actions.remove_at(0);
             if (current_game_action.is_valid()) {
@@ -268,7 +282,7 @@ void YGameState::do_process(double delta) {
             }
             return;
         }
-        if (future_game_actions.size() > 0) {
+        if (future_game_actions_remaining > 0) {
             current_game_action = future_game_actions[0];
             //print_line("Set the current game action to be the one in front of future_game_actions ",current_game_action);
             future_game_actions.remove_at(0);
@@ -295,9 +309,15 @@ bool YGameState::end_current_game_action() const {
 }
 
 Ref<YGameAction> YGameState::add_game_action(const Ref<YGameAction> &ygs, int desired_game_state_id) {
+    if (is_playing_back) {
+        return ygs;
+    }
     return add_game_action_with_param(ygs,-1,Variant{},desired_game_state_id);
 }
 Ref<YGameAction> YGameState::add_game_action_with_param(const Ref<YGameAction> &ygs, int desired_initial_param, const Variant &desired_param_data, int desired_game_state_id) {
+    if (is_playing_back) {
+        return ygs;
+    }
     showed_out_of_actions_message=false;
     if (desired_initial_param != -1) {
         ygs->set_action_parameter(desired_initial_param,desired_param_data);
@@ -320,10 +340,16 @@ Ref<YGameAction> YGameState::add_game_action_with_param(const Ref<YGameAction> &
 }
 
 Ref<YGameAction> YGameState::add_override_game_action(const Ref<YGameAction> &ygs, int desired_game_state_id) {
+    if (is_playing_back) {
+        return ygs;
+    }
     return add_override_game_action_with_param(ygs,-1,Variant{},desired_game_state_id);
 }
 
 Ref<YGameAction> YGameState::add_override_game_action_with_param(const Ref<YGameAction> &ygs, int desired_initial_param, const Variant &desired_param_data, int desired_game_state_id) {
+    if (is_playing_back) {
+        return ygs;
+    }
     showed_out_of_actions_message=false;
     if (desired_initial_param != -1) {
         ygs->set_action_parameter(desired_initial_param,desired_param_data);
@@ -344,4 +370,145 @@ Ref<YGameAction> YGameState::add_override_game_action_with_param(const Ref<YGame
     ygs->created();
     emit_signal("registered_action",ygs);
     return ygs;
+}
+
+Dictionary YGameState::serialize() {
+    Dictionary dict;
+
+    dict["next_game_action_unique_id"] = next_game_action_unique_id;
+    dict["next_visual_action_unique_id"] = next_visual_action_unique_id;
+    dict["next_player_unique_id"] = next_player_unique_id;
+    dict["next_visual_element_unique_id"] = next_visual_element_unique_id;
+
+    Dictionary serialized_players;
+    for (const auto& [key, player] : game_players) {
+        serialized_players[Variant(key)] = player->serialize();
+    }
+    dict["players"] = serialized_players;
+
+    Array overriding_game_actions_array;
+    for (const auto& game_action : overriding_game_actions) {
+        overriding_game_actions_array.push_back(game_action->serialize());
+    }
+
+    Array future_game_actions_array;
+    for (const auto& game_action : future_game_actions) {
+        future_game_actions_array.push_back(game_action->serialize());
+    }
+
+    Array past_game_actions_array;
+    for (const auto& game_action : past_game_actions) {
+        past_game_actions_array.push_back(game_action->serialize());
+    }
+
+    Dictionary state_parameters_dict;
+    for (auto& entry : state_parameters) {
+        state_parameters_dict[Variant(entry.key)] = entry.value;
+    }
+    dict["state_parameters"] = state_parameters_dict;
+
+    dict["override_actions"] = overriding_game_actions_array;
+    dict["future_actions"] = future_game_actions_array;
+    dict["past_actions"] = past_game_actions_array;
+
+    return dict;
+}
+
+void YGameState::deserialize_game_actions_into(Vector<Ref<YGameAction>> &list_into, Array serialized_game_actions) {
+    for (int i = 0; i < serialized_game_actions.size(); i++) {
+        Dictionary action_dict = serialized_game_actions[i];
+        String class_name = action_dict.get("class","");
+        Ref<YGameAction> action;
+        action.instantiate();
+        if (!class_name.is_empty() && YEngine::get_singleton()->class_name_to_script_path.has(class_name)) {
+            Ref<Script> gdScript = ResourceLoader::load(YEngine::get_singleton()->class_name_to_script_path[class_name], "Script");
+            if (gdScript.is_valid()) {
+                auto temp_script_instance = gdScript->instance_create(action.ptr());
+                if (temp_script_instance != nullptr) {
+                    action->set_script_instance(temp_script_instance);
+                    action->set_name(class_name);
+                }
+            }
+        }
+        action->deserialize(action_dict);
+        list_into.push_back(action);
+    }
+}
+
+Dictionary YGameState::deserialize(const Dictionary dict, bool p_playback_after = false, bool p_instant_playback = false) {
+    overriding_game_actions.clear();
+    future_game_actions.clear();
+    past_game_actions.clear();
+    if (p_playback_after) {
+        if (dict.has("past_game_actions")) {
+            Array past_game_actions_array = dict["past_game_actions"];
+            deserialize_game_actions_into(future_game_actions , past_game_actions_array);
+            for (const auto& ygame_action: future_game_actions) {
+                ygame_action->set_instant_execute(p_instant_playback);
+            }
+        }
+        if (dict.has("override_actions")) {
+            Array overriding_game_actions_array = dict["override_actions"];
+            deserialize_game_actions_into(future_game_actions , overriding_game_actions_array);
+        }
+        if (dict.has("future_actions")) {
+            Array future_game_action_array = dict["future_actions"];
+            deserialize_game_actions_into(future_game_actions , future_game_action_array);
+        }
+    } else {
+        if (dict.has("override_actions")) {
+            Array overriding_game_actions_array = dict["override_actions"];
+            deserialize_game_actions_into(overriding_game_actions , overriding_game_actions_array);
+        }
+        if (dict.has("future_actions")) {
+            Array future_game_action_array = dict["future_actions"];
+            deserialize_game_actions_into(future_game_actions , future_game_action_array);
+        }
+        if (dict.has("past_game_actions")) {
+            Array past_game_actions_array = dict["past_game_actions"];
+            deserialize_game_actions_into(past_game_actions , past_game_actions_array);
+        }
+    }
+
+    if (dict.has("next_game_action_unique_id")) next_game_action_unique_id = dict["next_game_action_unique_id"];
+    if (dict.has("next_visual_action_unique_id")) next_visual_action_unique_id = dict["next_visual_action_unique_id"];
+    if (dict.has("next_player_unique_id")) next_player_unique_id = dict["next_player_unique_id"];
+    if (dict.has("next_visual_element_unique_id")) next_visual_element_unique_id = dict["next_visual_element_unique_id"];
+
+    if (dict.has("state_parameters")) {
+        Dictionary state_parameters_dict = dict["state_parameters"];
+        state_parameters.clear();
+        for (int i = 0; i < state_parameters_dict.size(); i++) {
+            Variant key = state_parameters_dict.get_key_at_index(i);
+            state_parameters[key.operator int()] = state_parameters_dict.get_value_at_index(i);
+        }
+    }
+
+    if (dict.has("players")) {
+        Dictionary players_dict = dict["players"];
+        game_players.clear();
+        for (int i = 0; i < players_dict.size(); i++) {
+            int key = players_dict.get_key_at_index(i);
+            YGamePlayer *player = memnew(YGamePlayer); // replace with correct constructor
+            Dictionary player_dict = players_dict.get_value_at_index(i);
+            String player_class = player_dict["player_class"];
+            if (!player_class.is_empty() && YEngine::get_singleton()->class_name_to_script_path.has(player_class)) {
+                Ref<Script> gdScript = ResourceLoader::load(YEngine::get_singleton()->class_name_to_script_path[player_class], "Script");
+                if (gdScript.is_valid()) {
+                    auto temp_script_instance = gdScript->instance_create(player);
+                    if (temp_script_instance != nullptr)
+                        player->set_script_instance(temp_script_instance);
+                }
+            }
+            if (player_dict.has("parent_path") && YEngine::get_singleton()->has_node(NodePath{player_dict["parent_path"]})) {
+                YEngine::get_singleton()->get_node(NodePath{player_dict["parent_path"]})->add_child(player);
+            } else {
+                YEngine::get_singleton()->add_child(player);
+            }
+            player->deserialize(player_dict);
+            game_players[key] = player;
+        }
+    }
+
+    return dict;
 }

@@ -75,7 +75,6 @@ void YGameAction::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_unique_id"), &YGameAction::get_unique_id);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "unique_id"), "set_unique_id", "get_unique_id");
 
-
     ClassDB::bind_method(D_METHOD("set_turn_player_id","player_id"), &YGameAction::set_player_turn_id);
 
     ClassDB::bind_method(D_METHOD("set_player_turn","player_turn"), &YGameAction::set_player_turn);
@@ -87,12 +86,16 @@ void YGameAction::_bind_methods() {
     ClassDB::bind_method(D_METHOD("wait_for_step","prevent_processing"), &YGameAction::wait_for_step);
     ClassDB::bind_method(D_METHOD("release_step"), &YGameAction::release_step);
 
+    ClassDB::bind_method(D_METHOD("serialize"), &YGameAction::serialize);
+    ClassDB::bind_method(D_METHOD("deserialize", "dict"), &YGameAction::deserialize);
+
     ADD_SIGNAL(MethodInfo("started_action", PropertyInfo(Variant::STRING, "action_name")));
     ADD_SIGNAL(MethodInfo("registered_step", PropertyInfo(Variant::INT, "step_index")));
     ADD_SIGNAL(MethodInfo("action_stepped", PropertyInfo(Variant::INT, "step_index")));
     ADD_SIGNAL(MethodInfo("waiting_for_step", PropertyInfo(Variant::INT, "step_index")));
     ADD_SIGNAL(MethodInfo("released_waited_step", PropertyInfo(Variant::INT, "step_index")));
     ADD_SIGNAL(MethodInfo("ended_action", PropertyInfo(Variant::STRING, "action_name")));
+
     GDVIRTUAL_BIND(_on_created)
     GDVIRTUAL_BIND(_on_enter_action)
     GDVIRTUAL_BIND(_on_stepped_action,"step_index","step_identifier","step_data","is_ending")
@@ -240,13 +243,66 @@ bool YGameAction::slow_process_action(float _delta) {
     return rert;
 }
 
-Dictionary YGameAction::serialize(Dictionary dict) {
+Dictionary YGameAction::serialize() {
+    Dictionary dict;
     GDVIRTUAL_CALL(_on_serialize,dict,dict);
+
+    dict["id"] = unique_id;
+    dict["class"] = get_name();
+
+    if (player_turn != -1)
+        dict["pturn"] = player_turn;
+
+    if (!action_parameters.is_empty()) {
+        Dictionary serialize_action_parameters;
+        for (const auto& action_parameter: action_parameters) {
+            serialize_action_parameters[action_parameter.key] = action_parameter.value;
+        }
+        dict["params"] = serialize_action_parameters;
+    }
+
+    if (!action_steps.is_empty()) {
+        Array serialize_action_steps;
+        for (const auto& serialize_action_step: action_steps) {
+            Array p_step_info;
+            p_step_info.push_back(serialize_action_step->get_step_index());
+            p_step_info.push_back(serialize_action_step->get_step_identifier());
+            p_step_info.push_back(serialize_action_step->get_step_data());
+            serialize_action_steps.push_back(p_step_info);
+        }
+        dict["steps"] = serialize_action_steps;
+    }
+
     return dict;
 }
 
 Dictionary YGameAction::deserialize(Dictionary dict) {
-    GDVIRTUAL_CALL(_on_deserialize,dict,dict);
+    GDVIRTUAL_CALL(_on_deserialize, dict, dict);
+
+    unique_id = dict.get("id",0);
+    player_turn = dict.get("pturn",-1);
+
+    if (dict.has("params")) {
+        Dictionary serialized_action_parameters = dict["params"];
+        for (const auto& key : serialized_action_parameters.keys()) {
+            action_parameters[key] = serialized_action_parameters[key];
+        }
+    }
+
+    if (dict.has("steps")) {
+        Array serialized_action_steps = dict["steps"];
+        for (int i = 0; i < serialized_action_steps.size(); i++) {
+            Array p_step_info = serialized_action_steps[i];
+            Ref<YActionStep> new_step;
+            new_step.instantiate();
+            new_step->step_index = p_step_info[0];
+            new_step->step_identifier = p_step_info[1];
+            new_step->step_data = p_step_info[2];
+
+            action_steps.push_back(new_step);
+        }
+    }
+
     return dict;
 }
 

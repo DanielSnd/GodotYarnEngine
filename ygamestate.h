@@ -33,6 +33,7 @@ protected:
 public:
     static YGameState *get_singleton();
 
+
     static void set_singleton(const Ref<YGameState> &ref) {
         singleton = ref;
     }
@@ -52,6 +53,12 @@ public:
     double wait_before_going_to_next_step =0.0;
     void set_wait_before_going_to_next_step(double f) {wait_before_going_to_next_step = f;}
     double get_wait_before_going_to_next_step() const {return wait_before_going_to_next_step;}
+
+    Dictionary serialize();
+
+    void deserialize_game_actions_into(Vector<Ref<YGameAction>> &list_into, Array serialized_actions);
+
+    Dictionary deserialize(Dictionary dict, bool p_playback_after, bool p_instant_playback);
 
     YGamePlayer* current_turn_player;
     Ref<YGameAction> current_game_action;
@@ -137,6 +144,13 @@ public:
     bool end_current_game_action() const;
 
     int last_turn_player_id=-1;
+    bool is_playing_back = false;
+    void set_is_playing_back(bool b) {
+        is_playing_back = b;
+    }
+    bool get_is_playing_back() const {
+        return is_playing_back;
+    }
 
     Ref<YGameAction> add_game_action(const Ref<YGameAction>& ygs, int desired_game_state_id = -1);
     Ref<YGameAction> add_override_game_action(const Ref<YGameAction>& ygs, int desired_game_state_id = -1);
@@ -207,7 +221,6 @@ public:
         }
         return returndict;
     }
-
     
     YGameState() {
         next_execution_order_number = 0;
@@ -220,6 +233,7 @@ public:
         wait_before_going_to_next_step = 0.0;
         current_turn_player = nullptr;
         has_started = false;
+        is_playing_back = false;
     }
 
     ~YGameState() {
