@@ -26,7 +26,7 @@ private:
     int width = 64;
     int height = 64;
 
-    Color _get_color_at(int x, int y) const;
+    Vector4 _get_color_at(int x, int y) const;
 
     bool update_pending = false;
     void _queue_update();

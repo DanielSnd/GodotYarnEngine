@@ -48,12 +48,12 @@ void CombinedTexture2D::_update() {
 		uint8_t *wd8 = image_data.ptrw();
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
-				const Color ofs = _get_color_at(x, y);
+				const Vector4 ofs = _get_color_at(x, y);
 				const int starting_index = (x + (y * width)) * 4;
-				wd8[starting_index + 0] = uint8_t(CLAMP(ofs.r * 255.0, 0, 255));
-				wd8[starting_index + 1] = uint8_t(CLAMP(ofs.g * 255.0, 0, 255));
-				wd8[starting_index + 2] = uint8_t(CLAMP(ofs.b * 255.0, 0, 255));
-				wd8[starting_index + 3] = uint8_t(CLAMP(ofs.a * 255.0, 0, 255));
+				wd8[starting_index + 0] = uint8_t(CLAMP(ofs.x * 255.0, 0, 255));
+				wd8[starting_index + 1] = uint8_t(CLAMP(ofs.y * 255.0, 0, 255));
+				wd8[starting_index + 2] = uint8_t(CLAMP(ofs.z * 255.0, 0, 255));
+				wd8[starting_index + 3] = uint8_t(CLAMP(ofs.w * 255.0, 0, 255));
 			}
 		}
 	}
@@ -72,9 +72,10 @@ void CombinedTexture2D::_update() {
 	}
 }
 
-Color CombinedTexture2D::_get_color_at(int x, int y) const {
-	if (!ImageFront.is_valid() || !ImageBack.is_valid())
-		return Color{1.0,1.0,1.0,1.0};
+Vector4 CombinedTexture2D::_get_color_at(int x, int y) const {
+	if (!ImageFront.is_valid() || !ImageBack.is_valid()) {
+		return Vector4{1.0,1.0,1.0,1.0};
+	}
 
 	Vector2 pixel;
 	if (width > 1) {
@@ -92,13 +93,14 @@ Color CombinedTexture2D::_get_color_at(int x, int y) const {
 	int front_x = static_cast<int>(CLAMP(Math::round((pixel.x * (static_cast<float>(ImageFront->get_width()) - 1))), 0, ImageFront->get_width() - 1));
 	int front_y = static_cast<int>(CLAMP(Math::round((pixel.y * (static_cast<float>(ImageFront->get_height()) - 1))), 0, ImageFront->get_height() - 1));
 
-	Color colorBack = ImageBack->get_pixel(back_x, back_y) * modulate_back;
-	Color colorFront = ImageFront->get_pixel(front_x, front_y) * modulate_front;
-
-	// Here, you can decide how you want to combine the two sampled colors.
-	// For instance, you could average them, or perhaps blend them based on some other criterion.
-	// For simplicity, we'll just average them for now:
-	Color desired_result = colorBack.lerp(colorFront, colorFront.a);
+	Color colorBack = ImageBack->get_pixel(back_x, back_y);
+	Color colorFront = ImageFront->get_pixel(front_x, front_y);
+	Vector4 v4back = Vector4{colorBack.r,colorBack.g,colorBack.b,colorBack.a} *
+		(Vector4{modulate_back.r + additive_back.x,modulate_back.g + additive_back.y,modulate_back.b + additive_back.z,modulate_back.a});
+	Vector4 v4front = Vector4{colorFront.r,colorFront.g,colorFront.b,colorFront.a} *
+		(Vector4{modulate_front.r + additive_front.x,modulate_front.g + additive_front.y,modulate_front.b + additive_front.z,modulate_front.a});
+	
+	Vector4 desired_result = v4back.lerp(v4front, v4front.w);
 
 	return desired_result;
 }
