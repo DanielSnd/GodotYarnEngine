@@ -36,8 +36,8 @@ public:
     int get_step_identifier() const {return step_identifier;}
     void set_step_identifier(int b ){ step_identifier = b;}
     Variant step_data;
-    int get_step_data() const{return step_data;}
-    void set_step_data(Variant b ){ step_data = b;}
+    Variant get_step_data() const{return step_data;}
+    void set_step_data(const Variant & b ){ step_data = b;}
 
     YActionStep() {
         step_index=-1;
@@ -66,8 +66,11 @@ protected:
 
 public:
     bool instant_execute=false;
+    bool is_playing_back=false;
+    bool has_executed_created_method = false;
+    Variant get_from_step_data(Array p_step_data, int p_get_index, const Variant& p_get_default);
 
-    void set_instant_execute(bool b) { instant_execute = false; }
+    void set_instant_execute(bool b) { instant_execute = b; }
     bool get_instant_execute() const { return instant_execute; }
     int last_step_ran = 0;
     HashMap<int,Variant> action_parameters;

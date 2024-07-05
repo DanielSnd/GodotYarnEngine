@@ -56,6 +56,8 @@ public:
 
     Dictionary serialize();
 
+    void deserialize_individual_game_action_into(Vector<Ref<YGameAction>> &list_into, const Dictionary &action_dict, bool p_front_instead);
+
     void deserialize_game_actions_into(Vector<Ref<YGameAction>> &list_into, Array serialized_actions);
 
     Dictionary deserialize(Dictionary dict, bool p_playback_after, bool p_instant_playback);
@@ -145,6 +147,8 @@ public:
 
     int last_turn_player_id=-1;
     bool is_playing_back = false;
+    bool stop_playing_back_when_current_action_steps_done = false;
+    int stop_playing_back_at_id = -1;
     void set_is_playing_back(bool b) {
         is_playing_back = b;
     }
@@ -232,6 +236,7 @@ public:
         wait_before_going_to_next_action = 0.0;
         wait_before_going_to_next_step = 0.0;
         current_turn_player = nullptr;
+        stop_playing_back_when_current_action_steps_done = false;
         has_started = false;
         is_playing_back = false;
     }

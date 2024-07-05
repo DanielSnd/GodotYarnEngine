@@ -86,6 +86,8 @@ void YGameAction::_bind_methods() {
     ClassDB::bind_method(D_METHOD("wait_for_step","prevent_processing"), &YGameAction::wait_for_step);
     ClassDB::bind_method(D_METHOD("release_step"), &YGameAction::release_step);
 
+    ClassDB::bind_method(D_METHOD("get_from_step_data", "step_data", "get_index", "get_default"), &YGameAction::get_from_step_data);
+
     ClassDB::bind_method(D_METHOD("serialize"), &YGameAction::serialize);
     ClassDB::bind_method(D_METHOD("deserialize", "dict"), &YGameAction::deserialize);
 
@@ -126,7 +128,16 @@ void YGameAction::release_step() {
     }
 }
 
+Variant YGameAction::get_from_step_data(Array p_step_data, int p_get_index, const Variant& p_get_default) {
+    if (static_cast<int>(p_step_data.size()) > p_get_index) {
+        return p_step_data[p_get_index];
+    }
+    return p_get_default;
+}
+
 void YGameAction::register_step(const int _step_identifier, const Variant v) {
+    if (instant_execute) return;
+
     Ref<YActionStep> new_step;
     new_step.instantiate();
     new_step->step_index = static_cast<int>(action_steps.size());
@@ -171,6 +182,9 @@ void YGameAction::end_action() {
 }
 
 void YGameAction::enter_action() {
+    if (!has_executed_created_method)
+        created();
+
     auto ygs = YGameState::get_singleton();
     if (ygs != nullptr) {
         in_state_order = YGameState::get_singleton()->next_execution_order_number;
@@ -262,12 +276,12 @@ Dictionary YGameAction::serialize() {
     }
 
     if (!action_steps.is_empty()) {
-        Array serialize_action_steps;
+        TypedArray<Dictionary> serialize_action_steps;
         for (const auto& serialize_action_step: action_steps) {
-            Array p_step_info;
-            p_step_info.push_back(serialize_action_step->get_step_index());
-            p_step_info.push_back(serialize_action_step->get_step_identifier());
-            p_step_info.push_back(serialize_action_step->get_step_data());
+            Dictionary p_step_info;
+            p_step_info["i"] = serialize_action_step->get_step_index();
+            p_step_info["id"] = serialize_action_step->get_step_identifier();
+            p_step_info["data"] = serialize_action_step->get_step_data();
             serialize_action_steps.push_back(p_step_info);
         }
         dict["steps"] = serialize_action_steps;
@@ -290,14 +304,17 @@ Dictionary YGameAction::deserialize(Dictionary dict) {
     }
 
     if (dict.has("steps")) {
-        Array serialized_action_steps = dict["steps"];
+        TypedArray<Dictionary> serialized_action_steps = dict["steps"];
         for (int i = 0; i < serialized_action_steps.size(); i++) {
-            Array p_step_info = serialized_action_steps[i];
+            Dictionary p_step_info = serialized_action_steps[i];
             Ref<YActionStep> new_step;
             new_step.instantiate();
-            new_step->step_index = p_step_info[0];
-            new_step->step_identifier = p_step_info[1];
-            new_step->step_data = p_step_info[2];
+            if (p_step_info.has("id"))
+                new_step->set_step_identifier(p_step_info["id"]);
+            if (p_step_info.has("data"))
+                new_step->set_step_data(p_step_info["data"]);
+            if (p_step_info.has("i"))
+                new_step->step_index = p_step_info["i"];
 
             action_steps.push_back(new_step);
         }
@@ -307,18 +324,27 @@ Dictionary YGameAction::deserialize(Dictionary dict) {
 }
 
 void YGameAction::created() {
+    if (has_executed_created_method) {
+        return;
+    }
+    has_executed_created_method = true;
     Ref<Script> _find_script = get_script();
     if (_find_script.is_valid()) {
         String string_global_name = _find_script->get_global_name();
         if (!string_global_name.is_empty()) {
             set_name(string_global_name);
         }
+        GDVIRTUAL_CALL(_on_created);
+    } else {
+        has_executed_created_method = false;
     }
-    GDVIRTUAL_CALL(_on_created);
 }
 
 YGameAction::YGameAction() {
+    is_playing_back = false;
+    has_executed_created_method = false;
     player_turn=-1;
+    instant_execute = false;
     time_started = 0.0;
     steps_consumed = 0;
     unique_id = 0;

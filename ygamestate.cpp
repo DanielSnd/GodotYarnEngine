@@ -214,21 +214,33 @@ void YGameState::do_process(double delta) {
             wait_before_going_to_next_step -= delta;
         } else {
             //IF THERE'S A NEW STEP AND WE'RE NOT CURRENTLY WAITING FOR A STEP TO CONCLUDE THEN GO TO NEXT STEP!!
-            if (current_game_action->steps_consumed < current_game_action->action_steps.size() && !current_game_action->waiting_for_step) {
-                if (!current_game_action->action_steps[current_game_action->steps_consumed].is_valid()) {
-                    ERR_PRINT("YGameState Attempted to take an action step that wasn't valid");
-                    current_game_action->steps_consumed+=1;
-                } else {
-                    auto current_possible_step = current_game_action->action_steps[current_game_action->steps_consumed];
-                    if (current_possible_step.is_valid()) {
-                        // THIS STEP WAS ALREADY TAKEN, CONSUME!
-                        if (current_possible_step->get_step_taken()) {
-                            current_game_action->steps_consumed+=1;
-                        }
-                        else {
-                            current_game_action->step_action(current_game_action->action_steps[current_game_action->steps_consumed],false);
+            if (current_game_action->steps_consumed < current_game_action->action_steps.size()) {
+                if (!current_game_action->waiting_for_step) {
+                    if (!current_game_action->action_steps[current_game_action->steps_consumed].is_valid()) {
+                        ERR_PRINT("YGameState Attempted to take an action step that wasn't valid");
+                        current_game_action->steps_consumed+=1;
+                    } else {
+                        auto current_possible_step = current_game_action->action_steps[current_game_action->steps_consumed];
+                        if (current_possible_step.is_valid()) {
+                            // THIS STEP WAS ALREADY TAKEN, CONSUME!
+                            if (current_possible_step->get_step_taken()) {
+                                current_game_action->steps_consumed+=1;
+                            }
+                            else {
+                                if (is_playing_back && stop_playing_back_when_current_action_steps_done && current_game_action->steps_consumed + 1 >= current_game_action->action_steps.size()) {
+                                    stop_playing_back_when_current_action_steps_done = false;
+                                    is_playing_back = false;
+                                    current_game_action->is_playing_back = false;
+                                }
+                                current_game_action->step_action(current_game_action->action_steps[current_game_action->steps_consumed],false);
+                            }
                         }
                     }
+                }
+            } else {
+                if (is_playing_back && stop_playing_back_when_current_action_steps_done) {
+                    stop_playing_back_when_current_action_steps_done = false;
+                    is_playing_back = false;
                 }
             }
         }
@@ -266,10 +278,13 @@ void YGameState::do_process(double delta) {
         int overriding_game_actions_remaining = static_cast<int>(overriding_game_actions.size());
         int future_game_actions_remaining = static_cast<int>(future_game_actions.size());
 
-        if (is_playing_back && overriding_game_actions_remaining + future_game_actions_remaining == 1)
-            is_playing_back = false;
+        if (is_playing_back && ((overriding_game_actions_remaining + future_game_actions_remaining == 1) || (!future_game_actions.is_empty() && future_game_actions[0]->unique_id == stop_playing_back_at_id))) {
+            stop_playing_back_when_current_action_steps_done = true;
+            if (!future_game_actions.is_empty() && future_game_actions[0]->unique_id == stop_playing_back_at_id)
+                overriding_game_actions_remaining = 0;
+        }
 
-        if (overriding_game_actions_remaining > 0) {
+        if (overriding_game_actions_remaining > 0 && !is_playing_back) {
             current_game_action = overriding_game_actions[0];
             overriding_game_actions.remove_at(0);
             if (current_game_action.is_valid()) {
@@ -282,14 +297,34 @@ void YGameState::do_process(double delta) {
             }
             return;
         }
+
         if (future_game_actions_remaining > 0) {
             current_game_action = future_game_actions[0];
             //print_line("Set the current game action to be the one in front of future_game_actions ",current_game_action);
             future_game_actions.remove_at(0);
             //print_line("Popped the front of futuregameactions, is current game action valid? ",current_game_action," ",current_game_action.is_valid());
             if (current_game_action.is_valid()) {
+                if (stop_playing_back_when_current_action_steps_done) {
+                    is_playing_back = false;
+                    current_game_action->is_playing_back = false;
+                    current_game_action->instant_execute = false;
+                } else if(is_playing_back) {
+                    current_game_action->is_playing_back = true;
+                }
+                int current_action_steps = current_game_action->get_all_steps_count();
+                if ((is_playing_back || stop_playing_back_when_current_action_steps_done) && current_action_steps == 0 && get_overridinge_game_action_count() == 0 && get_future_game_action_count() == 0) {
+                    stop_playing_back_when_current_action_steps_done=false;
+                    is_playing_back = false;
+                    current_game_action->is_playing_back = false;
+                }
+
                 emit_signal("changed_current_action",current_game_action);
                 current_game_action->enter_action();
+
+                if (stop_playing_back_when_current_action_steps_done && current_action_steps > 0) {
+                    is_playing_back = true;
+                    current_game_action->is_playing_back =true;
+                }
                 return;
             }
         }
@@ -411,40 +446,64 @@ Dictionary YGameState::serialize() {
     dict["future_actions"] = future_game_actions_array;
     dict["past_actions"] = past_game_actions_array;
 
+    if (!current_game_action.is_null() && current_game_action.is_valid())
+        dict["current_action"] = current_game_action->serialize();
+
     return dict;
+}
+
+void YGameState::deserialize_individual_game_action_into(Vector<Ref<YGameAction>> &list_into, const Dictionary &action_dict, bool p_front_instead = false) {
+    String class_name = action_dict.get("class","");
+    Ref<YGameAction> action;
+    action.instantiate();
+    if (!class_name.is_empty() && YEngine::get_singleton()->class_name_to_script_path.has(class_name)) {
+        Ref<Script> gdScript = ResourceLoader::load(YEngine::get_singleton()->class_name_to_script_path[class_name], "Script");
+        if (gdScript.is_valid()) {
+            auto temp_script_instance = gdScript->instance_create(action.ptr());
+            if (temp_script_instance != nullptr) {
+                action->set_script_instance(temp_script_instance);
+                action->set_name(class_name);
+            }
+        }
+    }
+    action->deserialize(action_dict);
+    if (p_front_instead)
+        list_into.insert(0,action);
+    else
+        list_into.push_back(action);
 }
 
 void YGameState::deserialize_game_actions_into(Vector<Ref<YGameAction>> &list_into, Array serialized_game_actions) {
     for (int i = 0; i < serialized_game_actions.size(); i++) {
         Dictionary action_dict = serialized_game_actions[i];
-        String class_name = action_dict.get("class","");
-        Ref<YGameAction> action;
-        action.instantiate();
-        if (!class_name.is_empty() && YEngine::get_singleton()->class_name_to_script_path.has(class_name)) {
-            Ref<Script> gdScript = ResourceLoader::load(YEngine::get_singleton()->class_name_to_script_path[class_name], "Script");
-            if (gdScript.is_valid()) {
-                auto temp_script_instance = gdScript->instance_create(action.ptr());
-                if (temp_script_instance != nullptr) {
-                    action->set_script_instance(temp_script_instance);
-                    action->set_name(class_name);
-                }
-            }
-        }
-        action->deserialize(action_dict);
-        list_into.push_back(action);
+        deserialize_individual_game_action_into(list_into, action_dict);
     }
 }
 
 Dictionary YGameState::deserialize(const Dictionary dict, bool p_playback_after = false, bool p_instant_playback = false) {
+    clear_all_game_actions();
+    if(has_started && p_playback_after) {
+        has_started=false;
+        YEngine::get_singleton()->using_game_state = false;
+    }
     overriding_game_actions.clear();
     future_game_actions.clear();
     past_game_actions.clear();
     if (p_playback_after) {
-        if (dict.has("past_game_actions")) {
-            Array past_game_actions_array = dict["past_game_actions"];
+        if (dict.has("past_actions")) {
+            Array past_game_actions_array = dict["past_actions"];
             deserialize_game_actions_into(future_game_actions , past_game_actions_array);
             for (const auto& ygame_action: future_game_actions) {
                 ygame_action->set_instant_execute(p_instant_playback);
+            }
+        }
+        if (dict.has("current_action")) {
+            if (p_playback_after) {
+                deserialize_individual_game_action_into(future_game_actions, dict["current_action"]);
+                if (!future_game_actions.is_empty()) {
+                    auto should_be_current_action = future_game_actions[static_cast<int>(future_game_actions.size()-1)];
+                    stop_playing_back_at_id = should_be_current_action->get_unique_id();
+                }
             }
         }
         if (dict.has("override_actions")) {
@@ -464,9 +523,15 @@ Dictionary YGameState::deserialize(const Dictionary dict, bool p_playback_after 
             Array future_game_action_array = dict["future_actions"];
             deserialize_game_actions_into(future_game_actions , future_game_action_array);
         }
-        if (dict.has("past_game_actions")) {
-            Array past_game_actions_array = dict["past_game_actions"];
+        if (dict.has("past_actions")) {
+            Array past_game_actions_array = dict["past_actions"];
             deserialize_game_actions_into(past_game_actions , past_game_actions_array);
+        }
+        if (dict.has("current_action")) {
+            Vector<Ref<YGameAction>> temp_current;
+            deserialize_individual_game_action_into(temp_current, dict["current_action"]);
+            if (!temp_current.is_empty())
+                current_game_action = temp_current[0];
         }
     }
 
@@ -510,5 +575,12 @@ Dictionary YGameState::deserialize(const Dictionary dict, bool p_playback_after 
         }
     }
 
+    if (p_playback_after) {
+        is_playing_back = true;
+        if(!has_started) {
+            YEngine::get_singleton()->game_state_starting(this);
+            has_started=true;
+        }
+    }
     return dict;
 }
