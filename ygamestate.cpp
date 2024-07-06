@@ -482,10 +482,12 @@ void YGameState::deserialize_game_actions_into(Vector<Ref<YGameAction>> &list_in
 
 Dictionary YGameState::deserialize(const Dictionary dict, bool p_playback_after = false, bool p_instant_playback = false) {
     clear_all_game_actions();
+
     if(has_started && p_playback_after) {
         has_started=false;
         YEngine::get_singleton()->using_game_state = false;
     }
+
     overriding_game_actions.clear();
     future_game_actions.clear();
     past_game_actions.clear();

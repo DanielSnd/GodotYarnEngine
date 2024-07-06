@@ -26,7 +26,7 @@ private:
     int width = 64;
     int height = 64;
 
-    Vector4 _get_color_at(int x, int y) const;
+    Vector4 _get_color_at(int x, int y, float aspect_ration) const;
 
     bool update_pending = false;
     void _queue_update();
@@ -47,6 +47,28 @@ public:
     Color modulate_front = {1.0,1.0,1.0,1.0};
     Vector3 additive_back = {0.0,0.0,0.0};
     Vector3 additive_front = {0.0,0.0,0.0};
+    Vector2 back_offset = {0.0,0.0};
+    Vector2 back_scale = {1.0,1.0};
+    Vector2 front_offset = {0.0,0.0};
+    Vector2 front_scale = {1.0,1.0};
+    Vector4i front_crop_out = {0,0,0,0};
+
+    Vector2 get_front_offset() const { return front_offset; }
+
+    void set_front_offset(Vector2 offset);
+
+    Vector2 get_front_scale() const { return front_scale; }
+
+    void set_front_scale(Vector2 scale);
+
+    Vector2 get_back_offset() const { return back_offset; }
+
+    void set_back_offset(Vector2 offset);
+
+    Vector2 get_back_scale() const { return back_scale; }
+
+    void set_back_scale(Vector2 scale) ;
+
     void set_modulate_back(Color p_color);
     void set_modulate_front(Color p_color);
 
@@ -64,6 +86,9 @@ public:
     Color get_modulate_back() const {
         return modulate_back;
     }
+
+    Vector4i get_front_crop_out() const { return front_crop_out; }
+    void set_front_crop_out(Vector4i crop_under);
 
     void set_texture_back(const Ref<Texture2D> &p_texture_back);
 

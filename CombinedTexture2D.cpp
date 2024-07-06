@@ -45,15 +45,20 @@ void CombinedTexture2D::_update() {
 		image_data.resize(data_size);
 
 	{
+		// calculate aspect ratio
+		float aspect_ratio = 1.0;
+		if (ImageFront.is_valid()) {
+			aspect_ratio = static_cast<float>(ImageFront->get_width()) / static_cast<float>(ImageFront->get_height());
+		}
 		uint8_t *wd8 = image_data.ptrw();
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
-				const Vector4 ofs = _get_color_at(x, y);
+				const Vector4 ofs = _get_color_at(x, y, aspect_ratio);
 				const int starting_index = (x + (y * width)) * 4;
-				wd8[starting_index + 0] = uint8_t(CLAMP(ofs.x * 255.0, 0, 255));
-				wd8[starting_index + 1] = uint8_t(CLAMP(ofs.y * 255.0, 0, 255));
-				wd8[starting_index + 2] = uint8_t(CLAMP(ofs.z * 255.0, 0, 255));
-				wd8[starting_index + 3] = uint8_t(CLAMP(ofs.w * 255.0, 0, 255));
+				wd8[starting_index + 0] = static_cast<uint8_t>(CLAMP(ofs.x * 255.0, 0, 255));
+				wd8[starting_index + 1] = static_cast<uint8_t>(CLAMP(ofs.y * 255.0, 0, 255));
+				wd8[starting_index + 2] = static_cast<uint8_t>(CLAMP(ofs.z * 255.0, 0, 255));
+				wd8[starting_index + 3] = static_cast<uint8_t>(CLAMP(ofs.w * 255.0, 0, 255));
 			}
 		}
 	}
@@ -72,7 +77,7 @@ void CombinedTexture2D::_update() {
 	}
 }
 
-Vector4 CombinedTexture2D::_get_color_at(int x, int y) const {
+Vector4 CombinedTexture2D::_get_color_at(int x, int y, float aspect_ratio) const {
 	if (!ImageFront.is_valid() || !ImageBack.is_valid()) {
 		return Vector4{1.0,1.0,1.0,1.0};
 	}
@@ -90,24 +95,34 @@ Vector4 CombinedTexture2D::_get_color_at(int x, int y) const {
 	int back_x = static_cast<int>(CLAMP(Math::round((pixel.x * (static_cast<float>(ImageBack->get_width()) - 1))), 0, ImageBack->get_width() - 1));
 	int back_y = static_cast<int>(CLAMP(Math::round((pixel.y * (static_cast<float>(ImageBack->get_height()) - 1))), 0, ImageBack->get_height() - 1));
 
-	int front_x = static_cast<int>(CLAMP(Math::round((pixel.x * (static_cast<float>(ImageFront->get_width()) - 1))), 0, ImageFront->get_width() - 1));
-	int front_y = static_cast<int>(CLAMP(Math::round((pixel.y * (static_cast<float>(ImageFront->get_height()) - 1))), 0, ImageFront->get_height() - 1));
+	// add offset and scale vector
+	back_x = static_cast<int>((static_cast<float>(back_x) + (back_offset.x * 100.0)) * (back_scale.x));
+	back_y = static_cast<int>((static_cast<float>(back_y) + (back_offset.y * 100.0)) * (back_scale.y));
 
-	Color colorBack = ImageBack->get_pixel(back_x, back_y);
-	Color colorFront = ImageFront->get_pixel(front_x, front_y);
+	int front_x = static_cast<int>(CLAMP(Math::round((pixel.x * (static_cast<float>(ImageFront->get_width()) - 1))), 0, ImageFront->get_width() - 1));
+	int front_y = static_cast<int>(CLAMP(Math::round((pixel.y * (static_cast<float>(ImageFront->get_height()) - 1) * aspect_ratio)), 0, ImageFront->get_height() - 1));
+
+	// add offset and scale vector
+	front_x = static_cast<int>((static_cast<float>(front_x) + (front_offset.x * 100.0)) * front_scale.x);
+	front_y = static_cast<int>((static_cast<float>(front_y) + (front_offset.y * 100.0)) * front_scale.y);
+
+	Color colorBack = ImageBack->get_pixel(CLAMP(back_x,0,ImageBack->get_width()-1),  CLAMP(back_y,0,ImageBack->get_height()-1));
+	Color colorFront = ImageFront->get_pixel(CLAMP(front_x,0,ImageFront->get_width()-1), CLAMP(front_y,0,ImageFront->get_height()-1));
+
 	Vector4 v4back = Vector4{colorBack.r,colorBack.g,colorBack.b,colorBack.a} *
 		(Vector4{modulate_back.r + additive_back.x,modulate_back.g + additive_back.y,modulate_back.b + additive_back.z,modulate_back.a});
 	Vector4 v4front = Vector4{colorFront.r,colorFront.g,colorFront.b,colorFront.a} *
 		(Vector4{modulate_front.r + additive_front.x,modulate_front.g + additive_front.y,modulate_front.b + additive_front.z,modulate_front.a});
-	
-	Vector4 desired_result = v4back.lerp(v4front, v4front.w);
 
-	return desired_result;
+	if (front_crop_out == Vector4i{0,0,0,0})
+		return v4back.lerp(v4front, v4front.w);
+
+	return v4back.lerp(v4front, ((y < (height - front_crop_out.z) && (y > front_crop_out.w) ) && (x < (width - front_crop_out.y) && (x > front_crop_out.x) )) ? v4front.w : 0.0f);
 }
 
 void CombinedTexture2D::set_width(int p_width) {
-	ERR_FAIL_COND_MSG(p_width <= 0 || p_width > 16384, "Texture dimensions have to be within 1 to 16384 range.");
-	width = p_width;
+	// ERR_FAIL_COND_MSG(p_width <= 0 || p_width > 16384, "Texture dimensions have to be within 1 to 16384 range.");
+	width = MIN(MAX(p_width,1),16384);
 	_queue_update();
 	emit_changed();
 }
@@ -117,8 +132,8 @@ int CombinedTexture2D::get_width() const {
 }
 
 void CombinedTexture2D::set_height(int p_height) {
-	ERR_FAIL_COND_MSG(p_height <= 0 || p_height > 16384, "Texture dimensions have to be within 1 to 16384 range.");
-	height = p_height;
+	// ERR_FAIL_COND_MSG(p_height <= 0 || p_height > 16384, "Texture dimensions have to be within 1 to 16384 range.");
+	height = MIN(MAX(p_height,1),16384);
 	_queue_update();
 	emit_changed();
 }
@@ -141,6 +156,28 @@ Ref<Texture2D> CombinedTexture2D::get_texture_back() const {
 
 Ref<Texture2D> CombinedTexture2D::get_texture_front() const {
 	return TextureFront;
+}
+
+void CombinedTexture2D::set_front_offset(Vector2 offset) {
+	front_offset = offset;
+	_queue_update();
+	emit_changed();
+}
+
+void CombinedTexture2D::set_front_scale(Vector2 scale) {
+	front_scale = scale;
+	_queue_update();
+	emit_changed();
+}
+
+void CombinedTexture2D::set_back_offset(const Vector2 offset) {
+	{ back_offset = offset; }
+	_queue_update();
+}
+
+void CombinedTexture2D::set_back_scale(const Vector2 scale) {
+	{ back_scale = scale; }
+	_queue_update();
 }
 
 void CombinedTexture2D::set_modulate_back(Color p_color) {
@@ -176,6 +213,13 @@ Vector3 CombinedTexture2D::get_additive_front() const {
 	return additive_front;
 }
 
+void CombinedTexture2D::set_front_crop_out(Vector4i crop_under) {
+	front_crop_out = crop_under;
+
+	_queue_update();
+	emit_changed();
+}
+
 void CombinedTexture2D::set_texture_back(const Ref<Texture2D> &p_texture_back) {
 	TextureBack = p_texture_back;
 	if (TextureBack.is_valid()) {
@@ -199,7 +243,7 @@ void CombinedTexture2D::set_texture_front(const Ref<Texture2D> &p_texture_front)
 Ref<Image> CombinedTexture2D::get_image() const {
 	const_cast<CombinedTexture2D *>(this)->update_now();
 	if (!texture.is_valid()) {
-		return Ref<Image>();
+		return {};
 	}
 	return RenderingServer::get_singleton()->texture_2d_get(texture);
 }
@@ -241,4 +285,26 @@ void CombinedTexture2D::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "additive_back"), "set_additive_back", "get_additive_back");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "additive_front"), "set_additive_front", "get_additive_front");
+
+	ClassDB::bind_method(D_METHOD("get_front_offset"), &CombinedTexture2D::get_front_offset);
+	ClassDB::bind_method(D_METHOD("set_front_offset", "offset"), &CombinedTexture2D::set_front_offset);
+
+	ClassDB::bind_method(D_METHOD("get_front_scale"), &CombinedTexture2D::get_front_scale);
+	ClassDB::bind_method(D_METHOD("set_front_scale", "scale"), &CombinedTexture2D::set_front_scale, DEFVAL(Vector2(1.0,1.0)));
+	ClassDB::bind_method(D_METHOD("get_front_crop_out"), &CombinedTexture2D::get_front_crop_out);
+	ClassDB::bind_method(D_METHOD("set_front_crop_out", "crop_under"), &CombinedTexture2D::set_front_crop_out, DEFVAL(Vector4i(0,0,0,0)));
+
+	ClassDB::bind_method(D_METHOD("get_back_offset"), &CombinedTexture2D::get_back_offset);
+	ClassDB::bind_method(D_METHOD("set_back_offset", "offset"), &CombinedTexture2D::set_back_offset);
+
+	ClassDB::bind_method(D_METHOD("get_back_scale"), &CombinedTexture2D::get_back_scale);
+	ClassDB::bind_method(D_METHOD("set_back_scale", "scale"), &CombinedTexture2D::set_back_scale, DEFVAL(Vector2(1.0,1.0)));
+    
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "front_scale", PROPERTY_HINT_LINK), "set_front_scale", "get_front_scale");
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "front_offset"), "set_front_offset", "get_front_offset");
+
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "back_scale", PROPERTY_HINT_LINK), "set_back_scale", "get_back_scale");
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "back_offset"), "set_back_offset", "get_back_offset");
+
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR4I, "front_crop_out"), "set_front_crop_out", "get_front_crop_out");
 }
