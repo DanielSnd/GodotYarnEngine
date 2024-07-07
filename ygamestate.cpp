@@ -397,8 +397,13 @@ Ref<YGameAction> YGameState::add_override_game_action_with_param(const Ref<YGame
         desired_game_state_id = next_game_action_unique_id;
         next_game_action_unique_id++;
     }
-    if (overriding_game_actions.size()>0)
-        overriding_game_actions.insert(0,ygs);
+    if (overriding_game_actions.size()>0) {
+        if (overriding_game_actions[0]->has_priority >= 0 && ygs->has_priority < overriding_game_actions[0]->has_priority) {
+            overriding_game_actions.insert(1,ygs);
+        } else {
+            overriding_game_actions.insert(0,ygs);
+        }
+    }
     else
         overriding_game_actions.append(ygs);
     ygs->set_unique_id(desired_game_state_id);

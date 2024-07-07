@@ -164,7 +164,6 @@ public:
     float time_started;
     void set_time_started(float f) {time_started = f;}
     float get_time_started() const {return time_started;}
-
     
     int in_state_order = INT16_MAX;
     void set_in_state_order(int f) { in_state_order = f; }
@@ -173,6 +172,11 @@ public:
     int steps_consumed;
     void set_steps_consumed(int f) { steps_consumed = f; }
     int get_steps_consumed() const { return steps_consumed; }
+
+    int has_priority = -1;
+    void set_priority(int f) { has_priority = f; }
+    int get_priority() const { return has_priority; }
+
 
     int get_all_steps_count() const {
         return static_cast<int>(action_steps.size());
