@@ -21,6 +21,16 @@ void YGameLog::_bind_methods() {
     ClassDB::bind_method(D_METHOD("clear_log"), &YGameLog::clear_log);
 
     ADD_SIGNAL(MethodInfo("on_message_logged", PropertyInfo(Variant::STRING, "message")));
+
+    ClassDB::bind_method(D_METHOD("get_variant_log_count"), &YGameLog::get_variant_log_count);
+
+    ClassDB::bind_method(D_METHOD("get_logged_variants"), &YGameLog::get_logged_variants);
+    ClassDB::bind_method(D_METHOD("set_logged_variants", "logged_variants"), &YGameLog::set_logged_variants);
+    ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "logged_variants"), "set_logged_variants", "get_logged_variants");
+
+    ClassDB::bind_method(D_METHOD("log_variant", "new_message"), &YGameLog::log_variant);
+    ClassDB::bind_method(D_METHOD("clear_variant_log"), &YGameLog::clear_variant_log);
+
 }
 
 YGameLog *YGameLog::get_singleton() {

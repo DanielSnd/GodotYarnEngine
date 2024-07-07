@@ -30,19 +30,28 @@ public:
     void SetupOutputLogging();
 
     Vector<String> logged;
+    Vector<Variant> loggedVariants;
 
-    int get_log_count() {return static_cast<int>(logged.size());}
-    Vector<String> get_logged() {return logged;}
+    int get_log_count() const {return static_cast<int>(logged.size());}
+    Vector<String> get_logged() const {return logged;}
     void set_logged(const Vector<String> &p_logged) {logged = p_logged;}
-
-    void log_message(String new_message) { logged.push_back(new_message); }
+    void log_message(const String &new_message) { logged.push_back(new_message); }
 
     void clear_log() { logged.clear(); }
+
+    int get_variant_log_count() const {return static_cast<int>(loggedVariants.size());}
+    Vector<Variant> get_logged_variants() const {return loggedVariants;}
+    void set_logged_variants(const Vector<Variant> &p_logged) {loggedVariants = p_logged;}
+    void log_variant(const Variant &new_message) { loggedVariants.push_back(new_message); }
+
+    void clear_variant_log() { loggedVariants.clear(); }
+
 
     YGameLog() { }
 
     ~YGameLog() {
         logged.clear();
+        loggedVariants.clear();
         if(singleton.is_valid() && singleton == this) {
             singleton.unref();
         }
