@@ -16,9 +16,11 @@ private:
     Ref<Image> use_image;
     Ref<Image> ImageBack;
     Ref<Image> ImageFront;
+    Ref<Image> ImageOverlay;
 
     Ref<Texture2D> TextureBack;
     Ref<Texture2D> TextureFront;
+    Ref<Texture2D> TextureOverlay;
 
     Vector<uint8_t> image_data;
     mutable RID texture;
@@ -26,7 +28,12 @@ private:
     int width = 64;
     int height = 64;
 
-    Vector4 _get_color_at(int x, int y, float aspect_ration) const;
+    Vector4 _get_color_at(int x, int y, float aspect_ration, bool has_texture_overlay) const;
+
+    bool show_based_on_back_alpha = false;
+    bool only_use_front_full_alpha = false;
+    bool black_on_back_overrides_front = false;
+    bool front_flips_h = false;
 
     bool update_pending = false;
     void _queue_update();
@@ -52,6 +59,28 @@ public:
     Vector2 front_offset = {0.0,0.0};
     Vector2 front_scale = {1.0,1.0};
     Vector4i front_crop_out = {0,0,0,0};
+    int black_on_black_overrides_under = 0;
+    int show_based_on_back_alpha_under = 0;
+
+    int get_show_based_on_back_alpha_under() const { return show_based_on_back_alpha_under; }
+    void set_show_based_on_back_alpha_under(int p_show_based_on_back_alpha_under);
+
+    bool get_show_based_on_back_alpha() const { return show_based_on_back_alpha; }
+
+    void set_show_based_on_back_alpha(bool p_show_based);
+
+    bool get_only_use_front_full_alpha() const { return only_use_front_full_alpha; }
+
+    void set_only_use_front_full_alpha(bool p_only_use_front_full_alpha);
+
+    bool get_black_on_back_overrides_front() const { return black_on_back_overrides_front; }
+    void set_black_on_back_overrides_front(bool p_black_on_back_overrides_front);
+
+    int get_black_on_black_overrides_under() const { return black_on_black_overrides_under; }
+    void set_black_on_black_overrides_under(int p_black_on_black_overrides_under);
+
+    bool get_front_flips_h() const { return front_flips_h; }
+    void set_front_flips_h(bool p_front_flips_h);
 
     Vector2 get_front_offset() const { return front_offset; }
 
@@ -95,8 +124,10 @@ public:
     Ref<Texture2D> get_texture_back() const;
 
     void set_texture_front(const Ref<Texture2D> &p_texture_front);
-
     Ref<Texture2D> get_texture_front() const;
+
+    void set_texture_overlay(const Ref<Texture2D> &p_texture_overlay);
+    Ref<Texture2D> get_texture_overlay() const;
 
     virtual bool has_alpha() const override { return true; }
     virtual Ref<Image> get_image() const override;
