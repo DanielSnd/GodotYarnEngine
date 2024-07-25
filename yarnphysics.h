@@ -6,6 +6,7 @@
 #define YARNPHYSICS_H
 #include "core/object/ref_counted.h"
 #include "core/variant/typed_array.h"
+#include "scene/resources/3d/shape_3d.h"
 
 class YPhysics : public RefCounted {
     GDCLASS(YPhysics, RefCounted);
@@ -20,6 +21,7 @@ public:
     static YPhysics *get_singleton();
 
     static void set_singleton(const Ref<YPhysics> &ref) {
+        has_sphere_shape = false;
         singleton = ref;
     }
 
@@ -29,23 +31,37 @@ public:
         COLLIDE_WITH_BOTH = 2
     };
 
-    RID sphere_rid;
-    bool has_sphere_shape = false;
-    Dictionary raycast3d(Vector3 ray_origin, Vector3 ray_dir, float ray_dist, CollideType _collide_type, uint32_t layer_mask = UINT32_MAX);
-    Dictionary raycast2d_to(Vector2 ray_origin, Vector2 ray_end, CollideType _collide_type, uint32_t layer_mask = UINT32_MAX);
+    static RID sphere_rid;
+    static bool has_sphere_shape;
+    static Dictionary raycast3d(Vector3 ray_origin, Vector3 ray_dir, float ray_dist, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
+    static Dictionary raycast2d_to(Vector2 ray_origin, Vector2 ray_end, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
 
-    bool free_line_check(Vector3 ray_origin, Vector3 ray_end, CollideType _collide_type, uint32_t layer_mask);
+    static bool free_line_check(Vector3 ray_origin, Vector3 ray_end, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
 
-    Dictionary raycast3d_to(Vector3 ray_origin, Vector3 ray_end, CollideType _collide_type, uint32_t layer_mask = UINT32_MAX);
+    static Dictionary raycast3d_to(Vector3 ray_origin, Vector3 ray_end, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
 
-    TypedArray<Dictionary> _intersect_sphere(Vector3 p_world_position, real_t radius, CollideType _collide_type,
-                                             int p_max_results, uint32_t collision_mask);
+    static TypedArray<Dictionary> _intersect_sphere(Vector3 p_world_position, real_t radius, CollideType _collide_type = COLLIDE_WITH_BODIES,
+                                             int p_max_results = 32, uint32_t collision_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
 
-    Object *check_collision_sphere(Vector3 p_world_position, real_t radius, uint32_t collision_mask);
+    static TypedArray<Dictionary> _intersect_point_3d(Vector3 p_world_position, CollideType _collide_type = COLLIDE_WITH_BODIES,
+                                             int p_max_results = 32, uint32_t collision_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
 
-    bool free_sphere_check(Vector3 p_world_position, real_t radius, uint32_t collision_mask);
+    static TypedArray<Dictionary> _intersect_shape_3d(const Ref<Shape3D> &p_shape, const Transform3D &p_world_transform,
+                                                real_t margin, CollideType _collide_type, int p_max_results,
+                                                uint32_t collision_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
 
-    Dictionary raycast2d(Vector2 ray_origin, Vector2 ray_dir, float ray_dist, CollideType _collide_type, uint32_t layer_mask = UINT32_MAX);
+    static Dictionary check_rest_info(const Ref<Shape3D> &p_shape, const Transform3D &p_world_transform, real_t p_margin,
+                                      CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t collision_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
+
+    static Object *check_collision_sphere(Vector3 p_world_position, real_t radius, uint32_t collision_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
+
+    static bool free_sphere_check(Vector3 p_world_position, real_t radius, uint32_t collision_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
+
+    static Vector<real_t> cast_motion(const Ref<Shape3D> &p_shape, const Transform3D &p_world_transform, real_t p_margin,
+                                      const Vector3 &p_motion, CollideType p_collide_type = COLLIDE_WITH_BODIES, uint32_t p_collision_mask = UINT32_MAX,
+                                      const TypedArray<RID> &p_exclude = {});
+
+    static Dictionary raycast2d(Vector2 ray_origin, Vector2 ray_dir, float ray_dist, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
 
     YPhysics();
     ~YPhysics();
