@@ -11,7 +11,8 @@
 #include "servers/physics_server_2d.h"
 
 Ref<YPhysics> YPhysics::singleton;
-
+bool YPhysics::has_sphere_shape = false;
+RID YPhysics::sphere_rid;
 
 void YPhysics::_bind_methods() {
     ClassDB::bind_static_method("YPhysics",D_METHOD("raycast2d_to", "ray_origin", "ray_end", "collide_type", "collision_mask", "exclude"), &YPhysics::raycast2d_to,DEFVAL(COLLIDE_WITH_BODIES),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));

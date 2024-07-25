@@ -21,7 +21,6 @@ public:
     static YPhysics *get_singleton();
 
     static void set_singleton(const Ref<YPhysics> &ref) {
-        has_sphere_shape = false;
         singleton = ref;
     }
 
