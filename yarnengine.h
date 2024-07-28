@@ -112,6 +112,10 @@ public:
 
     TypedArray<Resource> find_resources_in(const Variant &path, const String &name_contains = "");
 
+    bool are_resources_virtually_the_same(const Ref<Resource> &resource_a, const Ref<Resource> &resource_b);
+
+    Vector<String> get_diverging_variables_in_resources(const Ref<Resource> &resource_a, const Ref<Resource> &resource_b);
+
     PackedStringArray find_resources_paths_in(const Variant &path, const String &name_contains);
 
     static YEngine* get_singleton();

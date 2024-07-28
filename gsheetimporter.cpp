@@ -10,9 +10,18 @@
 #include "editor/GSheetImporterEditorPlugin.h"
 #endif
 
+GSheetImporter::ImportBeginFunc GSheetImporter::import_begin_function = nullptr;
+GSheetImporter::ImportStepFunc GSheetImporter::import_step_function = nullptr;
+GSheetImporter::ImportEndFunc GSheetImporter::import_end_function = nullptr;
+
 void GSheetImporter::_bind_methods() {
     ADD_SIGNAL(MethodInfo("imported_data", PropertyInfo(Variant::STRING, "import_type"), PropertyInfo(Variant::ARRAY, "data")));
     ClassDB::bind_method(D_METHOD("request_import"), &GSheetImporter::request_import);
+    ClassDB::bind_method(D_METHOD("start_import_progress_bar","steps","task_name","task_description"), &GSheetImporter::start_import_progress_bar);
+    ClassDB::bind_method(D_METHOD("step_import_progress_bar","step","step_description"), &GSheetImporter::step_import_progress_bar);
+    ClassDB::bind_method(D_METHOD("end_import_progress_bar"), &GSheetImporter::end_import_progress_bar);
+    ClassDB::bind_method(D_METHOD("save_resource_if_different","resource_path","resource"), &GSheetImporter::save_resource_if_different);
+
     GDVIRTUAL_BIND(get_sheet_id)
     GDVIRTUAL_BIND(get_sheet_name)
     GDVIRTUAL_BIND(on_imported_data,"import_type","data")
@@ -29,9 +38,16 @@ void GSheetImporter::request_import() {
     auto desired_url = get_spreadsheet_url();
     last_importing_type = sheet_name;
     auto error = http_request->request(desired_url,p_headers);
+    if (import_begin_function) {
+        import_begin_function(2,"download_sheet","Downloading Spreadsheet");
+    }
     //print("Requesting ",desired_url, " headers ",headers)
-    if (error != OK)
+    if (error != OK) {
+        if (import_end_function) {
+            import_end_function();
+        }
         ERR_PRINT(vformat("An error %s occurred in the HTTP request. Url: %s Headers %s",error,desired_url, p_headers));
+    }
 }
 
 String GSheetImporter::get_string_from_utf8(const PackedByteArray &p_instance) {
@@ -43,8 +59,13 @@ String GSheetImporter::get_string_from_utf8(const PackedByteArray &p_instance) {
     return s;
 }
 
+
+
 void GSheetImporter::on_import_completed(int p_status, int p_code, const PackedStringArray &p_headers,
     const PackedByteArray &p_data) {
+    if (import_step_function) {
+        import_step_function(1,"Downloaded");
+    }
     String data_csv = get_string_from_utf8(p_data);
     //print_line("data_csv_was: ",data_csv);
     int pos = data_csv.find("\"version\":");
@@ -82,7 +103,6 @@ void GSheetImporter::on_import_completed(int p_status, int p_code, const PackedS
             }
         }
     }
-
 
     // print_line(vformat("Column names %s",columnNames));
 
@@ -122,11 +142,15 @@ void GSheetImporter::on_import_completed(int p_status, int p_code, const PackedS
             }
         }
     }
+    if (import_end_function) {
+        import_end_function();
+    }
     // emit_signal("imported_data", data_type, entries);
     String sheet_name = "";
     GDVIRTUAL_CALL(get_sheet_name,sheet_name);
-    GDVIRTUAL_CALL(on_imported_data,sheet_name,entries);
-
+    const Callable desired_callable = callable_mp(this,&GSheetImporter::handle_import_on_gdscript).bind(sheet_name, entries);
+    if (!SceneTree::get_singleton()->is_connected(SNAME("process_frame"), desired_callable))
+        SceneTree::get_singleton()->connect(SNAME("process_frame"), desired_callable, CONNECT_ONE_SHOT);
     if (http_request != nullptr) {
         http_request->queue_free();
         http_request = nullptr;
@@ -150,7 +174,43 @@ void GSheetImporter::on_import_completed(int p_status, int p_code, const PackedS
 //         }
 //     }
 // #endif
+}
 
+void GSheetImporter::save_resource_if_different(const String &resource_path, const Ref<Resource> &resource_saving) {
+    if (resource_saving.is_null() || !resource_saving.is_valid())
+        return;
+
+    if (ResourceLoader::exists(resource_path)) {
+        Ref<Resource> already_existing = ResourceLoader::load(resource_path);
+        if (!YEngine::get_singleton()->are_resources_virtually_the_same(already_existing, resource_saving)) {
+            if (already_existing.is_valid() && resource_saving.is_valid()) {
+                bool changed_any = false;
+                Vector<String> properties_to_update = YEngine::get_singleton()->get_diverging_variables_in_resources(already_existing, resource_saving);
+                for (const auto& to_update: properties_to_update) {
+                    bool valid;
+                    const Variant &resource_a_val = already_existing->get(to_update, &valid);
+                    if (valid) {
+                        const Variant &resource_b_val = resource_saving->get(to_update, &valid);
+                        if (valid) {
+                            already_existing->set(to_update, resource_b_val);
+                            changed_any = true;
+                        }
+                    }
+                }
+                if (changed_any) {
+                    ResourceSaver::save(already_existing, resource_path);
+                }
+            }
+        }
+    } else {
+        resource_saving->set_path(resource_path, true);
+        ResourceSaver::save(resource_saving, resource_path);
+    }
+}
+
+void GSheetImporter::handle_import_on_gdscript(const String &sheet_name, const Array &entries) {
+    // print_line("Called handle import on gdscript");
+    GDVIRTUAL_CALL(on_imported_data,sheet_name,entries);
 }
 
 int GSheetImporter::str_hash(String s) {
@@ -192,6 +252,21 @@ void GSheetImporter::ensure_http_request_is_child() {
 #endif
         }
     }
+}
+
+void GSheetImporter::start_import_progress_bar(int p_steps, const String &p_task_name, const String &p_task_description) {
+    if (import_begin_function)
+        import_begin_function(p_steps, p_task_name, p_task_description);
+}
+
+void GSheetImporter::step_import_progress_bar(int p_step, const String &p_step_description) {
+    if (import_step_function)
+        import_step_function(p_step, p_step_description);
+}
+
+void GSheetImporter::end_import_progress_bar() {
+    if(import_end_function)
+        import_end_function();
 }
 
 GSheetImporter::GSheetImporter() {

@@ -9,11 +9,16 @@
 
 #include "../gsheetimporter.h"
 #include "editor/plugins/editor_plugin.h"
+#include "editor/editor_node.h"
 
-
+struct EditorProgress;
 class GSheetImporterEditorPlugin : public EditorPlugin {
     GDCLASS(GSheetImporterEditorPlugin, EditorPlugin);
 
+    static EditorProgress *tmp_progress;
+    static void import_func_begin(int p_steps, const String &p_task_name, const String &p_task_description);
+    static void import_func_step(int p_step, const String &p_description);
+    static void import_func_end();
 protected:
 
 public:

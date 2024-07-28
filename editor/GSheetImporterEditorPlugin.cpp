@@ -7,6 +7,29 @@
 #ifdef TOOLS_ENABLED
 #include "core/io/dir_access.h"
 
+EditorProgress *GSheetImporterEditorPlugin::tmp_progress = nullptr;
+
+void GSheetImporterEditorPlugin::import_func_begin(int p_steps, const String &p_task_name, const String &p_task_description) {
+	if (tmp_progress != nullptr) {
+	    memdelete(tmp_progress);
+	    tmp_progress = nullptr;
+	}
+    tmp_progress = memnew(EditorProgress(p_task_name, p_task_description, p_steps));
+}
+
+void GSheetImporterEditorPlugin::import_func_step(int p_step, const String &p_description) {
+    if (tmp_progress != nullptr) {
+        tmp_progress->step(p_description, p_step, false);
+    }
+}
+
+void GSheetImporterEditorPlugin::import_func_end() {
+    if (tmp_progress != nullptr) {
+        memdelete(tmp_progress);
+        tmp_progress = nullptr;
+    }
+}
+
 GSheetImporterEditorPlugin * GSheetImporterEditorPlugin::get_singleton() {
     return singleton;
 }
@@ -78,6 +101,9 @@ void GSheetImporterEditorPlugin::clicked_menu_item(const String &import_name, co
 
 GSheetImporterEditorPlugin::GSheetImporterEditorPlugin() {
     singleton = this;
+    GSheetImporter::import_begin_function = import_func_begin;
+    GSheetImporter::import_step_function = import_func_step;
+    GSheetImporter::import_end_function = import_func_end;
     FindImporterScripts();
 }
 

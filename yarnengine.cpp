@@ -122,6 +122,9 @@ void YEngine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_all_game_resources_of_type","resource_type"), &YEngine::get_all_game_resources_of_type);
     ClassDB::bind_method(D_METHOD("get_all_game_resources_types"), &YEngine::get_all_game_resources_types);
 
+    ClassDB::bind_method(D_METHOD("are_resources_virtually_the_same","resource_a","resource_b"), &YEngine::are_resources_virtually_the_same);
+    ClassDB::bind_method(D_METHOD("get_diverging_variables_in_resources","resource_a","resource_b"), &YEngine::get_diverging_variables_in_resources);
+
     ClassDB::bind_method(D_METHOD("get_random_point_on_top_of_mesh","mesh_instance_3d","random_number_generator"), &YEngine::get_random_point_on_top_of_mesh);
 
     ADD_SIGNAL(MethodInfo("changed_pause", PropertyInfo(Variant::BOOL, "pause_value")));
@@ -228,10 +231,12 @@ void YEngine::_notification(int p_what) {
             }
         }
         case NOTIFICATION_PROCESS: {
-            if (!Engine::get_singleton()->is_editor_hint() && OS::get_singleton() != nullptr) {
-                do_process();
-                if (using_game_state) {
-                    ygamestate->do_process(get_process_delta_time());
+            if (OS::get_singleton() != nullptr) {
+                if (!Engine::get_singleton()->is_editor_hint()) {
+                    do_process();
+                    if (using_game_state) {
+                        ygamestate->do_process(get_process_delta_time());
+                    }
                 }
             }
             //print_line(pause_independent_time);
@@ -433,6 +438,57 @@ TypedArray<Resource> YEngine::find_resources_in(const Variant &variant_path, con
         }
     }
     return return_paths;
+}
+
+bool YEngine::are_resources_virtually_the_same(const Ref<Resource> &resource_a, const Ref<Resource> &resource_b) {
+    if (resource_a.is_null() || resource_b.is_null() || !resource_a.is_valid() || !resource_b.is_valid())
+        return false;
+
+    List<PropertyInfo> pinfo;
+    resource_a->get_property_list(&pinfo);
+
+    for (const PropertyInfo &E : pinfo) {
+        if ((E.usage & (PROPERTY_USAGE_CATEGORY | PROPERTY_USAGE_GROUP | PROPERTY_USAGE_SUBGROUP | PROPERTY_USAGE_INTERNAL))
+            || (E.name == "script" || E.name == "scripts" || E.name == "resource_path" || E.name == "resource_local_to_scene")) {
+            continue;
+        }
+
+        bool valid;
+        const Variant &resource_a_val = resource_a->get(E.name, &valid);
+        if (valid) {
+            const Variant &resource_b_val = resource_b->get(E.name, &valid);
+            if (!valid || resource_a_val != resource_b_val)
+                return false;
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+
+Vector<String> YEngine::get_diverging_variables_in_resources(const Ref<Resource> &resource_a, const Ref<Resource> &resource_b) {
+    Vector<String> return_strings;
+    if (resource_a.is_null() || resource_b.is_null() || !resource_a.is_valid() || !resource_b.is_valid())
+        return return_strings;
+
+    List<PropertyInfo> pinfo;
+    resource_a->get_property_list(&pinfo);
+
+    for (const PropertyInfo &E : pinfo) {
+        if ((E.usage & (PROPERTY_USAGE_CATEGORY | PROPERTY_USAGE_GROUP | PROPERTY_USAGE_SUBGROUP | PROPERTY_USAGE_INTERNAL))
+            || (E.name == "script" || E.name == "scripts" || E.name == "resource_path" || E.name == "resource_local_to_scene")) {
+            continue;
+            }
+
+        bool valid;
+        const Variant &resource_a_val = resource_a->get(E.name, &valid);
+        if (valid) {
+            const Variant &resource_b_val = resource_b->get(E.name, &valid);
+            if (valid && resource_a_val != resource_b_val)
+                return_strings.push_back(E.name);
+        }
+    }
+    return return_strings;
 }
 
 PackedStringArray YEngine::find_resources_paths_in(const Variant &variant_path, const String &name_contains) {
