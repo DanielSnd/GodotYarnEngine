@@ -57,11 +57,18 @@ public:
     virtual bool can_move();
     virtual bool override_animation();
 
+    bool print_debugs = false;
+    bool get_print_debugs() const {return print_debugs;}
+    void set_print_debugs(bool b) {print_debugs = b;}
+
     int last_started_count;
     int last_overrided_with_count;
     
     bool auto_override;
     void set_auto_override(bool val);
+
+    NodePath last_transitioned_from = NodePath();
+    Node *get_last_transitioned_from_or_null() const;
 
     PackedStringArray get_configuration_warnings() const;
 
@@ -177,11 +184,16 @@ protected:
     GDVIRTUAL1(_on_state_machine_started,Node*)
     GDVIRTUAL1(_on_process,float)
     GDVIRTUAL1(_on_transition,YState*)
+    GDVIRTUAL1(_on_set_state_target,Node*)
+    GDVIRTUAL1(_on_set_state_target_position,Variant)
 
 public:
     YState* current_state;
     Node* fsm_owner;
     YState* override_with_state;
+    bool print_debugs = false;
+    bool get_print_debugs() const {return print_debugs;}
+    void set_print_debugs(bool b) {print_debugs = b;}
     int transitions_count;
     int overrides_count;
     int attempt_transition_interval;
@@ -204,14 +216,23 @@ public:
     Node* state_target;
     Node3D* state_target_3d;
     Node2D* state_target_2d;
+    Variant state_target_position_only;
+
+    Variant get_state_target_position() const {
+        if (state_target != nullptr && state_target->has_method("get_global_position")) {
+            return state_target->call("get_global_position");
+        }
+        return state_target_position_only;
+    }
 
     Node3D* get_state_target_3d() const { return state_target_3d; }
     Node2D* get_state_target_2d() const { return state_target_2d; }
 
-    float get_state_target_distance();
-    Node* get_state_target();
+    float get_state_target_distance() const;
+    Node* get_state_target() const;
     void clear_state_target();
     void set_state_target(Node* new_target);
+    void set_state_target_position(const Variant &new_target);
 
 
     YStateMachine(): state_target(nullptr), state_target_3d(nullptr), state_target_2d(nullptr) {

@@ -31,6 +31,10 @@ void YState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("can_move"), &YState::can_move);
     ClassDB::bind_method(D_METHOD("override_animation"), &YState::override_animation);
 
+    ClassDB::bind_method(D_METHOD("get_last_transitioned_from_or_null"), &YState::get_last_transitioned_from_or_null);
+
+
+
     ADD_SUBGROUP("Auto Override","");
 
     ClassDB::bind_method(D_METHOD("get_auto_override"), &YState::get_auto_override);
@@ -72,6 +76,10 @@ void YState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_autooverride_check_value"), &YState::get_autooverride_check_value);
     ClassDB::bind_method(D_METHOD("set_autooverride_check_value", "autooverride_check_value"), &YState::set_autooverride_check_value);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "check_value"), "set_autooverride_check_value", "get_autooverride_check_value");
+
+    ClassDB::bind_method(D_METHOD("get_print_debugs"), &YState::get_print_debugs);
+    ClassDB::bind_method(D_METHOD("set_print_debugs","print_debugs"), &YState::set_print_debugs);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "print_debugs"), "set_print_debugs", "get_print_debugs");
 
     GDVIRTUAL_BIND(_on_state_machine_setup,"fsm")
     GDVIRTUAL_BIND(_on_ready,"fsm")
@@ -140,7 +148,6 @@ void YState::state_machine_setup(Ref<YStateMachine> fsm) {
 
 void YState::enter_state() {
     last_time_state_started = YTime::get_singleton()->time;
-    //print_line("Called enter state on cpp");
     GDVIRTUAL_CALL(_on_enter_state);
 }
 
@@ -181,6 +188,13 @@ void YState::set_auto_override(bool val) {
     auto_override = val;
     notify_property_list_changed();
     update_configuration_warnings();
+}
+
+Node * YState::get_last_transitioned_from_or_null() const {
+    if (last_transitioned_from.is_empty()) {
+        return nullptr;
+    }
+    return get_node_or_null(last_transitioned_from);
 }
 
 PackedStringArray YState::get_configuration_warnings() const {
@@ -254,7 +268,8 @@ PackedStringArray YState::get_configuration_warnings() const {
 }
 
 bool YState::has_valid_auto_override() {
-    // print_line("Checking if has valid auto override, is check node null? ",autooverride_check_node == nullptr);
+    if (print_debugs)
+        print_line("Checking if has valid auto override, is check node null? ",autooverride_check_node == nullptr);
     if (autooverride_check_type == CheckType::NONE)
         return true;
     if (autooverride_check_node == nullptr)
@@ -291,11 +306,13 @@ bool YState::has_valid_auto_override() {
 }
 
 bool YState::can_auto_override() const {
-    // print_line("can auto override? ");
     if (!auto_override)
         return false;
     const bool can_based_on_ignore_and_only_if = ((ignore_if_objectids.is_empty() || !ignore_if_objectids.has(fsm_machine->current_state->get_instance_id()))
         && (only_if_objectids.is_empty() || (only_if_objectids.has(fsm_machine->current_state->get_instance_id()))));
+
+    if (print_debugs)
+        print_line("can auto override based on ignore and only if? ",can_based_on_ignore_and_only_if);
 
     if (!can_based_on_ignore_and_only_if) return false;
 
@@ -344,7 +361,9 @@ bool YState::can_auto_override() const {
             }break;
             default: ;
         }
-        // print_line("Checking can transition, found result ",found_result," current value ",current_value);
+
+        if (print_debugs)
+            print_line("Checking can transition, found result ",found_result," current value ",current_value);
         return found_result;
     }
     return false;
@@ -353,10 +372,13 @@ bool YState::can_auto_override() const {
 void YState::execute_auto_override() {
     if (auto_override) {
         if (!fsm_machine.is_valid()) return;
-        //print_line("Attempt override called, not blocking others? ",!fsm_owner->block_other_overrides," my override not null? ",override_with_state != nullptr ," their override with state null? ",fsm_owner->override_with_state == nullptr);
+
+        if (print_debugs)
+            print_line("Attempt override called from",this,", not blocking others? ",!fsm_machine->block_other_overrides, " their override with state null? ",fsm_machine->override_with_state == nullptr);
         if (!fsm_machine->block_other_overrides && fsm_machine != nullptr) {
             if (fsm_machine->current_state != this) {
-                //print_line("Set override with state");
+                if (print_debugs)
+                    print_line("Set override with state ",this);
                 fsm_machine->override_with_state = this;
             }
             fsm_machine->block_other_overrides = true;
@@ -373,9 +395,11 @@ void YState::set_autooverride_check_type(const CheckType val) {
 void YState::attempt_override() {
     if (auto_override) {
         if (!fsm_machine.is_valid()) return;
-        //print_line("Attempt override called, not blocking others? ",!fsm_owner->block_other_overrides," my override not null? ",override_with_state != nullptr ," their override with state null? ",fsm_owner->override_with_state == nullptr);
+        if (print_debugs)
+            print_line("Attempt override called, not blocking others? ",!fsm_machine->block_other_overrides," my override not null? ", this, " their override with state null? ",fsm_machine->override_with_state == nullptr);
         if (!fsm_machine->block_other_overrides && fsm_machine != nullptr) {
-            //print_line("Getting here? ignore_if_state == nullptr ",ignore_if_state == nullptr, " not current ignoring ",fsm_owner->current_state != ignore_if_state);
+            // if (print_debugs)
+            //     print_line("Getting here? ignore_if_state == nullptr ", ignore_if_state == nullptr, " not current ignoring ",fsm_owner->current_state != ignore_if_state);
             if ((ignore_if_objectids.is_empty() || !ignore_if_objectids.has(fsm_machine->current_state->get_instance_id()))
                 && (only_if_objectids.is_empty() || (only_if_objectids.has(fsm_machine->current_state->get_instance_id())))
                 && can_auto_override()) {
@@ -399,11 +423,11 @@ void YState::ready() {
                 ignore_if_objectids.push_back(ignoreystate->get_instance_id());
             }
         }
-        for (NodePath ignoreif: autooverride_only_if_states) {
-            auto ignoreystate = Object::cast_to<YState>(get_node(ignoreif));
-            // print_line(vformat("only if y state path %s is node null? %s", ignoreif, ignoreystate == nullptr));
-            if (ignoreystate != nullptr) {
-                only_if_objectids.push_back(ignoreystate->get_instance_id());
+        for (NodePath onlyif: autooverride_only_if_states) {
+            auto onlyystate = Object::cast_to<YState>(get_node(onlyif));
+            // print_line(vformat("only if y state path %s is node null? %s", onlyif, onlyystate == nullptr));
+            if (onlyystate != nullptr) {
+                only_if_objectids.push_back(onlyystate->get_instance_id());
             }
         }
     }
@@ -419,10 +443,14 @@ void YStateMachine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_current_state","new_state"), &YStateMachine::set_current_state);
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "current_state",  PROPERTY_HINT_NODE_TYPE, "YState",PROPERTY_USAGE_NO_EDITOR), "set_current_state", "get_current_state");
 
-    //
+    ClassDB::bind_method(D_METHOD("finished_navigation"), &YStateMachine::finished_navigation);
     ClassDB::bind_method(D_METHOD("process","delta"), &YStateMachine::process);
 
+    ClassDB::bind_method(D_METHOD("get_print_debugs"), &YStateMachine::get_print_debugs);
+    ClassDB::bind_method(D_METHOD("set_print_debugs","print_debugs"), &YStateMachine::set_print_debugs);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "print_debugs"), "set_print_debugs", "get_print_debugs");
 
+    
     ClassDB::bind_method(D_METHOD("get_run_on_server_only"), &YStateMachine::get_run_on_server_only);
     ClassDB::bind_method(D_METHOD("set_run_on_server_only","run_on_server_only"), &YStateMachine::set_run_on_server_only);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "run_on_server_only"), "set_run_on_server_only", "get_run_on_server_only");
@@ -435,7 +463,12 @@ void YStateMachine::_bind_methods() {
     // GDVIRTUAL_BIND(_end_state_machine)
     GDVIRTUAL_BIND(_on_process,"delta")
     GDVIRTUAL_BIND(_on_transition,"new_state")
+    GDVIRTUAL_BIND(_on_set_state_target,"new_state_target")
+    GDVIRTUAL_BIND(_on_set_state_target_position,"new_state_target_position")
 
+
+    ClassDB::bind_method(D_METHOD("set_state_target_position"), &YStateMachine::set_state_target_position);
+    ClassDB::bind_method(D_METHOD("get_state_target_position"), &YStateMachine::get_state_target_position);
 
     ClassDB::bind_method(D_METHOD("get_state_target"), &YStateMachine::get_state_target);
     ClassDB::bind_method(D_METHOD("set_state_target","new_target"), &YStateMachine::set_state_target);
@@ -454,7 +487,8 @@ void YStateMachine::_bind_methods() {
 void YStateMachine::start_state_machine(Node *p_owner) {
     if (run_on_server_only && !YEngine::get_singleton()->get_multiplayer()->is_server())
         return;
-    //print_line("Start state machine called");
+    if (print_debugs)
+        print_line("Start state machine called");
     if (p_owner != nullptr) {
         fsm_owner = p_owner;
 
@@ -476,7 +510,8 @@ void YStateMachine::start_state_machine(Node *p_owner) {
                 auto* overrider_child = Object::cast_to<YStateOverride>(children[i].operator Object*());
                 if (overrider_child != nullptr) {
                     overrider_child->state_machine_setup(this);
-                    // print_line("Found overrider child, has overriders?",has_overriders);
+                    if (print_debugs)
+                        print_line("Found overrider child, has overriders?",has_overriders);
                 }
             }
         }
@@ -484,8 +519,8 @@ void YStateMachine::start_state_machine(Node *p_owner) {
             found_states[i]->ready();
         }
         if (current_state != nullptr) {
-            //print_line("Established current state isn't null ",current_state);
-            //print_line("About to call enter_state on it.");
+            if (print_debugs)
+                print_line("Established current state isn't null and will call enter state on it ",current_state);
             current_state->enter_state();
         }
     }
@@ -509,14 +544,18 @@ void YStateMachine::process(float p_delta) {
         override_with_state = nullptr;
         block_other_overrides = false;
         _counting = 0;
-        // print_line("Did an override transition, currnet override with state? ",override_with_state," block others? ",block_other_overrides," counting? ",_counting);
+        if (print_debugs)
+            print_line("Did an override transition, currnet override with state? ",override_with_state," block others? ",block_other_overrides," counting? ",_counting);
     }
 
-    // print_line(vformat("Counting %d attempt interval %d has overriders %s", _counting, attempt_transition_interval, has_overriders));
+    if (print_debugs)
+        print_line(vformat("Counting %d attempt interval %d has overriders %s", _counting, attempt_transition_interval, has_overriders));
+
     if (_counting >= attempt_transition_interval) {
         _counting = 0;
         block_other_overrides = false;
-        // print_line("auto_overridable_states ",auto_overridable_states.size());
+        if (print_debugs)
+            print_line("auto_overridable_states ",auto_overridable_states.size());
         if (!auto_overridable_states.is_empty()) {
             LocalVector<YState*> valid_auto_overrides;
             for (auto ystate: auto_overridable_states) {
@@ -579,8 +618,12 @@ void YStateMachine::transition(YState *p_state) {
     if (run_on_server_only && !YEngine::get_singleton()->get_multiplayer()->is_server())
         return;
     if (current_state != nullptr) {
+        if (p_state != nullptr) {
+            p_state->last_transitioned_from = p_state->get_path_to(current_state);
+        }
         current_state->exit_state();
     }
+
     current_state = p_state;
     if (current_state != nullptr) {
         current_state->enter_state();
@@ -592,17 +635,18 @@ void YStateMachine::transition(YState *p_state) {
 }
 
 void YStateMachine::finished_navigation() {
-    // if (current_state != nullptr) {
-    //     current_state->_finished_navigation();
-    // }
-   // GDVIRTUAL_CALL(_finished_navigation);
+    if (current_state != nullptr) {
+        current_state->finished_navigation();
+    }
 }
 
-float YStateMachine::get_state_target_distance() {
+float YStateMachine::get_state_target_distance() const {
     if (fsm_owner == nullptr || !fsm_owner->has_method("get_global_position"))
         return -1.0;
 
-    if (state_target_2d != nullptr) {
+    if (state_target == nullptr) {
+        return fsm_owner->call("get_global_position").call("distance_to", state_target_position_only);
+    } else if (state_target_2d != nullptr) {
         return state_target_2d->get_global_position().distance_to(fsm_owner->call("get_global_position"));
     } else if (state_target_3d != nullptr) {
         return state_target_3d->get_global_position().distance_to(fsm_owner->call("get_global_position"));
@@ -610,15 +654,19 @@ float YStateMachine::get_state_target_distance() {
     return -1.0f;
 }
 
-Node * YStateMachine::get_state_target() {
+Node * YStateMachine::get_state_target() const {
     return state_target;
 }
 
 void YStateMachine::clear_state_target() {
-    state_target = nullptr;
-    state_target_3d = nullptr;
-    state_target_2d = nullptr;
+    if (state_target != nullptr) {
+        state_target = nullptr;
+        state_target_3d = nullptr;
+        state_target_2d = nullptr;
+        emit_signal("state_target_changed");
+    }
 }
+
 void YStateMachine::set_state_target(Node *new_target) {
     if (new_target != state_target) {
         if (state_target != nullptr) {
@@ -627,6 +675,7 @@ void YStateMachine::set_state_target(Node *new_target) {
             clear_state_target();
         }
         state_target = new_target;
+        GDVIRTUAL_CALL(_on_set_state_target,new_target);
         if (state_target != nullptr) {
             if (!state_target->is_connected(SceneStringName(tree_exited), callable_mp(this, &YStateMachine::clear_state_target)))
                 state_target->connect(SceneStringName(tree_exited), callable_mp(this, &YStateMachine::clear_state_target), CONNECT_ONE_SHOT);
@@ -636,4 +685,12 @@ void YStateMachine::set_state_target(Node *new_target) {
         }
         emit_signal("state_target_changed");
     }
+}
+
+void YStateMachine::set_state_target_position(const Variant &new_target) {
+        state_target_position_only = new_target;
+        GDVIRTUAL_CALL(_on_set_state_target_position,new_target);
+        if (state_target != nullptr) {
+            clear_state_target();
+        }
 }
