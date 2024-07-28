@@ -7,6 +7,7 @@
 #include "scene/main/scene_tree.h"
 #include "scene/main/window.h"
 #include "scene/resources/world_2d.h"
+#include "scene/resources/2d/shape_2d.h"
 #include "scene/resources/3d/world_3d.h"
 #include "servers/physics_server_2d.h"
 
@@ -30,6 +31,13 @@ void YPhysics::_bind_methods() {
                          DEFVAL(COLLIDE_WITH_BODIES),
                          DEFVAL(UINT32_MAX),
                          DEFVAL(TypedArray<RID>()));
+    ClassDB::bind_static_method("YPhysics",D_METHOD("cast_motion_2d", "shape", "world_transform", "margin", "motion", "collide_type", "collision_mask", "exclude"),
+                     &YPhysics::cast_motion,
+                     DEFVAL(0.04),
+                     DEFVAL(Vector2()),
+                     DEFVAL(COLLIDE_WITH_BODIES),
+                     DEFVAL(UINT32_MAX),
+                     DEFVAL(TypedArray<RID>()));
     ClassDB::bind_static_method("YPhysics",D_METHOD("cast_motion_3d", "shape", "world_transform", "margin", "motion", "collide_type", "collision_mask", "exclude"),
                      &YPhysics::cast_motion,
                      DEFVAL(0.04),
@@ -523,6 +531,49 @@ Vector<real_t> YPhysics::cast_motion(const Ref<Shape3D> &p_shape, const Transfor
     real_t closest_safe = 1.0f, closest_unsafe = 1.0f;
     // Call the rest info method on the PhysicsDirectSpaceState3D singleton
     const bool res = world_3d->get_direct_space_state()->cast_motion(motion_params, closest_safe, closest_unsafe);
+    if (!res) {
+        return {};
+    }
+    Vector<real_t> ret;
+    ret.resize(2);
+    ret.write[0] = closest_safe;
+    ret.write[1] = closest_unsafe;
+    return ret;
+}
+
+
+Vector<real_t> YPhysics::cast_motion_2D(const Ref<Shape2D> &p_shape, const Transform2D &p_world_transform, real_t p_margin, const Vector2 &p_motion, CollideType p_collide_type, uint32_t p_collision_mask, const TypedArray<RID> &p_exclude) {
+    // Ensure the shape is valid
+
+    ERR_FAIL_COND_V(!p_shape.is_valid(), Vector<real_t>());
+
+    auto world_2d = SceneTree::get_singleton()->get_root()->get_world_2d();
+    PhysicsDirectSpaceState2D::ShapeParameters motion_params;
+
+    motion_params.collision_mask = p_collision_mask;
+    motion_params.shape_rid = p_shape->get_rid();
+    motion_params.transform = p_world_transform;
+    motion_params.margin = p_margin;
+    motion_params.motion = p_motion;
+
+    // Determine what we are colliding with
+    if (p_collide_type == COLLIDE_WITH_BOTH) {
+        motion_params.collide_with_areas = true;
+        motion_params.collide_with_bodies = true;
+    } else {
+        motion_params.collide_with_areas = p_collide_type == COLLIDE_WITH_AREAS;
+        motion_params.collide_with_bodies = p_collide_type == COLLIDE_WITH_BODIES;
+    }
+    // Exclude certain RIDS
+    if (!p_exclude.is_empty()) {
+        for (int i = 0; i < p_exclude.size(); i++) {
+            motion_params.exclude.insert(p_exclude[i]);
+        }
+    }
+
+    real_t closest_safe = 1.0f, closest_unsafe = 1.0f;
+    // Call the rest info method on the PhysicsDirectSpaceState3D singleton
+    const bool res = world_2d->get_direct_space_state()->cast_motion(motion_params, closest_safe, closest_unsafe);
     if (!res) {
         return {};
     }

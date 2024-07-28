@@ -6,6 +6,7 @@
 #define YARNPHYSICS_H
 #include "core/object/ref_counted.h"
 #include "core/variant/typed_array.h"
+#include "scene/resources/2d/shape_2d.h"
 #include "scene/resources/3d/shape_3d.h"
 
 class YPhysics : public RefCounted {
@@ -66,6 +67,10 @@ public:
     static Vector<real_t> cast_motion(const Ref<Shape3D> &p_shape, const Transform3D &p_world_transform, real_t p_margin,
                                       const Vector3 &p_motion, CollideType p_collide_type = COLLIDE_WITH_BODIES, uint32_t p_collision_mask = UINT32_MAX,
                                       const TypedArray<RID> &p_exclude = {});
+
+    static Vector<real_t> cast_motion_2D(const Ref<Shape2D> &p_shape, const Transform2D &p_world_transform, real_t p_margin,
+                                  const Vector2 &p_motion, CollideType p_collide_type, uint32_t p_collision_mask,
+                                  const TypedArray<RID> &p_exclude);
 
     static Dictionary raycast2d(Vector2 ray_origin, Vector2 ray_dir, float ray_dist, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
 
