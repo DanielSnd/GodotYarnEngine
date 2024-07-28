@@ -20,6 +20,7 @@ class GSheetImporterEditorPlugin : public EditorPlugin {
     static void import_func_step(int p_step, const String &p_description);
     static void import_func_end();
 protected:
+    void _notification(int p_what);
 
 public:
     inline static GSheetImporterEditorPlugin* singleton = nullptr;
@@ -28,9 +29,12 @@ public:
 
     void FindImporterScripts();
 
-    void add_menu_item(const String &menu_prefix, const String &menu_name, const Ref<GSheetImporter> &script_desired);
+    void DelayedLookForImporterScripts();
 
-    void clicked_menu_item(const String &import_name, const Ref<GSheetImporter> &script_desired);
+    void add_menu_item(const String &menu_prefix, const String &menu_name, const Ref<GSheetImporter> &script_desired, const String &script_path);
+
+    void clicked_menu_item(const String &import_name, const Ref<GSheetImporter> &script_desired, const String &script_path);
+
 
     Dictionary menu_scripts;
     Vector<String> added_menu_texts;
