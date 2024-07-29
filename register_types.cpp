@@ -56,18 +56,27 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 		EditorPlugins::add_by_type<yarnengine::AssetPlacerPlugin>();
 		EditorPlugins::add_by_type<AOBakeEditorPlugin>();
 		EditorPlugins::add_by_type<GSheetImporterEditorPlugin>();
-		GDREGISTER_CLASS(ResourceImporterGLBasMesh);
-		if (Engine::get_singleton()->is_editor_hint()) {
-			Ref<ResourceImporterGLBasMesh> ogg_vorbis_importer;
-			ogg_vorbis_importer.instantiate();
-			ResourceFormatImporter::get_singleton()->add_importer(ogg_vorbis_importer);
-		}
 	}
 #endif
 
  	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
  			return;
 	}
+
+#ifdef TOOLS_ENABLED
+	if (Engine::get_singleton()->is_editor_hint()) {
+		Ref<ResourceImporterGLBasMesh> ogg_vorbis_importer;
+		ogg_vorbis_importer.instantiate();
+		ResourceFormatImporter::get_singleton()->add_importer(ogg_vorbis_importer);
+	}
+
+	ClassDB::APIType prev_api = ClassDB::get_current_api();
+	ClassDB::set_current_api(ClassDB::API_EDITOR);
+
+	GDREGISTER_CLASS(ResourceImporterGLBasMesh);
+
+	ClassDB::set_current_api(prev_api);
+#endif
 
 	ClassDB::register_class<GSheetImporter>();
 	ClassDB::register_class<YTime>();

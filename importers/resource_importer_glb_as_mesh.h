@@ -7,7 +7,7 @@
 
 #include "core/io/resource_importer.h"
 #include "scene/3d/importer_mesh_instance_3d.h"
-#if TOOLS_ENABLED
+#ifdef TOOLS_ENABLED
 #include "editor/editor_interface.h"
 #include "editor/editor_file_system.h"
 #endif
