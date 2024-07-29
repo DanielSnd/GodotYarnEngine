@@ -40,6 +40,7 @@ public:
     virtual bool can_import_threaded() const override { return false; }
 
     ResourceImporterGLBasMesh();
+    ~ResourceImporterGLBasMesh();
 };
 
 
