@@ -35,6 +35,14 @@ GSheetImporterEditorPlugin * GSheetImporterEditorPlugin::get_singleton() {
 }
 
 void GSheetImporterEditorPlugin::FindImporterScripts() {
+    if (waitin_for_delayed_add_importers < 500) {
+        waitin_for_delayed_add_importers++;
+        return;
+    } else {
+        const Callable my_callable = callable_mp(this,&GSheetImporterEditorPlugin::FindImporterScripts);
+        if (SceneTree::get_singleton()->is_connected(SNAME("process_frame"),my_callable))
+            SceneTree::get_singleton()->disconnect(SNAME("process_frame"),my_callable);
+    }
     auto _dir_exists = DirAccess::exists("res://importers/");
     if (!_dir_exists)
         return;
@@ -83,7 +91,7 @@ void GSheetImporterEditorPlugin::FindImporterScripts() {
 }
 
 void GSheetImporterEditorPlugin::DelayedLookForImporterScripts() {
-    callable_mp(this, &GSheetImporterEditorPlugin::FindImporterScripts).call_deferred();
+    SceneTree::get_singleton()->connect(SNAME("process_frame"),callable_mp(this,&GSheetImporterEditorPlugin::FindImporterScripts));
 }
 
 void GSheetImporterEditorPlugin::add_menu_item(const String &menu_prefix, const String &menu_name, const Ref<GSheetImporter> &script_desired, const String &
@@ -117,6 +125,7 @@ void GSheetImporterEditorPlugin::_notification(int p_what) {
 
 GSheetImporterEditorPlugin::GSheetImporterEditorPlugin() {
     singleton = this;
+    waitin_for_delayed_add_importers = 0;
     GSheetImporter::import_begin_function = import_func_begin;
     GSheetImporter::import_step_function = import_func_step;
     GSheetImporter::import_end_function = import_func_end;

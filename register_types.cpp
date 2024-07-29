@@ -30,6 +30,7 @@
 #include "yscenespawner3d.h"
 #include "ytween.h"
 #include "ythreader.h"
+#include "importers/resource_importer_glb_as_mesh.h"
 // This is your singleton reference.
 static YEngine* YEnginePtr;
 static Ref<YSave> yarn_save_ref;
@@ -55,6 +56,12 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 		EditorPlugins::add_by_type<yarnengine::AssetPlacerPlugin>();
 		EditorPlugins::add_by_type<AOBakeEditorPlugin>();
 		EditorPlugins::add_by_type<GSheetImporterEditorPlugin>();
+		GDREGISTER_CLASS(ResourceImporterGLBasMesh);
+		if (Engine::get_singleton()->is_editor_hint()) {
+			Ref<ResourceImporterGLBasMesh> ogg_vorbis_importer;
+			ogg_vorbis_importer.instantiate();
+			ResourceFormatImporter::get_singleton()->add_importer(ogg_vorbis_importer);
+		}
 	}
 #endif
 

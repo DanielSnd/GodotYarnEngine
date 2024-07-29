@@ -15,6 +15,7 @@ struct EditorProgress;
 class GSheetImporterEditorPlugin : public EditorPlugin {
     GDCLASS(GSheetImporterEditorPlugin, EditorPlugin);
 
+    int waitin_for_delayed_add_importers = 0;
     static EditorProgress *tmp_progress;
     static void import_func_begin(int p_steps, const String &p_task_name, const String &p_task_description);
     static void import_func_step(int p_step, const String &p_description);
