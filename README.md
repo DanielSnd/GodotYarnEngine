@@ -19,4 +19,4 @@ Essentially you make an export variable that starts with `_btn_yourfunctionname`
 ![Example gif](http://yarncatgames.com/images/Example_Inspector_button.gif)
 
 
-## Licensed under MIT https://opensource.org/license/mit
+## Licensed under MIT License https://opensource.org/license/mit
