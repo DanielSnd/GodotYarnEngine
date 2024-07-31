@@ -17,3 +17,6 @@ func button():
 Essentially you make an export variable that starts with `_btn_yourfunctionname`.
 
 ![Example gif](http://yarncatgames.com/images/Example_Inspector_button.gif)
+
+
+## Licensed under MIT https://www.google.com/search?q=mit+license&rlz=1CDGOYI_enCA736CA736&oq=mit+license&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIKCAEQLhixAxiABDIHCAIQABiABDIKCAMQABixAxiABDIKCAQQABixAxiABDIHCAUQABiABDIKCAYQABixAxiABDIHCAcQABiABDIKCAgQABixAxiABNIBCDE3NjNqMGo5qAITsAIB4gMEGAEgXw&hl=en-US&sourceid=chrome-mobile&ie=UTF-8
