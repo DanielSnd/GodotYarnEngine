@@ -6,6 +6,8 @@
 #define EVENTASSET_H
 #ifdef NO_FMOD
 #include "core/io/resource.h"
+#include "scene/main/node.h"
+#include "core/object/ref_counted.h"
 
 class EventAsset : public Resource {
     GDCLASS(EventAsset, Resource);
@@ -50,7 +52,7 @@ public:
     bool has_parameter(const String& parameter_guid) const;
 
 public:
-    void set_guid(const String& guid);
+    void set_guid(const String& p_guid);
     String get_guid() const;
     String get_fmod_path();
 

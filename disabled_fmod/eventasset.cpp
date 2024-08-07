@@ -26,6 +26,7 @@ void EventAsset::stop_looped(Node *node) {
 
 
 void EventAsset::play_looped_attached(Node *node) {
+
 }
 
 void EventAsset::play_looped(Node *node, const Variant &position = Variant()) {
