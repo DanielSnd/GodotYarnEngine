@@ -54,13 +54,13 @@ TypedArray<ImporterMeshInstance3D> ResourceImporterGLBasMesh::find_first_matched
     if (checking_node == nullptr) return {};
     TypedArray<Node> children = checking_node->get_children();
     TypedArray<ImporterMeshInstance3D> result;
-    for (const auto& node_child: children) {
-        auto* importer_child = Object::cast_to<ImporterMeshInstance3D>(node_child);
+    for (int i = 0; i < static_cast<int>(children.size()); ++i) {
+        auto* importer_child = Object::cast_to<ImporterMeshInstance3D>(children[i]);
         if (importer_child != nullptr) {
             result.append(importer_child);
             continue;
         }
-        auto* node_child_as_node = Object::cast_to<Node>(node_child);
+        auto* node_child_as_node = Object::cast_to<Node>(children[i]);
         if (node_child_as_node != nullptr) {
             TypedArray<ImporterMeshInstance3D> recursive_found = find_first_matched_nodes(node_child_as_node);
         	if (!recursive_found.is_empty())
@@ -103,8 +103,8 @@ Error ResourceImporterGLBasMesh::import(const String &p_source_file, const Strin
     TypedArray<ImporterMeshInstance3D> found_importers = find_first_matched_nodes(root_node);
     Ref<ArrayMesh> find_mesh;
     int overall_i = 0;
-    for (const auto& found_importer: found_importers) {
-        auto* importer = Object::cast_to<ImporterMeshInstance3D>(found_importer);
+    for (int i = 0; i < static_cast<int>(found_importers.size()); ++i) {
+        auto* importer = Object::cast_to<ImporterMeshInstance3D>(found_importers[i]);
         if (importer != nullptr) {
             Ref<ImporterMesh> imp_mesh = importer->get_mesh();
         	if (imp_mesh.is_null() || !imp_mesh.is_valid()) continue;
