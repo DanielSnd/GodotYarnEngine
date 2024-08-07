@@ -14,10 +14,10 @@ protected:
     static void _bind_methods();
 
 public:
-    void set_event_ref(Variant event_description);
-    Variant get_event_description() const;
+    void set_event_ref(Dictionary event_description);
+    Dictionary get_event_description() const;
 
-    void set_event_ref_from_description_ref(Variant event_description);
+    void set_event_ref_from_description_ref(Dictionary event_description);
 
     void play_one_shot_attached(Node *node);
     void stop_looped(Node *node);

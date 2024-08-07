@@ -5,15 +5,15 @@
 #ifdef NO_FMOD
 #include "eventasset.h"
 
-void EventAsset::set_event_ref(Variant event_description) {
+void EventAsset::set_event_ref(Dictionary event_description) {
 
 }
 
-Variant EventAsset::get_event_description() const {
-	return Variant{};
+Dictionary EventAsset::get_event_description() const {
+	return Dictionary{};
 }
 
-void EventAsset::set_event_ref_from_description_ref(Variant event_description) {
+void EventAsset::set_event_ref_from_description_ref(Dictionary event_description) {
 
 }
 
