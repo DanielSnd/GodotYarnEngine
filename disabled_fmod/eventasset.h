@@ -4,6 +4,7 @@
 
 #ifndef EVENTASSET_H
 #define EVENTASSET_H
+#ifdef NO_FMOD
 #include "core/io/resource.h"
 
 class EventAsset : public Resource {
@@ -66,6 +67,6 @@ private:
     Dictionary parameters;
 };
 
-
+#endif
 
 #endif //EVENTASSET_H

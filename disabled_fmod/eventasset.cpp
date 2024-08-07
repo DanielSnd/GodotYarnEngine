@@ -2,6 +2,7 @@
 // Created by Daniel on 2024-08-07.
 //
 
+#ifdef NO_FMOD
 #include "eventasset.h"
 
 void EventAsset::set_event_ref(Variant event_description) {
@@ -159,3 +160,5 @@ void EventAsset::_bind_methods()
 						 "24/17:ParameterAsset", PROPERTY_USAGE_DEFAULT),
 			"set_parameters", "get_parameters");
 }
+
+#endif
