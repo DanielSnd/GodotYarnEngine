@@ -159,13 +159,15 @@ Error ResourceImporterGLBasMesh::import(const String &p_source_file, const Strin
         		find_mesh->set_name(find_mesh->get_name().replace("Root Scene_",""));
         		if (!should_save_mesh) break;
         		String file_path_save = found_importers.size() == 1 ? vformat("%s.mesh", p_source_file.replace(".glb","").replace(".gltf","")) : vformat("%s_%02d.mesh", p_source_file.replace(".glb","").replace(".gltf",""), overall_i);
+#ifdef TOOLS_ENABLED
         		bool file_already_existed = ResourceLoader::exists(file_path_save);
         		ResourceSaver::save(find_mesh, file_path_save);
-#ifdef TOOLS_ENABLED
         		if (file_already_existed) {
         			find_mesh->set_path(file_path_save, true);
         			EditorFileSystem::get_singleton()->update_file(file_path_save);
         		}
+#else
+        		ResourceSaver::save(find_mesh, file_path_save);
 #endif
         	}
 			overall_i += 1;

@@ -56,25 +56,32 @@ public:
 
     TypedArray<Node> get_menu_stack() {
         TypedArray<Node> btns;
-        for (int i = 0; i < menu_stack.size(); ++i) {
-            btns.append(menu_stack.get(i));
+        for (const auto _node: menu_stack) {
+            btns.append(_node);
         }
         return btns;
     }
 
-    bool is_top_of_menu_stack(Node* test_menu) const {
-        return menu_stack.size() > 0 && test_menu != nullptr && menu_stack.get(menu_stack.size()-1) == test_menu;
+    bool is_top_of_menu_stack(const Node* test_menu) const {
+        int iterating_index = 0;
+        const int top_of_stack = menu_stack.size()-1;
+        for (const auto _node: menu_stack) {
+            if (iterating_index == top_of_stack && _node == test_menu)
+                return true;
+            iterating_index++;
+        }
+        return false;
     }
 
     void add_to_menu_stack(Node* adding_menu) {
-        for (int i = 0; i < menu_stack.size(); ++i)
-            if (menu_stack.get(i) == adding_menu) return;
+        for (const auto _node: menu_stack)
+            if (_node == adding_menu) return;
         menu_stack.push_back(adding_menu);
     }
 
     void remove_from_menu_stack(Node* removing_menu) {
-        for (int i = 0; i < menu_stack.size(); ++i)
-            if (menu_stack.get(i) == removing_menu) {
+        for (const auto _node: menu_stack)
+            if (_node == removing_menu) {
                 menu_stack.erase(removing_menu);
                 return;
             }

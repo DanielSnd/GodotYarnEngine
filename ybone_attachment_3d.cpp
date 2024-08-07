@@ -123,7 +123,7 @@ void YBoneAttachment3D::_check_bind() {
 			bone_idx = sk->find_bone(bone_name);
 		}
 		if (bone_idx != -1) {
-			sk->connect(SceneStringName(skeleton_updated), callable_mp(this, &YBoneAttachment3D::on_skeleton_update));
+			sk->connect(SNAME("skeleton_updated"), callable_mp(this, &YBoneAttachment3D::on_skeleton_update));
 			bound = true;
 			callable_mp(this, &YBoneAttachment3D::on_skeleton_update);
 		}
@@ -151,7 +151,7 @@ void YBoneAttachment3D::_check_unbind() {
 		Skeleton3D *sk = _get_skeleton3d();
 
 		if (sk) {
-			sk->disconnect(SceneStringName(skeleton_updated), callable_mp(this, &YBoneAttachment3D::on_skeleton_update));
+			sk->disconnect(SNAME("skeleton_updated"), callable_mp(this, &YBoneAttachment3D::on_skeleton_update));
 		}
 		bound = false;
 	}
