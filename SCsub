@@ -2,6 +2,9 @@
 
 Import('env')
 
+if ARGUMENTS.get('fmodgodot', 'yes') == 'no':
+    env.Append(CPPDEFINES=["NO_FMOD"])
+
 if ARGUMENTS.get('ygodot', 'yes') == 'yes':
     env.Append(CPPDEFINES=["YGODOT"])
 
@@ -9,3 +12,6 @@ module_env = env.Clone()
 module_env.add_source_files(env.modules_sources, "editor/*.cpp")
 module_env.add_source_files(env.modules_sources, "importers/*.cpp")
 module_env.add_source_files(env.modules_sources, "*.cpp")
+
+if ARGUMENTS.get('fmodgodot', 'yes') == 'no':
+    module_env.add_source_files(env.modules_sources, "disabled_fmod/*.cpp")

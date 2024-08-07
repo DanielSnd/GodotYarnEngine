@@ -22,7 +22,6 @@ protected:
 
     static void _bind_methods();
 
-
     Variant execute_button_click_callable_if_modulate(const Callable &p_callable, Control *p_control);
 
     Variant execute_button_click_callable(const Callable &p_callable);

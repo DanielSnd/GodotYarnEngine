@@ -31,6 +31,11 @@
 #include "ytween.h"
 #include "ythreader.h"
 #include "importers/resource_importer_glb_as_mesh.h"
+
+#ifdef NO_FMOD
+#include "disabled_fmod/eventasset.h"
+#endif
+
 // This is your singleton reference.
 static YEngine* YEnginePtr;
 static Ref<YSave> yarn_save_ref;
@@ -78,6 +83,9 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	ClassDB::set_current_api(prev_api);
 #endif
 
+#ifdef NO_FMOD
+	ClassDB::register_class<EventAsset>();
+#endif
 	ClassDB::register_class<GSheetImporter>();
 	ClassDB::register_class<YTime>();
 	ClassDB::register_class<YSave>();
