@@ -2,7 +2,7 @@
 
 Import('env')
 
-if ARGUMENTS.get('ygodot_changes', 'yes') == 'yes':
+if ARGUMENTS.get('ygodot', 'yes') == 'yes':
     env.Append(CPPDEFINES=["YGODOT"])
 
 module_env = env.Clone()

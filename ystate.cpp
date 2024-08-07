@@ -197,6 +197,7 @@ Node * YState::get_last_transitioned_from_or_null() const {
     return get_node_or_null(last_transitioned_from);
 }
 
+#if YGODOT
 PackedStringArray YState::get_configuration_warnings() const {
     PackedStringArray warnings = Node::get_configuration_warnings();
 
@@ -266,6 +267,7 @@ PackedStringArray YState::get_configuration_warnings() const {
 
     return warnings;
 }
+#endif
 
 bool YState::has_valid_auto_override() {
     if (print_debugs)
@@ -416,17 +418,15 @@ void YState::attempt_override() {
 void YState::ready() {
     GDVIRTUAL_CALL(_on_ready,fsm_machine);
     if (auto_override) {
-        for (NodePath ignoreif: autooverride_ignore_if_states) {
-            auto ignoreystate = Object::cast_to<YState>(get_node(ignoreif));
+        for (int i = 0; i < static_cast<int>(autooverride_ignore_if_states.size()); ++i) {
             // print_line(vformat("ignore if y state path %s is node null? %s", ignoreif, ignoreystate == nullptr));
-            if (ignoreystate != nullptr) {
+            if (const auto ignoreystate = Object::cast_to<YState>(get_node(autooverride_ignore_if_states[i])); ignoreystate != nullptr) {
                 ignore_if_objectids.push_back(ignoreystate->get_instance_id());
             }
         }
-        for (NodePath onlyif: autooverride_only_if_states) {
-            auto onlyystate = Object::cast_to<YState>(get_node(onlyif));
+        for (int i = 0; i < static_cast<int>(autooverride_only_if_states.size()); ++i) {
             // print_line(vformat("only if y state path %s is node null? %s", onlyif, onlyystate == nullptr));
-            if (onlyystate != nullptr) {
+            if (const auto onlyystate = Object::cast_to<YState>(get_node(autooverride_only_if_states[i])); onlyystate != nullptr) {
                 only_if_objectids.push_back(onlyystate->get_instance_id());
             }
         }
@@ -670,15 +670,15 @@ void YStateMachine::clear_state_target() {
 void YStateMachine::set_state_target(Node *new_target) {
     if (new_target != state_target) {
         if (state_target != nullptr) {
-            if (state_target->is_connected(SceneStringName(tree_exited), callable_mp(this, &YStateMachine::clear_state_target)))
-                state_target->disconnect(SceneStringName(tree_exited), callable_mp(this, &YStateMachine::clear_state_target));
+            if (state_target->is_connected("tree_exited", callable_mp(this, &YStateMachine::clear_state_target)))
+                state_target->disconnect("tree_exited", callable_mp(this, &YStateMachine::clear_state_target));
             clear_state_target();
         }
         state_target = new_target;
         GDVIRTUAL_CALL(_on_set_state_target,new_target);
         if (state_target != nullptr) {
-            if (!state_target->is_connected(SceneStringName(tree_exited), callable_mp(this, &YStateMachine::clear_state_target)))
-                state_target->connect(SceneStringName(tree_exited), callable_mp(this, &YStateMachine::clear_state_target), CONNECT_ONE_SHOT);
+            if (!state_target->is_connected("tree_exited", callable_mp(this, &YStateMachine::clear_state_target)))
+                state_target->connect("tree_exited", callable_mp(this, &YStateMachine::clear_state_target), CONNECT_ONE_SHOT);
 
             state_target_3d = Object::cast_to<Node3D>(state_target);
             state_target_2d = Object::cast_to<Node2D>(state_target);
