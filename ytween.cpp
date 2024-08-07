@@ -7,6 +7,7 @@
 Ref<YTween> YTween::singleton;
 
 void YTweenWrap::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("set_ytrans", "trans", "param1", "param2"), &YTweenWrap::set_ytrans, DEFVAL(INFINITY), DEFVAL(INFINITY));
     ADD_SIGNAL(MethodInfo("finished_or_killed"));
 }
 
@@ -16,6 +17,14 @@ void YTweenWrap::register_finished_extra_callback() {
 
 void YTweenWrap::register_node_kill_when(Node* p_node_owner) {
     p_node_owner->connect("tree_exiting", callable_mp(this,&YTweenWrap::kill_due_to_node_tree_exiting));
+}
+
+Ref<PropertyTweener> YTweenWrap::set_ytrans(Tween::TransitionType p_trans, real_t p_param1, real_t p_param2) {
+#ifdef YGODOT
+    return set_trans(p_trans,p_param1, p_param2);
+#else
+    return set_trans(p_trans,p_param1);
+#endif
 }
 
 void YTweenWrap::kill_due_to_node_tree_exiting() {
