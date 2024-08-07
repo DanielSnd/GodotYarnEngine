@@ -302,8 +302,9 @@ Dictionary YGameAction::deserialize(Dictionary dict) {
 
     if (dict.has("params")) {
         Dictionary serialized_action_parameters = dict["params"];
-        for (const auto& key : serialized_action_parameters.keys()) {
-            action_parameters[key] = serialized_action_parameters[key];
+        Array serialized_action_keys = serialized_action_parameters.keys();
+        for (int i = 0; i < static_cast<int>(serialized_action_keys.size()); ++i) {
+            action_parameters[serialized_action_keys[i]] = serialized_action_parameters[serialized_action_keys[i]];
         }
     }
 

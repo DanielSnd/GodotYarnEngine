@@ -39,8 +39,10 @@ YGameLog *YGameLog::get_singleton() {
 
 void YGameLog::SetupOutputLogging() {
     if (!output_logging_on) {
+#ifdef YGODOT
         output_logging_on=true;
         OS::get_singleton()->add_extra_logger(memnew(YLogger));
+#endif
     }
 }
 

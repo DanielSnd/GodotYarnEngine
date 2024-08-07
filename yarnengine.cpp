@@ -220,7 +220,8 @@ void YEngine::_notification(int p_what) {
             set_process(true);
             set_physics_process(true);
             TypedArray<Dictionary> global_class_list = ProjectSettings::get_singleton()->get_global_class_list();
-            for (Dictionary p_class_list: global_class_list) {
+            for (int i = 0; i < static_cast<int>(global_class_list.size()); ++i) {
+                Dictionary p_class_list = global_class_list[i];
                 if (p_class_list.has("class") && p_class_list.has("path"))
                     class_name_to_script_path[p_class_list["class"]] = p_class_list["path"];
             }
