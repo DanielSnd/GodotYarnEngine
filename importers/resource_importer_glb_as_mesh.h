@@ -36,6 +36,8 @@ public:
 
     virtual Error import(const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files = nullptr, Variant *r_metadata = nullptr) override;
 
+    virtual int get_import_order() const override { return ResourceImporter::IMPORT_ORDER_SCENE; }
+    // virtual float get_priority() const { return 1.0; }
     // Threaded import can currently cause deadlocks, see GH-48265.
     virtual bool can_import_threaded() const override { return false; }
 
