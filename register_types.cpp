@@ -61,6 +61,9 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 		EditorPlugins::add_by_type<yarnengine::AssetPlacerPlugin>();
 		EditorPlugins::add_by_type<AOBakeEditorPlugin>();
 		EditorPlugins::add_by_type<GSheetImporterEditorPlugin>();
+#ifdef NO_FMOD
+		ClassDB::register_class<ProjectCache>();
+#endif
 	}
 #endif
 

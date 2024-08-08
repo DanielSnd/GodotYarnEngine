@@ -280,7 +280,7 @@ GSheetImporter::GSheetImporter() {
     } else {
 #if TOOLS_ENABLED
         if (http_request != nullptr) {
-            GSheetImporterEditorPlugin::get_singleton()->call_deferred("add_child",http_request);
+            GSheetImporterEditorPlugin::get_singleton()->add_child(http_request);
         }
 #endif
     }
