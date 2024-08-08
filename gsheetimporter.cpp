@@ -21,7 +21,6 @@ void GSheetImporter::_bind_methods() {
     ClassDB::bind_method(D_METHOD("step_import_progress_bar","step","step_description"), &GSheetImporter::step_import_progress_bar);
     ClassDB::bind_method(D_METHOD("end_import_progress_bar"), &GSheetImporter::end_import_progress_bar);
     ClassDB::bind_method(D_METHOD("save_resource_if_different","resource_path","resource"), &GSheetImporter::save_resource_if_different);
-    ClassDB::bind_method(D_METHOD("delayed_initialize"), &GSheetImporter::delayed_initialize);
 
     GDVIRTUAL_BIND(get_sheet_id)
     GDVIRTUAL_BIND(get_sheet_name)
@@ -287,9 +286,8 @@ GSheetImporter::GSheetImporter() {
     } else {
 #if TOOLS_ENABLED
         if (http_request != nullptr) {
-            Callable callable_delayed_init = callable_mp(this,&GSheetImporter::delayed_initialize);
-            if (!SceneTree::get_singleton()->is_connected(SNAME("process_frame"), callable_delayed_init))
-                SceneTree::get_singleton()->connect(SNAME("process_frame"), callable_delayed_init);
+            if (!SceneTree::get_singleton()->is_connected(SNAME("process_frame"), callable_mp(this, &GSheetImporter::ensure_http_request_is_child)))
+                SceneTree::get_singleton()->connect(SNAME("process_frame"), callable_mp(this, &GSheetImporter::ensure_http_request_is_child), CONNECT_ONE_SHOT);
         }
 #endif
     }
@@ -299,8 +297,7 @@ GSheetImporter::GSheetImporter() {
 
 GSheetImporter::~GSheetImporter() {
     if (SceneTree::get_singleton() != nullptr) {
-        Callable callable_delayed_init = callable_mp(this,&GSheetImporter::delayed_initialize);
-        if (SceneTree::get_singleton()->is_connected(SNAME("process_frame"), callable_delayed_init))
-            SceneTree::get_singleton()->disconnect(SNAME("process_frame"), callable_delayed_init);
+        if (SceneTree::get_singleton()->is_connected(SNAME("process_frame"), callable_mp(this, &GSheetImporter::ensure_http_request_is_child)))
+            SceneTree::get_singleton()->disconnect(SNAME("process_frame"), callable_mp(this, &GSheetImporter::ensure_http_request_is_child));
     }
 }

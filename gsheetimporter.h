@@ -6,7 +6,7 @@
 #define GSHEETIMPORTER_H
 #include "core/object/ref_counted.h"
 #include "scene/main/http_request.h"
-
+#include "core/variant/callable.h"
 
 class GSheetImporter : public RefCounted {
     GDCLASS(GSheetImporter, RefCounted);
