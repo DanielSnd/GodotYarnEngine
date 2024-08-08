@@ -282,9 +282,11 @@ void GSheetImporter::end_import_progress_bar() {
 }
 
 void GSheetImporter::delayed_initialize() const {
+#ifdef TOOLS_ENABLED
     if (http_request != nullptr && GSheetImporterEditorPlugin::get_singleton() != nullptr) {
         GSheetImporterEditorPlugin::get_singleton()->add_child(http_request);
     }
+#endif
 }
 
 GSheetImporter::GSheetImporter() {
