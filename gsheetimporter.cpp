@@ -21,6 +21,7 @@ void GSheetImporter::_bind_methods() {
     ClassDB::bind_method(D_METHOD("step_import_progress_bar","step","step_description"), &GSheetImporter::step_import_progress_bar);
     ClassDB::bind_method(D_METHOD("end_import_progress_bar"), &GSheetImporter::end_import_progress_bar);
     ClassDB::bind_method(D_METHOD("save_resource_if_different","resource_path","resource"), &GSheetImporter::save_resource_if_different);
+    ClassDB::bind_method(D_METHOD("delayed_initialize"), &GSheetImporter::delayed_initialize);
 
     GDVIRTUAL_BIND(get_sheet_id)
     GDVIRTUAL_BIND(get_sheet_name)
@@ -269,6 +270,11 @@ void GSheetImporter::end_import_progress_bar() {
         import_end_function();
 }
 
+void GSheetImporter::delayed_initialize() const {
+    if (http_request != nullptr && GSheetImporterEditorPlugin::get_singleton() != nullptr) {
+        GSheetImporterEditorPlugin::get_singleton()->add_child(http_request);
+    }
+}
 GSheetImporter::GSheetImporter() {
     http_request = memnew(HTTPRequest);
     if (!Engine::get_singleton()->is_editor_hint()) {
@@ -280,7 +286,7 @@ GSheetImporter::GSheetImporter() {
     } else {
 #if TOOLS_ENABLED
         if (http_request != nullptr) {
-            GSheetImporterEditorPlugin::get_singleton()->add_child(http_request);
+            GSheetImporterEditorPlugin::get_singleton()->call_deferred("delayed_initialize");
         }
 #endif
     }

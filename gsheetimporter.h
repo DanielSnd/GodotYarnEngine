@@ -49,6 +49,8 @@ public:
     void step_import_progress_bar(int p_step, const String &p_step_description);
     void end_import_progress_bar();
 
+    void delayed_initialize() const;
+
     GSheetImporter();
     ~GSheetImporter();
 };
