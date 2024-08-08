@@ -279,10 +279,13 @@ GSheetImporter::GSheetImporter() {
         }
     } else {
 #if TOOLS_ENABLED
-        GSheetImporterEditorPlugin::get_singleton()->call_deferred("add_child",http_request);
+        if (http_request != nullptr) {
+            GSheetImporterEditorPlugin::get_singleton()->call_deferred("add_child",http_request);
+        }
 #endif
     }
-    http_request->connect("request_completed", callable_mp(this,&GSheetImporter::on_import_completed));
+    if (http_request != nullptr)
+        http_request->connect("request_completed", callable_mp(this,&GSheetImporter::on_import_completed));
 }
 
 GSheetImporter::~GSheetImporter() {

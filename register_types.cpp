@@ -85,6 +85,13 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 
 #ifdef NO_FMOD
 	ClassDB::register_class<EventAsset>();
+	ClassDB::register_class<FMODAsset>();
+	ClassDB::register_class<BankAsset>();
+	ClassDB::register_class<EventAsset>();
+	ClassDB::register_class<BusAsset>();
+	ClassDB::register_class<VCAAsset>();
+	ClassDB::register_class<ParameterAsset>();
+	ClassDB::register_class<FMODGuidDictionary>();
 #endif
 	ClassDB::register_class<GSheetImporter>();
 	ClassDB::register_class<YTime>();
