@@ -237,7 +237,9 @@ public:
     void set_event_tree(const Array& p_event_tree) {
         event_tree = p_event_tree;
     }
-    Array get_event_tree();
+    Array get_event_tree() {
+        return event_tree;
+    }
     void set_snapshot_tree(const Array& p_snapshot_tree) {
         snapshot_tree = p_snapshot_tree;
     }
