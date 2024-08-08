@@ -275,6 +275,7 @@ void GSheetImporter::delayed_initialize() const {
         GSheetImporterEditorPlugin::get_singleton()->add_child(http_request);
     }
 }
+
 GSheetImporter::GSheetImporter() {
     http_request = memnew(HTTPRequest);
     if (!Engine::get_singleton()->is_editor_hint()) {
@@ -286,7 +287,9 @@ GSheetImporter::GSheetImporter() {
     } else {
 #if TOOLS_ENABLED
         if (http_request != nullptr) {
-            GSheetImporterEditorPlugin::get_singleton()->call_deferred("delayed_initialize");
+            auto callable_delayed_init = callable_mp(this,&GSheetImporter::delayed_initialize);
+            if (!SceneTree::get_singleton()->is_connected(SNAME("process_frame"), callable_delayed_init))
+                SceneTree::get_singleton()->connect(SNAME("process_frame"), callable_delayed_init);
         }
 #endif
     }
@@ -295,4 +298,9 @@ GSheetImporter::GSheetImporter() {
 }
 
 GSheetImporter::~GSheetImporter() {
+    if (SceneTree::get_singleton() != nullptr) {
+        auto callable_delayed_init = callable_mp(this,&GSheetImporter::delayed_initialize);
+        if (SceneTree::get_singleton()->is_connected(SNAME("process_frame"), callable_delayed_init))
+            SceneTree::get_singleton()->disconnect(SNAME("process_frame"), callable_delayed_init);
+    }
 }
