@@ -28,6 +28,18 @@ void GSheetImporter::_bind_methods() {
 }
 
 void GSheetImporter::request_import() {
+    if (http_request == nullptr) {
+        http_request = memnew(HTTPRequest);
+        http_request->connect("request_completed", callable_mp(this,&GSheetImporter::on_import_completed));
+
+        if (!Engine::get_singleton()->is_editor_hint()) {
+            YEngine::get_singleton()->add_child(http_request);
+        } else {
+#if TOOLS_ENABLED
+            GSheetImporterEditorPlugin::get_singleton()->add_child(http_request);
+#endif
+        }
+    }
     String sheet_name = "";
     GDVIRTUAL_CALL(get_sheet_name,sheet_name);
     // print_line(vformat("Requested Import %s" ,sheet_name));
@@ -248,7 +260,7 @@ void GSheetImporter::ensure_http_request_is_child() {
             }
         } else {
 #if TOOLS_ENABLED
-        GSheetImporterEditorPlugin::get_singleton()->call_deferred("add_child",http_request);
+        SceneTree::get_singleton()->call_deferred("add_child",http_request);
 #endif
         }
     }
@@ -276,28 +288,7 @@ void GSheetImporter::delayed_initialize() const {
 }
 
 GSheetImporter::GSheetImporter() {
-    http_request = memnew(HTTPRequest);
-    if (!Engine::get_singleton()->is_editor_hint()) {
-        if (!YEngine::get_singleton()->is_inside_tree()) {
-            YEngine::get_singleton()->connect("initialized",callable_mp(this,&GSheetImporter::ensure_http_request_is_child), CONNECT_ONE_SHOT);
-        } else {
-            YEngine::get_singleton()->add_child(http_request);
-        }
-    } else {
-#if TOOLS_ENABLED
-        if (http_request != nullptr) {
-            if (!SceneTree::get_singleton()->is_connected(SNAME("process_frame"), callable_mp(this, &GSheetImporter::ensure_http_request_is_child)))
-                SceneTree::get_singleton()->connect(SNAME("process_frame"), callable_mp(this, &GSheetImporter::ensure_http_request_is_child), CONNECT_ONE_SHOT);
-        }
-#endif
-    }
-    if (http_request != nullptr)
-        http_request->connect("request_completed", callable_mp(this,&GSheetImporter::on_import_completed));
 }
 
 GSheetImporter::~GSheetImporter() {
-    if (SceneTree::get_singleton() != nullptr) {
-        if (SceneTree::get_singleton()->is_connected(SNAME("process_frame"), callable_mp(this, &GSheetImporter::ensure_http_request_is_child)))
-            SceneTree::get_singleton()->disconnect(SNAME("process_frame"), callable_mp(this, &GSheetImporter::ensure_http_request_is_child));
-    }
 }
