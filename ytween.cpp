@@ -23,7 +23,7 @@ Ref<PropertyTweener> YTweenWrap::set_ytrans(Tween::TransitionType p_trans, real_
 #ifdef YGODOT
     return set_trans(p_trans,p_param1, p_param2);
 #else
-    return set_trans(p_trans,p_param1);
+    return set_trans(p_trans);
 #endif
 }
 

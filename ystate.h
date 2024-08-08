@@ -5,6 +5,7 @@
 #ifndef YSTATE_H
 #define YSTATE_H
 #include "scene/main/node.h"
+#include "core/object/gdvirtual.gen.inc"
 #include "scene/main/multiplayer_api.h"
 #include "ystateoverride.h"
 #include "scene/2d/node_2d.h"
