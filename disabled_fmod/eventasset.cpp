@@ -375,7 +375,9 @@ void ProjectCache::initialize_cache(const Dictionary& project_info) {
 	all_fmod_paths.append_array(get_vcas().keys());
 	all_fmod_paths.append_array(get_parameters().keys());
 	// print_line(vformat("All fmod paths %s",all_fmod_paths));
-	for (const auto& dir_path: resource_dirs.values()) {
+	int len = static_cast<int>(resource_dirs.values().size());
+	for (int i = 0; i < len; ++i) {
+		const String& dir_path = resource_dirs.values()[i];
 		Ref<DirAccess> new_dir = DirAccess::open(dir_path);
 		if (!new_dir.is_null()) {
 			new_dir->list_dir_begin();
