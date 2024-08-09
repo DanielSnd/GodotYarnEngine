@@ -183,7 +183,11 @@ Error ResourceImporterGLBasMesh::import(const String &p_source_file, const Strin
 	return OK;
 }
 
-ResourceImporterGLBasMesh::ResourceImporterGLBasMesh() = default;
+ResourceImporterGLBasMesh::ResourceImporterGLBasMesh() {
 
-ResourceImporterGLBasMesh::~ResourceImporterGLBasMesh() = default;
+}
+
+ResourceImporterGLBasMesh::~ResourceImporterGLBasMesh() {
+
+}
 
