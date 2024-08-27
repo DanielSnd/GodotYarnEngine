@@ -159,6 +159,11 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 }
 
 void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
+	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
+		if (YEnginePtr != nullptr) {
+			memdelete(YEnginePtr);
+		}
+	}
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
  			return;
     }
@@ -181,9 +186,7 @@ void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 		yarn_game_log_ref.unref();
 	if (yarn_tween_ref != nullptr && yarn_tween_ref.is_valid())
 		yarn_tween_ref.unref();
-	if (YEnginePtr != nullptr) {
-		memdelete(YEnginePtr);
-	}
+
 	YEnginePtr = nullptr;
    // Nothing to do here in this example.
 }
