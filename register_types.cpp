@@ -161,19 +161,22 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
 		if (YEnginePtr != nullptr) {
-			memdelete(YEnginePtr);
+			YEnginePtr->queue_free();
+			// memdelete(YEnginePtr);
 		}
 	}
-	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
- 			return;
-    }
-	Engine::get_singleton()->remove_singleton("YEngine");
-	Engine::get_singleton()->remove_singleton("YSave");
-	Engine::get_singleton()->remove_singleton("YTime");
-	Engine::get_singleton()->remove_singleton("YPhysics");
-	Engine::get_singleton()->remove_singleton("YGameState");
-	Engine::get_singleton()->remove_singleton("YGameLog");
-	Engine::get_singleton()->remove_singleton("YTween");
+	if (Engine::get_singleton()->has_singleton("YEngine")) {
+		Engine::get_singleton()->remove_singleton("YEngine");
+	}
+	if (Engine::get_singleton()->has_singleton("YSave")) {
+		Engine::get_singleton()->remove_singleton("YSave");
+		Engine::get_singleton()->remove_singleton("YTime");
+		Engine::get_singleton()->remove_singleton("YPhysics");
+		Engine::get_singleton()->remove_singleton("YGameState");
+		Engine::get_singleton()->remove_singleton("YGameLog");
+		Engine::get_singleton()->remove_singleton("YTween");
+	}
+
 	if (yarn_save_ref != nullptr && yarn_save_ref.is_valid())
 		yarn_save_ref.unref();
 	if (yarn_time_ref != nullptr && yarn_time_ref.is_valid())
@@ -188,5 +191,9 @@ void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 		yarn_tween_ref.unref();
 
 	YEnginePtr = nullptr;
+
+	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
+		return;
+	}
    // Nothing to do here in this example.
 }

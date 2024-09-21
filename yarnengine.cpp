@@ -5,7 +5,6 @@
 #include "core/io/dir_access.h"
 #include "core/io/json.h"
 #include "core/math/random_number_generator.h"
-#include "core/string/translation.h"
 #include "scene/gui/control.h"
 
 YEngine* YEngine::singleton = nullptr;
@@ -198,6 +197,8 @@ void YEngine::setup_node() {
         ysave->time_started = OS::get_singleton()->get_ticks_msec() * 0.001f;
     }
 }
+
+
 
 void YEngine::_notification(int p_what) {
     if (p_what == NOTIFICATION_POSTINITIALIZE && !Engine::get_singleton()->is_editor_hint()) {
@@ -490,6 +491,32 @@ Vector<String> YEngine::get_diverging_variables_in_resources(const Ref<Resource>
         }
     }
     return return_strings;
+}
+
+String replace_color_bbcode_tags(const String &input) {
+    String output = input;
+    int start_pos = 0;
+    
+    while ((start_pos = output.find("[c=", start_pos)) != -1) {
+        int end_pos = output.find("]", start_pos);
+        if (end_pos == -1) break;
+
+        String color = output.substr(start_pos + 3, end_pos - (start_pos + 3)).strip_edges();
+
+        // Replace "[c=COLOR]" with "[color=COLOR]"
+        output = output.replace("[c=" + color + "]", "[color=" + color + "]");
+
+        // Replace "[/c]" with "[/color]"
+        int close_tag_pos = output.find("[/c]", end_pos);
+        if (close_tag_pos != -1) {
+            output = output.replace("[/c]", "[/color]");
+            start_pos = close_tag_pos + 8; // Move past the [/color] tag for subsequent finds.
+        } else {
+            break; // No closing tag found, stop processing
+        }
+    }
+
+    return output;
 }
 
 PackedStringArray YEngine::find_resources_paths_in(const Variant &variant_path, const String &name_contains) {
