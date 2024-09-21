@@ -10,6 +10,7 @@
 #include "scene/main/node.h"
 #include "scene/main/window.h"
 #include "scene/resources/packed_scene.h"
+#include <core/string/translation_server.h>
 
 class YGameState;
 class YTween;
