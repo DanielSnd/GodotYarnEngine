@@ -160,7 +160,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 
 void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
-		if (YEnginePtr != nullptr) {
+		if (YEnginePtr != nullptr && SceneTree::get_singleton() != nullptr) {
 			YEnginePtr->queue_free();
 			// memdelete(YEnginePtr);
 		}
