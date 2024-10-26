@@ -26,6 +26,11 @@ public:
     bool step_waiting;
     bool get_step_waiting() const{return step_waiting;}
     void set_step_waiting(bool b ){ step_waiting = b;}
+
+    bool step_has_to_reconsume;
+    bool get_step_has_to_reconsume() const{return step_has_to_reconsume;}
+    void set_step_has_to_reconsume(bool b ){ step_has_to_reconsume = b;}
+
     bool step_taken;
     bool get_step_taken() const{return step_taken;}
     void set_step_taken(bool b ){ step_taken = b;}
@@ -45,6 +50,7 @@ public:
         step_identifier=0;
         step_taken_as_ending=false;
         step_waiting = false;
+        step_has_to_reconsume = false;
         step_data ={};
     }
     YActionStep(int p_index,int p_identifier) {
@@ -53,6 +59,7 @@ public:
         step_taken_as_ending=false;
         step_identifier=p_identifier;
         step_waiting = false;
+        step_has_to_reconsume = false;
         step_data ={};
     }
 };

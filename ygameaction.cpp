@@ -126,7 +126,10 @@ void YGameAction::release_step() {
             GDVIRTUAL_CALL(_on_waiting_step_released, data->get_step_index(), data->get_step_identifier(), data->step_data, false);
             emit_signal("released_waited_step",data->step_index);
             emit_signal("action_stepped",data->step_index);
-            steps_consumed+=1;
+            if (data->step_has_to_reconsume) {
+                steps_consumed+=1;
+                data->step_has_to_reconsume = false;
+            }
             break;
         }
     }
@@ -230,6 +233,7 @@ void YGameAction::step_action(Ref<YActionStep> data,bool is_ending) {
             emit_signal("action_stepped",data->step_index);
         else {
             steps_consumed -= 1;
+            data->step_has_to_reconsume = true;
         }
     }
 }
