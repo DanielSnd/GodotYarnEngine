@@ -44,6 +44,7 @@ public:
         step_taken=false;
         step_identifier=0;
         step_taken_as_ending=false;
+        step_waiting = false;
         step_data ={};
     }
     YActionStep(int p_index,int p_identifier) {
@@ -51,6 +52,7 @@ public:
         step_taken=false;
         step_taken_as_ending=false;
         step_identifier=p_identifier;
+        step_waiting = false;
         step_data ={};
     }
 };
