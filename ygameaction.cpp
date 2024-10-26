@@ -13,7 +13,7 @@ void YActionStep::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_step_taken"), &YActionStep::get_step_taken);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "step_taken"), "set_step_taken", "get_step_taken");
 
-    ClassDB::bind_method(D_METHOD("set_step_waiting","step_waiting"), &YActionStep::set_step_waiting);
+    ClassDB::bind_method(D_METHOD("set_step_waiting","step_waiting"), &YActionStep::set_step_waiting, DEFVAL(false));
     ClassDB::bind_method(D_METHOD("get_step_waiting"), &YActionStep::get_step_waiting);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "step_waiting"), "set_step_waiting", "get_step_waiting");
     
@@ -49,6 +49,7 @@ void YGameAction::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("get_step_by_index","step_index"), &YGameAction::get_step_by_index);
     ClassDB::bind_method(D_METHOD("get_all_steps_count"), &YGameAction::get_all_steps_count);
+    ClassDB::bind_method(D_METHOD("get_steps_consumed"), &YGameAction::get_steps_consumed);
 
     ClassDB::bind_method(D_METHOD("copy_parameters_from","other_action"), &YGameAction::copy_parameters_from);
     ClassDB::bind_method(D_METHOD("copy_parameters_to","other_action"), &YGameAction::copy_parameters_to);
@@ -112,7 +113,6 @@ void YGameAction::_bind_methods() {
     GDVIRTUAL_BIND(_on_deserialize,"dict")
 }
 
-
 void YGameAction::release_step() {
     if(!waiting_for_step)
         return;
@@ -123,7 +123,7 @@ void YGameAction::release_step() {
         if (action_steps[i] != nullptr && action_steps[i].is_valid() && action_steps[i]->step_waiting) {
             Ref<YActionStep> data = action_steps[i];
             data->set_step_waiting(false);
-            GDVIRTUAL_CALL(_on_waiting_step_released,data->get_step_index(),data->get_step_identifier(),data->step_data,false);
+            GDVIRTUAL_CALL(_on_waiting_step_released, data->get_step_index(), data->get_step_identifier(), data->step_data, false);
             emit_signal("released_waited_step",data->step_index);
             emit_signal("action_stepped",data->step_index);
             steps_consumed+=1;
@@ -159,8 +159,9 @@ void YGameAction::wait_for_step(bool prevent_processing) {
     waiting_for_step_no_processing = prevent_processing;
     int current_action_steps_in_list = static_cast<int>(action_steps.size());
     for (int i = current_action_steps_in_list-1; i >= 0; --i) {
-        if (action_steps[i] != nullptr && action_steps[i].is_valid()  && action_steps[i]->step_taken && action_steps[i]->step_index == last_step_ran) {
+        if (action_steps[i] != nullptr && action_steps[i].is_valid() && !action_steps[i]->step_taken && action_steps[i]->step_index == last_step_ran) {
             Ref<YActionStep> data = action_steps[i];
+            data->set_step_waiting(true);
             emit_signal("waiting_for_step",data->step_index);
             break;
         }
@@ -218,6 +219,10 @@ void YGameAction::step_action(Ref<YActionStep> data,bool is_ending) {
     steps_consumed += 1;
     if (data.is_valid()) {
         last_step_ran = data->get_step_index();
+        if (data->get_step_waiting() && !waiting_for_step) {
+            waiting_for_step = true;
+            emit_signal("waiting_for_step",data->step_index);
+        }
         GDVIRTUAL_CALL(_on_stepped_action,data->get_step_index(),data->get_step_identifier(),data->step_data,is_ending);
         data->step_taken=true;
         data->step_taken_as_ending = is_ending;
