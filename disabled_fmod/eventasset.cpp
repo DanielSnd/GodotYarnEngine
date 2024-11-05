@@ -5,6 +5,143 @@
 #ifdef NO_FMOD
 #include "eventasset.h"
 
+namespace FmodTypes {
+	void FMOD_STUDIO_PARAMETER_ID::_bind_methods()
+	{
+		ClassDB::bind_method(D_METHOD("set_data_1", "data1"), &FMOD_STUDIO_PARAMETER_ID::set_data1);
+		ClassDB::bind_method(D_METHOD("get_data_1"), &FMOD_STUDIO_PARAMETER_ID::get_data1);
+		ClassDB::bind_method(D_METHOD("set_data_2", "data2"), &FMOD_STUDIO_PARAMETER_ID::set_data2);
+		ClassDB::bind_method(D_METHOD("get_data_2"), &FMOD_STUDIO_PARAMETER_ID::get_data2);
+
+		ADD_PROPERTY(PropertyInfo(Variant::INT, "data1"), "set_data_1", "get_data_1");
+		ADD_PROPERTY(PropertyInfo(Variant::INT, "data2"), "set_data_2", "get_data_2");
+	}
+
+	void FMOD_STUDIO_PARAMETER_ID::set_data1(const unsigned int& _data1)
+	{
+		this->data1 = _data1;
+	}
+
+	unsigned int FMOD_STUDIO_PARAMETER_ID::get_data1() const
+	{
+		return data1;
+	}
+
+	void FMOD_STUDIO_PARAMETER_ID::set_data2(const unsigned int& _data2)
+	{
+		this->data2 = _data2;
+	}
+
+	unsigned int FMOD_STUDIO_PARAMETER_ID::get_data2() const
+	{
+		return data2;
+	}
+
+	void FMOD_STUDIO_PARAMETER_DESCRIPTION::_bind_methods()
+	{
+		ClassDB::bind_method(D_METHOD("set_id", "id"), &FMOD_STUDIO_PARAMETER_DESCRIPTION::set_id);
+		ClassDB::bind_method(D_METHOD("get_id"), &FMOD_STUDIO_PARAMETER_DESCRIPTION::get_id);
+		ClassDB::bind_method(D_METHOD("set_minimum", "minimum"), &FMOD_STUDIO_PARAMETER_DESCRIPTION::set_minimum);
+		ClassDB::bind_method(D_METHOD("get_minimum"), &FMOD_STUDIO_PARAMETER_DESCRIPTION::get_minimum);
+		ClassDB::bind_method(D_METHOD("set_maximum", "maximum"), &FMOD_STUDIO_PARAMETER_DESCRIPTION::set_maximum);
+		ClassDB::bind_method(D_METHOD("get_maximum"), &FMOD_STUDIO_PARAMETER_DESCRIPTION::get_maximum);
+		ClassDB::bind_method(D_METHOD("set_default_value", "default_value"),
+				&FMOD_STUDIO_PARAMETER_DESCRIPTION::set_default_value);
+		ClassDB::bind_method(D_METHOD("get_default_value"), &FMOD_STUDIO_PARAMETER_DESCRIPTION::get_default_value);
+		ClassDB::bind_method(D_METHOD("set_type", "type"), &FMOD_STUDIO_PARAMETER_DESCRIPTION::set_type);
+		ClassDB::bind_method(D_METHOD("get_type"), &FMOD_STUDIO_PARAMETER_DESCRIPTION::get_type);
+		ClassDB::bind_method(D_METHOD("set_flags", "flags"), &FMOD_STUDIO_PARAMETER_DESCRIPTION::set_flags);
+		ClassDB::bind_method(D_METHOD("get_flags"), &FMOD_STUDIO_PARAMETER_DESCRIPTION::get_flags);
+		ClassDB::bind_method(D_METHOD("set_guid", "guid"), &FMOD_STUDIO_PARAMETER_DESCRIPTION::set_guid);
+		ClassDB::bind_method(D_METHOD("get_guid"), &FMOD_STUDIO_PARAMETER_DESCRIPTION::get_guid);
+
+		ADD_PROPERTY(PropertyInfo(Variant::STRING, "name"), "set_name", "get_name");
+		ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "id", PROPERTY_HINT_RESOURCE_TYPE, "FMOD_STUDIO_PARAMETER_ID"), "set_id",
+				"get_id");
+		ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "minimum"), "set_minimum", "get_minimum");
+		ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "maximum"), "set_maximum", "get_maximum");
+		ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "default_value"), "set_default_value", "get_default_value");
+		ADD_PROPERTY(PropertyInfo(Variant::INT, "type", PROPERTY_HINT_ENUM,
+							 "GAME_CONTROLLED,DISTANCE,EVENT_CONE_ANGLE,EVENT_ORIENTATION,DIRECTION,ELEVATION,"
+							 "LISTENER_ORIENTATION,SPEED,SPEED_ABSOLUTE,DISTANCE_NORMALIZED,MAX"),
+				"set_type", "get_type");
+		ADD_PROPERTY(
+				PropertyInfo(Variant::INT, "flags", PROPERTY_HINT_FLAGS, "READONLY, AUTOMATIC, GLOBAL, DISCRETE, LABELED"),
+				"set_flags", "get_flags");
+		ADD_PROPERTY(PropertyInfo(Variant::STRING, "guid"), "set_guid", "get_guid");
+	}
+
+	void FMOD_STUDIO_PARAMETER_DESCRIPTION::set_id(const Ref<FMOD_STUDIO_PARAMETER_ID>& _id)
+	{
+		this->id = _id;
+	}
+
+	Ref<FMOD_STUDIO_PARAMETER_ID> FMOD_STUDIO_PARAMETER_DESCRIPTION::get_id() const
+	{
+		return id;
+	}
+
+	void FMOD_STUDIO_PARAMETER_DESCRIPTION::set_minimum(float _minimum)
+	{
+		this->minimum = _minimum;
+	}
+
+	float FMOD_STUDIO_PARAMETER_DESCRIPTION::get_minimum() const
+	{
+		return minimum;
+	}
+
+	void FMOD_STUDIO_PARAMETER_DESCRIPTION::set_maximum(float _maximum)
+	{
+		this->maximum = _maximum;
+	}
+
+	float FMOD_STUDIO_PARAMETER_DESCRIPTION::get_maximum() const
+	{
+		return maximum;
+	}
+
+	void FMOD_STUDIO_PARAMETER_DESCRIPTION::set_default_value(float _defaultValue)
+	{
+		this->defaultvalue = _defaultValue;
+	}
+
+	float FMOD_STUDIO_PARAMETER_DESCRIPTION::get_default_value() const
+	{
+		return defaultvalue;
+	}
+
+	void FMOD_STUDIO_PARAMETER_DESCRIPTION::set_type(int _type)
+	{
+		this->type = _type;
+	}
+
+	int FMOD_STUDIO_PARAMETER_DESCRIPTION::get_type() const
+	{
+		return (int)type;
+	}
+
+	void FMOD_STUDIO_PARAMETER_DESCRIPTION::set_flags(int _flags)
+	{
+		this->flags = _flags;
+	}
+
+	int FMOD_STUDIO_PARAMETER_DESCRIPTION::get_flags() const
+	{
+		return flags;
+	}
+
+	void FMOD_STUDIO_PARAMETER_DESCRIPTION::set_guid(const String& _guid)
+	{
+		this->guid = _guid;
+	}
+
+	String FMOD_STUDIO_PARAMETER_DESCRIPTION::get_guid() const
+	{
+		return guid;
+	}
+
+}
 void EventAsset::set_event_ref(Dictionary event_description) {
 
 }

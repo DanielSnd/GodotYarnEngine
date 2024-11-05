@@ -311,8 +311,13 @@ void YBoxContainer::position_child_in_rect(Control *p_child, const Rect2 &p_rect
 		if (YTween::get_singleton() != nullptr) {
 			auto tween_created = YTween::get_singleton()->create_unique_tween(p_child);
 			tween_created->set_parallel(true);
+#ifdef YGODOT
 			tween_created->tween_property(p_child,NodePath("position"),r.position,tween_duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type,tween_overshoot);
 			tween_created->tween_property(p_child,NodePath("size"),r.size,tween_duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type,tween_overshoot);
+#else
+			tween_created->tween_property(p_child,NodePath("position"),r.position,tween_duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type);
+			tween_created->tween_property(p_child,NodePath("size"),r.size,tween_duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type);
+#endif
 		} else {
 			p_child->set_rect(r);
 			p_child->set_rotation(0);
@@ -418,8 +423,13 @@ Ref<Tween> YBoxContainer::animated_free_child(Control* child, Vector2 exiting_of
 			// }
 			auto new_tween = YTween::get_singleton()->create_unique_tween(child);
 			new_tween->set_parallel(true);
+#ifdef YGODOT
 			new_tween->tween_property(child,NodePath("position"),child->get_position()+exiting_offset,duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type,tween_overshoot);
 			new_tween->tween_property(child,NodePath("modulate"),Color(1.0,1.0,1.0,0.0),duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type,tween_overshoot);
+#else
+			new_tween->tween_property(child,NodePath("position"),child->get_position()+exiting_offset,duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type);
+			new_tween->tween_property(child,NodePath("modulate"),Color(1.0,1.0,1.0,0.0),duration)->set_ease(tween_ease_type)->set_trans(tween_transition_type);
+#endif
 			auto control_as_node = Object::cast_to<Node>(child);
 			if (control_as_node != nullptr) {
 				new_tween->connect("finished_or_killed",callable_mp(control_as_node,&Node::queue_free));

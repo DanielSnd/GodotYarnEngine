@@ -95,6 +95,8 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<VCAAsset>();
 	ClassDB::register_class<ParameterAsset>();
 	ClassDB::register_class<FMODGuidDictionary>();
+	ClassDB::register_class<FmodTypes::FMOD_STUDIO_PARAMETER_ID>();
+	ClassDB::register_class<FmodTypes::FMOD_STUDIO_PARAMETER_DESCRIPTION>();
 #endif
 	ClassDB::register_class<GSheetImporter>();
 	ClassDB::register_class<YTime>();

@@ -7,8 +7,24 @@
 Ref<YTween> YTween::singleton;
 
 void YTweenWrap::_bind_methods() {
+    
+    ClassDB::bind_method(D_METHOD("yparallel"), &YTweenWrap::yparallel);
+    ClassDB::bind_method(D_METHOD("ychain"), &YTweenWrap::ychain);
+    
     ClassDB::bind_method(D_METHOD("set_ytrans", "trans", "param1", "param2"), &YTweenWrap::set_ytrans, DEFVAL(INFINITY), DEFVAL(INFINITY));
+    ClassDB::bind_method(D_METHOD("set_ytrans_in_property", "property", "trans", "param1", "param2"), &YTweenWrap::set_ytrans_in_property, DEFVAL(INFINITY), DEFVAL(INFINITY));
+    ClassDB::bind_method(D_METHOD("ytween_property", "object", "property", "final_val", "duration","ease", "trans", "param1", "param2"), &YTweenWrap::ytween_property, DEFVAL(Tween::EASE_IN_OUT), DEFVAL(Tween::TRANS_LINEAR), DEFVAL(INFINITY), DEFVAL(INFINITY));
     ADD_SIGNAL(MethodInfo("finished_or_killed"));
+}
+
+Ref<YTweenWrap> YTweenWrap::ychain() {
+    chain();
+    return this;
+}
+
+Ref<YTweenWrap> YTweenWrap::yparallel() {
+    parallel();
+    return this;
 }
 
 void YTweenWrap::register_finished_extra_callback() {
@@ -27,6 +43,16 @@ Ref<PropertyTweener> YTweenWrap::set_ytrans(Tween::TransitionType p_trans, real_
 #endif
 }
 
+Ref<PropertyTweener> YTweenWrap::set_ytrans_in_property(Ref<PropertyTweener> tweenproperty, Tween::TransitionType p_trans, real_t p_param1, real_t p_param2) {
+    if (!tweenproperty.is_valid())
+        return tweenproperty;
+#ifdef YGODOT
+    return tweenproperty->set_trans(p_trans,p_param1, p_param2);
+#else
+    return tweenproperty->set_trans(p_trans);
+#endif
+}
+
 void YTweenWrap::kill_due_to_node_tree_exiting() {
     if (!emitted_finished_or_killed) {
         kill();
@@ -40,6 +66,19 @@ void YTweenWrap::emitted_finished() {
         //print_line("Emit finish signal");
         emit_signal("finished_or_killed");
     }
+}
+
+Ref<PropertyTweener> YTweenWrap::ytween_property(const Object *p_target, const NodePath &p_property, Variant p_to, double p_duration, Tween::EaseType p_ease, Tween::TransitionType p_trans, real_t p_param1, real_t p_param2) {
+    Ref<PropertyTweener> new_tween = tween_property(p_target, p_property, p_to, p_duration);
+    if (new_tween.is_valid()) {
+        new_tween->set_ease(p_ease);
+#ifdef YGODOT
+        new_tween->set_trans(p_trans,p_param1, p_param2);
+#else
+        new_tween->set_trans(p_trans);
+#endif
+    }
+    return new_tween;
 }
 
 void YTween::_bind_methods() {
