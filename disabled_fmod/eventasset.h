@@ -157,7 +157,59 @@ private:
     Dictionary parameters;
 };
 
+namespace FmodTypes {
+    class FMOD_STUDIO_PARAMETER_ID : public Resource
+    {
+        GDCLASS(FMOD_STUDIO_PARAMETER_ID, Resource);
 
+    protected:
+        static void _bind_methods();
+
+    private:
+        unsigned int data1{};
+        unsigned int data2{};
+
+    public:
+        void set_data1(const unsigned int& data1);
+        unsigned int get_data1() const;
+        void set_data2(const unsigned int& data2);
+        unsigned int get_data2() const;
+    };
+
+    class FMOD_STUDIO_PARAMETER_DESCRIPTION : public Resource
+    {
+        GDCLASS(FMOD_STUDIO_PARAMETER_DESCRIPTION, Resource);
+
+    protected:
+        static void _bind_methods();
+
+    private:
+        String name{};
+        Ref<FMOD_STUDIO_PARAMETER_ID> id;
+        float minimum{};
+        float maximum{};
+        float defaultvalue{};
+        int type{};
+        int flags{};
+        String guid{};
+
+    public:
+        void set_id(const Ref<FMOD_STUDIO_PARAMETER_ID>& id);
+        Ref<FMOD_STUDIO_PARAMETER_ID> get_id() const;
+        void set_minimum(float minimum);
+        float get_minimum() const;
+        void set_maximum(float maximum);
+        float get_maximum() const;
+        void set_default_value(float defaultValue);
+        float get_default_value() const;
+        void set_type(int type);
+        int get_type() const;
+        void set_flags(int flags);
+        int get_flags() const;
+        void set_guid(const String& guid);
+        String get_guid() const;
+    };
+}
 class ProjectCache : public Resource
 {
     GDCLASS(ProjectCache, Resource);

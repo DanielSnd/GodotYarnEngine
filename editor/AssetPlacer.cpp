@@ -114,9 +114,9 @@ void yarnengine::AssetPanelEditorBottomPanel::_notification(int p_what) {
         }
         break;
         case NOTIFICATION_THEME_CHANGED: {
-            delete_pscene->set_icon(get_editor_theme_icon(SNAME("Remove")));
+            delete_pscene->set_button_icon(get_editor_theme_icon(SNAME("Remove")));
 			zoom_icon->set_texture(get_editor_theme_icon(SNAME("Zoom")));
-			save_pscene_list->set_icon(get_editor_theme_icon(SNAME("Save")));
+			save_pscene_list->set_button_icon(get_editor_theme_icon(SNAME("Save")));
         }break;
         case NOTIFICATION_PROCESS: {
             if (queue.size()>0 && !is_rendering_preview) {

@@ -28,12 +28,21 @@ public:
     // TweenProcessMode ytween_process_mode = TweenProcessMode::TWEEN_PROCESS_IDLE;
     Ref<PropertyTweener> set_ytrans(Tween::TransitionType p_trans, real_t p_param1 = INFINITY, real_t p_param2 = INFINITY);
 
+    Ref<PropertyTweener> set_ytrans_in_property(Ref<PropertyTweener> tweenproperty, Tween::TransitionType p_trans,
+                                                real_t p_param1, real_t p_param2);
+
     void kill_due_to_node_tree_exiting();
     void register_finished_extra_callback();
 
     void register_node_kill_when(Node *p_node_owner);
     void emitted_finished();
 
+    Ref<PropertyTweener> ytween_property(const Object *p_target, const NodePath &p_property, Variant p_to,
+                                         double p_duration, Tween::EaseType p_ease, Tween::TransitionType p_trans, real_t p_param1, real_t p_param2);
+
+    Ref<YTweenWrap> yparallel();
+	Ref<YTweenWrap> ychain();
+    
     YTweenWrap() : Tween() {
         tween_list_id = 0;
     }
