@@ -70,7 +70,7 @@ TypedArray<ImporterMeshInstance3D> ResourceImporterGLBasMesh::find_first_matched
     return result;
 }
 
-Error ResourceImporterGLBasMesh::import(const String &p_source_file, const String &p_save_path,
+Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const String &p_source_file, const String &p_save_path,
     const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files,
     Variant *r_metadata) {
     bool should_save_mesh = p_options.has("save_to_file") ? bool(p_options["save_to_file"]) : false;

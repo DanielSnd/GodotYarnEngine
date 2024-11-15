@@ -36,7 +36,7 @@ public:
 
     static TypedArray<ImporterMeshInstance3D> find_first_matched_nodes(const Node *checking_node);
 
-    virtual Error import(const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files = nullptr, Variant *r_metadata = nullptr) override;
+    virtual Error import(ResourceUID::ID p_source_id, const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files = nullptr, Variant *r_metadata = nullptr) override;
 
     virtual int get_import_order() const override { return ResourceImporter::IMPORT_ORDER_SCENE; }
     // virtual float get_priority() const { return 1.0; }
