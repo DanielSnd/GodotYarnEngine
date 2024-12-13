@@ -39,9 +39,9 @@
 // This is your singleton reference.
 static YEngine* YEnginePtr;
 static Ref<YSave> yarn_save_ref;
+static Ref<YTime> yarn_time_ref;
 static Ref<YPhysics> yarn_physics_ref;
 static Ref<YGameState> yarn_gamestate_ref;
-static Ref<YTime> yarn_time_ref;
 static Ref<YGameLog> yarn_game_log_ref;
 static Ref<YTween> yarn_tween_ref;
 
@@ -129,29 +129,22 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<CombinedTexture2D>();
 
 	// Initialize your singleton.
-	YEnginePtr = memnew(YEngine);
-	YEnginePtr->add_setting("application/config/window_name", "", Variant::Type::STRING);
 
 	yarn_save_ref.instantiate();
-	YSave::set_singleton(yarn_save_ref);
 
 	yarn_time_ref.instantiate();
-	YTime::set_singleton(yarn_time_ref);
 
 	yarn_physics_ref.instantiate();
-	YPhysics::set_singleton(yarn_physics_ref);
 
 	yarn_gamestate_ref.instantiate();
-	YGameState::set_singleton(yarn_gamestate_ref);
 
 	yarn_game_log_ref.instantiate();
-	YGameLog::set_singleton(yarn_game_log_ref);
 
 	yarn_tween_ref.instantiate();
-	YTween::set_singleton(yarn_tween_ref);
 
 	// Bind your singleton.
-	Engine::get_singleton()->add_singleton(Engine::Singleton("YEngine", YEngine::get_singleton()));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("YEngine", memnew(YEngine)));
+	YEngine::get_singleton()->add_setting("application/config/window_name", "", Variant::Type::STRING);
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YSave", YSave::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YTime", YTime::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YPhysics", YPhysics::get_singleton()));
@@ -161,16 +154,13 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 }
 
 void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
-	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
-		if (YEnginePtr != nullptr && SceneTree::get_singleton() != nullptr) {
-			YEnginePtr->queue_free();
-			// memdelete(YEnginePtr);
-		}
+	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
+		return;
 	}
+
+	// Remove singletons first
 	if (Engine::get_singleton()->has_singleton("YEngine")) {
 		Engine::get_singleton()->remove_singleton("YEngine");
-	}
-	if (Engine::get_singleton()->has_singleton("YSave")) {
 		Engine::get_singleton()->remove_singleton("YSave");
 		Engine::get_singleton()->remove_singleton("YTime");
 		Engine::get_singleton()->remove_singleton("YPhysics");
@@ -179,23 +169,10 @@ void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 		Engine::get_singleton()->remove_singleton("YTween");
 	}
 
-	if (yarn_save_ref != nullptr && yarn_save_ref.is_valid())
-		yarn_save_ref.unref();
-	if (yarn_time_ref != nullptr && yarn_time_ref.is_valid())
-		yarn_time_ref.unref();
-	if (yarn_physics_ref != nullptr && yarn_physics_ref.is_valid())
-		yarn_physics_ref.unref();
-	if (yarn_gamestate_ref != nullptr && yarn_gamestate_ref.is_valid())
-		yarn_gamestate_ref.unref();
-	if (yarn_game_log_ref != nullptr && yarn_game_log_ref.is_valid())
-		yarn_game_log_ref.unref();
-	if (yarn_tween_ref != nullptr && yarn_tween_ref.is_valid())
-		yarn_tween_ref.unref();
-
-	YEnginePtr = nullptr;
-
-	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
-		return;
-	}
-   // Nothing to do here in this example.
+	if (yarn_time_ref.is_valid()) yarn_time_ref.unref();
+	if (yarn_save_ref.is_valid()) yarn_save_ref.unref();
+	if (yarn_physics_ref.is_valid()) yarn_physics_ref.unref();
+	if (yarn_gamestate_ref.is_valid()) yarn_gamestate_ref.unref();
+	if (yarn_game_log_ref.is_valid()) yarn_game_log_ref.unref();
+	if (yarn_tween_ref.is_valid()) yarn_tween_ref.unref();
 }

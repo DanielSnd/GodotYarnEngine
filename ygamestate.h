@@ -27,16 +27,12 @@ class YGameState : public RefCounted {
     GDCLASS(YGameState, RefCounted);
 
 protected:
-    static Ref<YGameState> singleton;
+    static YGameState* singleton;
     static void _bind_methods();
 
 public:
     static YGameState *get_singleton();
 
-
-    static void set_singleton(const Ref<YGameState> &ref) {
-        singleton = ref;
-    }
     bool has_started=false;
 
     int next_execution_order_number;
@@ -227,6 +223,7 @@ public:
     }
     
     YGameState() {
+        singleton = this;
         next_execution_order_number = 0;
         next_game_action_unique_id = 1;
         next_visual_action_unique_id = 1;
@@ -242,8 +239,8 @@ public:
     }
 
     ~YGameState() {
-        if(singleton.is_valid() && singleton == this) {
-            singleton.unref();
+        if(singleton != nullptr && singleton == this) {
+            singleton = nullptr;
         }
         current_turn_player = nullptr;
         if (!current_game_action.is_null() && current_game_action.is_valid()) current_game_action.unref();

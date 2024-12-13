@@ -6,7 +6,7 @@
 
 #include "core/config/project_settings.h"
 
-Ref<YGameState> YGameState::singleton;
+YGameState* YGameState::singleton = nullptr;
 
 void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("register_player", "game_player"), &YGameState::register_player);
@@ -84,7 +84,7 @@ void YGameState::_bind_methods() {
 }
 
 YGameState *YGameState::get_singleton() {
-    return *singleton;
+    return singleton;
 }
 
 String YGameState::get_current_game_action_name() {

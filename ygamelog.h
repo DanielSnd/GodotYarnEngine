@@ -15,16 +15,12 @@ class YGameLog : public RefCounted {
     GDCLASS(YGameLog, RefCounted);
 
 protected:
-    static Ref<YGameLog> singleton;
+    static YGameLog* singleton;
     static void _bind_methods();
 
 
 public:
     static YGameLog *get_singleton();
-
-    static void set_singleton(const Ref<YGameLog> &ref) {
-        singleton = ref;
-    }
 
     bool output_logging_on = false;
     void SetupOutputLogging();
@@ -47,13 +43,15 @@ public:
     void clear_variant_log() { loggedVariants.clear(); }
 
 
-    YGameLog() { }
+    YGameLog() {
+        singleton = this;
+    }
 
     ~YGameLog() {
         logged.clear();
         loggedVariants.clear();
-        if(singleton.is_valid() && singleton == this) {
-            singleton.unref();
+        if(singleton != nullptr && singleton == this) {
+            singleton = nullptr;
         }
     }
 

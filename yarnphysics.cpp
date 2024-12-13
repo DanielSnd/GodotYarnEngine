@@ -11,7 +11,7 @@
 #include "scene/resources/3d/world_3d.h"
 #include "servers/physics_server_2d.h"
 
-Ref<YPhysics> YPhysics::singleton;
+YPhysics* YPhysics::singleton = nullptr;
 bool YPhysics::has_sphere_shape = false;
 RID YPhysics::sphere_rid;
 
@@ -585,14 +585,15 @@ Vector<real_t> YPhysics::cast_motion_2D(const Ref<Shape2D> &p_shape, const Trans
 }
 
 YPhysics *YPhysics::get_singleton() {
-    return *singleton;
+    return singleton;
 }
 
 YPhysics::YPhysics() {
+    singleton = this;
 }
 
 YPhysics::~YPhysics() {
-    if(singleton.is_valid() && singleton == this) {
-        singleton.unref();
+    if(singleton !=nullptr && singleton == this) {
+        singleton = nullptr;
     }
 }

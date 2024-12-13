@@ -15,7 +15,7 @@ class YTime : public RefCounted {
     GDCLASS(YTime, RefCounted);
 
 protected:
-    static Ref<YTime> singleton;
+    static YTime* singleton;
 
     static void _bind_methods();
 
@@ -42,10 +42,6 @@ protected:
     float last_time_stepped_clock;
 public:
     static YTime *get_singleton();
-
-    static void set_singleton(const Ref<YTime> &ref) {
-        singleton = ref;
-    }
 
     bool is_paused;
     bool get_is_paused() {return is_paused;}

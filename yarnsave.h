@@ -10,13 +10,13 @@
 
 
 class YSave : public RefCounted {
+
+    static YSave* singleton;
     GDCLASS(YSave, RefCounted);
 
 private:
 
 protected:
-    static Ref<YSave> singleton;
-
     static void _bind_methods();
 
     struct RegEventCallback {
@@ -161,10 +161,6 @@ public:
     void request_save(bool immediate);
 
     static YSave *get_singleton();
-
-    static void set_singleton(const Ref<YSave> &ref) {
-        singleton = ref;
-    }
 
     YSave();
     ~YSave();

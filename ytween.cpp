@@ -4,7 +4,7 @@
 
 #include "ytween.h"
 
-Ref<YTween> YTween::singleton;
+YTween* YTween::singleton = nullptr;
 
 void YTweenWrap::_bind_methods() {
     
@@ -100,7 +100,7 @@ void YTween::_bind_methods() {
 }
 
 YTween * YTween::get_singleton() {
-    return *singleton;
+    return singleton;
 }
 
 void YTween::do_process(double delta) {
@@ -335,6 +335,7 @@ void YTween::process_tweens(double p_delta, bool p_physics) {
 }
 
 YTween::YTween() {
+    singleton = this;
 }
 
 YTween::~YTween() {
@@ -343,4 +344,7 @@ YTween::~YTween() {
         tween->clear();
     }
     tweens.clear();
+    if (singleton != nullptr && singleton == this) {
+        singleton = nullptr;
+    }
 }

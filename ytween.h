@@ -55,7 +55,7 @@ class YTween : public RefCounted {
     GDCLASS(YTween, RefCounted);
 
 protected:
-    static Ref<YTween> singleton;
+    static YTween* singleton;
     static void _bind_methods();
 
 public:
@@ -112,9 +112,6 @@ public:
 
     void process_tweens(double p_delta, bool p_physics);
 
-    static void set_singleton(const Ref<YTween> &ref) {
-        singleton = ref;
-    }
 
     YTween();
     ~YTween();

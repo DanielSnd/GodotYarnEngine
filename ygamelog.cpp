@@ -4,7 +4,7 @@
 
 #include "ygamelog.h"
 
-Ref<YGameLog> YGameLog::singleton;
+YGameLog* YGameLog::singleton = nullptr;
 
 void YGameLog::_bind_methods() {
     ClassDB::bind_method(D_METHOD("enable_output_logging"), &YGameLog::SetupOutputLogging);
@@ -34,7 +34,7 @@ void YGameLog::_bind_methods() {
 }
 
 YGameLog *YGameLog::get_singleton() {
-    return *singleton;
+    return singleton;
 }
 
 void YGameLog::SetupOutputLogging() {

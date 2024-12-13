@@ -6,10 +6,10 @@
 
 #include "core/os/os.h"
 
-Ref<YTime> YTime::singleton;
+YTime* YTime::singleton = nullptr;
 
 YTime *YTime::get_singleton() {
-    return *singleton;
+    return singleton;
 }
 
 void YTime::_bind_methods() {
@@ -83,6 +83,7 @@ void YTime::_bind_methods() {
 }
 
 YTime::YTime(): last_time_ended_pause(0), last_time_stepped_clock(0) {
+    singleton = this;
     amount_time_last_frame = 0.0;
     amount_when_paused = 0.0;
     amount_when_unpaused = 0.0;
@@ -94,8 +95,8 @@ YTime::YTime(): last_time_ended_pause(0), last_time_stepped_clock(0) {
 }
 
 YTime::~YTime() {
-    if(singleton.is_valid() && singleton == this) {
-        singleton.unref();
+    if(singleton == this) {
+        singleton = nullptr;
     }
 }
 

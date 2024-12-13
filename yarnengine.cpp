@@ -147,9 +147,11 @@ Variant YEngine::execute_button_click_callable(const Callable &p_callable) {
 }
 
 void YEngine::game_state_starting(const Ref<YGameState> &ygs) {
-    ygamestate = ygs;
-    using_game_state=true;
-    print_line("Registered using game state ",ygamestate," using game state now? ",using_game_state);
+    if (ygs.is_valid()) {
+        ygamestate = ygs.ptr();
+        using_game_state=true;
+        print_line("Registered using game state ",ygamestate," using game state now? ",using_game_state);
+    }
 }
 
 Callable YEngine::button_click_callable(const Callable &p_callable) {
@@ -178,6 +180,17 @@ Array YEngine::seeded_shuffle(Array array_to_shuffle,int seed_to_use) {
     return array_to_shuffle;
 }
 
+void YEngine::cleanup_node() {
+    if (is_inside_tree()) {
+        ysave = nullptr;
+        ytime = nullptr;
+        ytween = nullptr;
+        ygamestate = nullptr;
+        
+        queue_free();
+    }
+}
+
 void YEngine::setup_node() {
     if(!already_setup_in_tree && SceneTree::get_singleton() != nullptr) {
         ysave = YSave::get_singleton();
@@ -191,6 +204,7 @@ void YEngine::setup_node() {
         }
         DisplayServer::get_singleton()->window_set_title(TranslationServer::get_singleton()->translate(appname));
 
+        SceneTree::get_singleton()->get_root()->connect("tree_exiting", callable_mp(this, &YEngine::cleanup_node));
         SceneTree::get_singleton()->get_root()->call_deferred("add_child",this);
         set_name("YEngine");
         already_setup_in_tree=true;
@@ -349,6 +363,7 @@ YEngine::YEngine() {
     ytween=nullptr;
     ysave=nullptr;
     ytime=nullptr;
+    ygamestate = nullptr;
 }
 
 YEngine::~YEngine() {
@@ -357,9 +372,9 @@ YEngine::~YEngine() {
     }
     if (using_game_state) {
         using_game_state=false;
-        ygamestate.unref();
+        ygamestate = nullptr;
     }
-    ytween=nullptr;
+    ytween = nullptr;
     ysave = nullptr;
     ytime = nullptr;
 }

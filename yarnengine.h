@@ -21,6 +21,8 @@ class YEngine : public Node {
 protected:
     void setup_node();
 
+    void cleanup_node();
+    
     static void _bind_methods();
 
     Variant execute_button_click_callable_if_modulate(const Callable &p_callable, Control *p_control);
@@ -39,7 +41,7 @@ protected:
 
     static YEngine* singleton;
     HashMap<StringName, Node *> othersingletons;
-    Ref<YGameState> ygamestate;
+    YGameState* ygamestate = nullptr;
 public:
     bool using_game_state=false;
     bool already_setup_in_tree = false;

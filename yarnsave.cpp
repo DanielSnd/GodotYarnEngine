@@ -7,10 +7,11 @@
 #include "core/io/file_access.h"
 #include "core/io/json.h"
 
-Ref<YSave> YSave::singleton;
+
+YSave* YSave::singleton = nullptr;
 
 YSave *YSave::get_singleton() {
-    return *singleton;
+    return singleton;
 }
 
 void YSave::_bind_methods() {
@@ -161,13 +162,12 @@ bool YSave::load_settings() {
 }
 
 YSave::YSave() {
-
+    singleton = this;
 }
 
 YSave::~YSave() {
-    if(singleton.is_valid() && singleton == this) {
-        singleton.unref();
-    }
+    if (singleton == this)
+        singleton = nullptr;
     if (reg_event_callbacks.size() > 0) {
         reg_event_callbacks.clear();
     }

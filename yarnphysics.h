@@ -13,17 +13,13 @@ class YPhysics : public RefCounted {
     GDCLASS(YPhysics, RefCounted);
 
 protected:
-    static Ref<YPhysics> singleton;
+    static YPhysics* singleton;
 
     static void _bind_methods();
 
 
 public:
     static YPhysics *get_singleton();
-
-    static void set_singleton(const Ref<YPhysics> &ref) {
-        singleton = ref;
-    }
 
     enum CollideType {
         COLLIDE_WITH_BODIES = 0,
