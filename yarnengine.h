@@ -45,7 +45,7 @@ protected:
 public:
     bool using_game_state=false;
     bool already_setup_in_tree = false;
-
+    static bool is_exiting;
     HashMap<StringName,String> class_name_to_script_path;
 
     void game_state_starting(const Ref<YGameState> &ygs);

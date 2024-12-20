@@ -47,7 +47,7 @@ void YGameLog::SetupOutputLogging() {
 }
 
 void YLogger::logv(const char *p_format, va_list p_list, bool p_err) {
-    if (!should_log(p_err)) {
+    if (YEngine::is_exiting || !should_log(p_err)) {
         return;
     }
     const int static_buf_size = 512;
@@ -77,6 +77,8 @@ void YLogger::logv(const char *p_format, va_list p_list, bool p_err) {
 }
 
 void YLogger::logf_error_custom(const char *p_format, ...) {
+    if (YEngine::is_exiting)
+        return;
     va_list argp;
     va_start(argp, p_format);
 
@@ -93,6 +95,9 @@ void YLogger::log_error(const char *p_function, const char *p_file, int p_line, 
     //     return;
     // }
 
+    if (YEngine::is_exiting)
+        return;
+    
     const char *err_type = "ERROR";
     bool do_push_error=false;
     switch (p_type) {

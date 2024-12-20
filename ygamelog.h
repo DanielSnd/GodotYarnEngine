@@ -10,6 +10,7 @@
 #include "core/os/os.h"
 #include "core/string/ustring.h"
 #include <stdarg.h>
+#include "yarnengine.h"
 
 class YGameLog : public RefCounted {
     GDCLASS(YGameLog, RefCounted);

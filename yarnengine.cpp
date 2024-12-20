@@ -7,6 +7,8 @@
 #include "core/math/random_number_generator.h"
 #include "scene/gui/control.h"
 
+bool YEngine::is_exiting = false;
+
 YEngine* YEngine::singleton = nullptr;
 
 YEngine * YEngine::get_singleton() {
@@ -357,6 +359,7 @@ Node * YEngine::spawn(const Ref<PackedScene> &p_spawnable_scene, Node *p_desired
 
 YEngine::YEngine() {
     singleton = this;
+    is_exiting = false;
     last_button_click_time = 0.0;
     using_game_state = false;
     can_button_click=true;
@@ -367,6 +370,7 @@ YEngine::YEngine() {
 }
 
 YEngine::~YEngine() {
+    is_exiting = true;
     if (singleton != nullptr && singleton == this) {
         singleton = nullptr;
     }
