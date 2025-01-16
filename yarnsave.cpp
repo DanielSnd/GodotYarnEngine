@@ -71,11 +71,17 @@ void YSave::_bind_methods() {
     ClassDB::bind_method(D_METHOD("register_event_callback","node","event_id","callback"), &YSave::register_event_callback);
     ClassDB::bind_method(D_METHOD("clear_registered_event_callbacks","node","event_id"), &YSave::clear_registered_event_callbacks_node,DEFVAL(-1));
 
+    ClassDB::bind_method(D_METHOD("get_registered_event_callbacks"), &YSave::get_registered_event_callbacks);
+
     ADD_SIGNAL(MethodInfo("executed_save_reset"));
     ADD_SIGNAL(MethodInfo("before_prepare_save"));
     ADD_SIGNAL(MethodInfo("prepare_save"));
     ADD_SIGNAL(MethodInfo("saved", PropertyInfo(Variant::STRING, "save_path")));
     ADD_SIGNAL(MethodInfo("loaded_save", PropertyInfo(Variant::DICTIONARY, "save_data")));
+
+    ClassDB::bind_method(D_METHOD("set_is_debugging", "is_debugging"), &YSave::set_is_debugging);
+    ClassDB::bind_method(D_METHOD("get_is_debugging"), &YSave::get_is_debugging);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "is_debugging"), "set_is_debugging", "get_is_debugging");
 }
 
 void YSave::process(float _pause_independent_time) {
@@ -395,18 +401,31 @@ void YSave::register_event_callback(Node *p_reference, int _event_id, const Call
         return;
     }
     if (registered_events.has(_event_id)) {
+        if (is_debugging) {
+            print_line(vformat("[YSave] Event %d already registered, skipping callback registration", _event_id));
+        }
         WARN_PRINT(vformat("Trying to register a callback for an already existing event_id %d. Callbacks only happen the first time an event is set.",_event_id));
         return;
     }
+    
+    if (is_debugging) {
+        print_line(vformat("[YSave] Registering callback for event %d", _event_id));
+    }
+    
     ObjectID _node_id = p_reference->get_instance_id();
     if (!reg_event_callbacks.has(_event_id))
         reg_event_callbacks[_event_id] = RegEventCallback{_event_id};
     if (!count_node_callbacks.has(_node_id)) {
         count_node_callbacks[_node_id] = 0;
-        p_reference->connect("tree_exiting", callable_mp(this, &YSave::clear_registered_event_callbacks).bind(_node_id,_event_id), CONNECT_ONE_SHOT);
+        p_reference->connect("tree_exiting", callable_mp(this, &YSave::clear_registered_event_callbacks).bind(_node_id,-1), CONNECT_ONE_SHOT);
     }
     count_node_callbacks[_node_id] += 1;
     reg_event_callbacks[_event_id].callbacks.append(RegEventCallback::RegEventCallbackInstance(_node_id,p_callable));
+    
+    if (is_debugging) {
+        print_line(vformat("[YSave] Successfully registered callback for event %d. Total callbacks for this event: %d", 
+            _event_id, reg_event_callbacks[_event_id].callbacks.size()));
+    }
 }
 
 void YSave::set_save_detail(String save_detail,Variant detail_value) {
@@ -437,4 +456,21 @@ void YSave::request_save(bool immediate = false) {
         save_requested = true;
         last_time_save_requested = pause_independent_time;
     }
+}
+
+Dictionary YSave::get_registered_event_callbacks() const {
+    Dictionary result;
+    
+    for (const KeyValue<int, RegEventCallback> &E : reg_event_callbacks) {
+        Array callbacks;
+        for (const RegEventCallback::RegEventCallbackInstance &callback : E.value.callbacks) {
+            Dictionary callback_info;
+            callback_info["node_id"] = callback.node_inst_id;
+            callback_info["callable"] = callback.callable;
+            callbacks.push_back(callback_info);
+        }
+        result[E.key] = callbacks;
+    }
+    
+    return result;
 }

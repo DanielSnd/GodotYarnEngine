@@ -249,7 +249,13 @@ Ref<YTweenWrap> YTween::create_unique_tween(Node *node_owner, uint64_t tag) {
 Ref<YTweenWrap> YTween::create_tween(Node* node_owner, uint64_t tag) {
     uint64_t desired_key = tag;
     //print_line("Create tween with tag ",tag);
-    Ref<YTweenWrap> tween = memnew(YTweenWrap(true));
+    SceneTree *tree = SceneTree::get_singleton();
+    if (tree == nullptr) {
+        Ref<YTweenWrap> new_wrap;
+        return new_wrap;
+    }
+
+    Ref<YTweenWrap> tween = memnew(YTweenWrap(tree));
     if (node_owner != nullptr && node_owner->is_inside_tree()) {
         uint64_t node_id = node_owner->get_instance_id();
         desired_key += node_id;

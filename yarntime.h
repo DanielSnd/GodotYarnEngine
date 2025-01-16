@@ -130,6 +130,8 @@ public:
 
     YTime();
     ~YTime();
+
+    Dictionary get_registered_clock_callbacks() const;
 };
 
 

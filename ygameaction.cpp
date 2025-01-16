@@ -96,12 +96,32 @@ void YGameAction::_bind_methods() {
     ClassDB::bind_method(D_METHOD("serialize"), &YGameAction::serialize);
     ClassDB::bind_method(D_METHOD("deserialize", "dict"), &YGameAction::deserialize);
 
+    ClassDB::bind_method(D_METHOD("set_runs_parallel", "runs_parallel"), &YGameAction::set_runs_parallel);
+    ClassDB::bind_method(D_METHOD("get_runs_parallel"), &YGameAction::get_runs_parallel);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "runs_parallel"), "set_runs_parallel", "get_runs_parallel");
+
+    ClassDB::bind_method(D_METHOD("set_max_in_parallel", "max_in_parallel"), &YGameAction::set_max_in_parallel);
+    ClassDB::bind_method(D_METHOD("get_max_in_parallel"), &YGameAction::get_max_in_parallel);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "max_in_parallel"), "set_max_in_parallel", "get_max_in_parallel");
+
+    ClassDB::bind_method(D_METHOD("set_start_check_interval", "interval"), &YGameAction::set_start_check_interval);
+    ClassDB::bind_method(D_METHOD("get_start_check_interval"), &YGameAction::get_start_check_interval);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "start_check_interval"), "set_start_check_interval", "get_start_check_interval");
+
+    ClassDB::bind_method(D_METHOD("set_can_be_serialized", "can_be_serialized"), &YGameAction::set_can_be_serialized);
+    ClassDB::bind_method(D_METHOD("get_can_be_serialized"), &YGameAction::get_can_be_serialized);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "can_be_serialized"), "set_can_be_serialized", "get_can_be_serialized");
+
     ADD_SIGNAL(MethodInfo("started_action", PropertyInfo(Variant::STRING, "action_name")));
     ADD_SIGNAL(MethodInfo("registered_step", PropertyInfo(Variant::INT, "step_index")));
     ADD_SIGNAL(MethodInfo("action_stepped", PropertyInfo(Variant::INT, "step_index")));
     ADD_SIGNAL(MethodInfo("waiting_for_step", PropertyInfo(Variant::INT, "step_index")));
     ADD_SIGNAL(MethodInfo("released_waited_step", PropertyInfo(Variant::INT, "step_index")));
     ADD_SIGNAL(MethodInfo("ended_action", PropertyInfo(Variant::STRING, "action_name")));
+    ADD_SIGNAL(MethodInfo("on_changed_action_parameter", 
+        PropertyInfo(Variant::INT, "param_id"),
+        PropertyInfo(Variant::NIL, "old_value"),
+        PropertyInfo(Variant::NIL, "new_value")));
 
     GDVIRTUAL_BIND(_on_created)
     GDVIRTUAL_BIND(_on_enter_action)
@@ -111,6 +131,7 @@ void YGameAction::_bind_methods() {
     GDVIRTUAL_BIND(_on_process_action,"delta")
     GDVIRTUAL_BIND(_on_serialize,"dict")
     GDVIRTUAL_BIND(_on_deserialize,"dict")
+    GDVIRTUAL_BIND(_only_starts_if)
 }
 
 void YGameAction::release_step() {
@@ -175,7 +196,7 @@ void YGameAction::end_action() {
     started=true;
     finished=true;
     if (waiting_for_step) {
-        ERR_PRINT(vformat("YGameState Action %s called end action while waiting for a step."));
+        ERR_PRINT(vformat("YGameState Action %s called end action while waiting for a step.", get_name()));
     }
     if (is_debugging) {
         print_line(vformat("%s is calling end action",get_name()));
@@ -277,15 +298,25 @@ Dictionary YGameAction::serialize() {
     dict["id"] = unique_id;
     dict["class"] = get_name();
 
+    if (runs_parallel)
+        dict["prll"] = true;
+    if (max_in_parallel != -1)
+        dict["max_prll"] = max_in_parallel;
+
     if (player_turn != -1)
         dict["pturn"] = player_turn;
 
     if (!action_parameters.is_empty()) {
         Dictionary serialize_action_parameters;
+        Dictionary serialize_start_action_parameters;
         for (const auto& action_parameter: action_parameters) {
             serialize_action_parameters[action_parameter.key] = action_parameter.value;
+            if (starting_parameters.has(action_parameter.key) && starting_parameters[action_parameter.key] != action_parameter.value)
+                serialize_start_action_parameters[action_parameter.key] = starting_parameters[action_parameter.key];
         }
         dict["params"] = serialize_action_parameters;
+        if (!serialize_start_action_parameters.is_empty())
+            dict["start_params"] = serialize_start_action_parameters;
     }
 
     if (!action_steps.is_empty()) {
@@ -300,6 +331,9 @@ Dictionary YGameAction::serialize() {
         dict["steps"] = serialize_action_steps;
     }
 
+    if (Math::abs(start_check_interval- 3.0f) > 0.001f)
+        dict["start_int"] = start_check_interval;
+
     return dict;
 }
 
@@ -309,6 +343,9 @@ Dictionary YGameAction::deserialize(Dictionary dict) {
     unique_id = dict.get("id",0);
     player_turn = dict.get("pturn",-1);
 
+    runs_parallel = dict.get("prll", false);
+    max_in_parallel = dict.get("max_prll", -1);
+
     if (dict.has("params")) {
         Dictionary serialized_action_parameters = dict["params"];
         Array serialized_action_keys = serialized_action_parameters.keys();
@@ -316,6 +353,24 @@ Dictionary YGameAction::deserialize(Dictionary dict) {
             action_parameters[serialized_action_keys[i]] = serialized_action_parameters[serialized_action_keys[i]];
         }
     }
+    
+    if (dict.has("start_params")) {
+        Dictionary serialized_action_parameters = dict["start_params"];
+        Array serialized_action_keys = serialized_action_parameters.keys();
+        for (int i = 0; i < static_cast<int>(serialized_action_keys.size()); ++i) {
+            starting_parameters[serialized_action_keys[i]] = serialized_action_parameters[serialized_action_keys[i]];
+            action_parameters[serialized_action_keys[i]] = serialized_action_parameters[serialized_action_keys[i]];
+        }
+    }
+
+    if (dict.has("params")) {
+        Dictionary serialized_action_parameters = dict["params"];
+        Array serialized_action_keys = serialized_action_parameters.keys();
+        for (int i = 0; i < static_cast<int>(serialized_action_keys.size()); ++i) {
+            action_parameters[serialized_action_keys[i]] = serialized_action_parameters[serialized_action_keys[i]];
+        }
+    }
+    
 
     if (dict.has("steps")) {
         TypedArray<Dictionary> serialized_action_steps = dict["steps"];
@@ -333,6 +388,8 @@ Dictionary YGameAction::deserialize(Dictionary dict) {
             action_steps.push_back(new_step);
         }
     }
+
+    start_check_interval = dict.get("start_int", 3.0f);
 
     return dict;
 }
@@ -363,4 +420,31 @@ YGameAction::YGameAction() {
     steps_consumed = 0;
     unique_id = 0;
     pause_independent_time_started = 0.0;
+    runs_parallel = false;
+    max_in_parallel = -1;
+    start_check_interval = 3.0f;
+    last_start_check_time = 0.0f;
+    can_be_serialized = true;
+}
+
+bool YGameAction::only_starts_if() {
+    bool can_start = true;
+    GDVIRTUAL_CALL(_only_starts_if, can_start);
+    return can_start;
+}
+
+void YGameAction::emit_action_parameter_changed(int param_id, const Variant& old_value, const Variant& new_value) {
+    emit_signal("on_changed_action_parameter", param_id, old_value, new_value);
+}
+
+YGameAction* YGameAction::set_action_parameter(int param, const Variant& v) {
+    Variant old_value;
+    if (action_parameters.has(param)) {
+        old_value = action_parameters[param];
+        emit_action_parameter_changed(param, old_value, v);
+    } else {
+        starting_parameters[param] = v;
+    }
+    action_parameters[param] = v;
+    return this;
 }

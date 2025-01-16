@@ -76,6 +76,15 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("serialize"), &YGameState::serialize);
     ClassDB::bind_method(D_METHOD("deserialize", "data","playback_after","instant_playback"), &YGameState::deserialize,DEFVAL(false),DEFVAL(false));
 
+    ClassDB::bind_method(D_METHOD("get_parallel_action_count"), &YGameState::get_parallel_action_count);
+    ClassDB::bind_method(D_METHOD("get_parallel_action", "index"), &YGameState::get_parallel_action, DEFVAL(0));
+    ClassDB::bind_method(D_METHOD("get_all_parallel_actions"), &YGameState::get_all_parallel_actions);
+    ClassDB::bind_method(D_METHOD("end_parallel_action", "index"), &YGameState::end_parallel_action, DEFVAL(0));
+    ClassDB::bind_method(D_METHOD("end_all_parallel_actions"), &YGameState::end_all_parallel_actions);
+
+    ClassDB::bind_method(D_METHOD("add_parallel_game_action", "game_action", "desired_id"), &YGameState::add_parallel_game_action, DEFVAL(-1));
+    ClassDB::bind_method(D_METHOD("add_parallel_game_action_with", "game_action", "initial_parameter", "param_value", "desired_id"), &YGameState::add_parallel_game_action_with_param, DEFVAL(-1), DEFVAL(Variant{}), DEFVAL(-1));
+
     ADD_SIGNAL(MethodInfo("registered_action",PropertyInfo(Variant::OBJECT, "new_action", PROPERTY_HINT_RESOURCE_TYPE, "YGameAction")));
     ADD_SIGNAL(MethodInfo("changed_current_action",PropertyInfo(Variant::OBJECT, "new_action", PROPERTY_HINT_RESOURCE_TYPE, "YGameAction")));
     ADD_SIGNAL(MethodInfo("changed_turn_player_id", PropertyInfo(Variant::INT, "player_turn_id_before"),
@@ -192,6 +201,38 @@ YGamePlayer * YGameState::get_game_player_by_type(int ypg_type) {
     return nullptr;
 }
 void YGameState::do_process(double delta) {
+    // Check if any future parallel actions can start
+    check_future_parallel_actions();
+
+    // Process parallel actions first
+    for (int i = current_parallel_actions.size() - 1; i >= 0; i--) {
+        Ref<YGameAction> parallel_action = current_parallel_actions[i];
+        if (!parallel_action.is_valid()) {
+            current_parallel_actions.remove_at(i);
+            continue;
+        }
+
+        if (parallel_action->finished && !parallel_action->waiting_for_step) {
+            end_parallel_action(i);
+            continue;
+        }
+
+        // Process steps and actions similar to regular actions
+        if (!parallel_action->waiting_for_step_no_processing) {
+            if (!parallel_action->process_action(static_cast<float>(delta)) && !parallel_action->waiting_for_step) {
+                end_parallel_action(i);
+                continue;
+            }
+
+            if (frame_count_before_doing_slow_process > 0.5) {
+                if (!parallel_action->slow_process_action(static_cast<float>(delta)) && !parallel_action->waiting_for_step) {
+                    end_parallel_action(i);
+                    continue;
+                }
+            }
+        }
+    }
+
     //print_line("do process, is current valid? ",current_game_action.is_valid()," future actions size ",future_game_actions.size());
     if (current_game_action.is_valid()) {
         //HAS A CURRENT GAMEACTION!!
@@ -204,7 +245,9 @@ void YGameState::do_process(double delta) {
             }
             current_game_action->end_action();
             game_actions_done_since_started_counting+=1;
-            past_game_actions.push_back(current_game_action);
+            if (current_game_action->can_be_serialized) {
+                past_game_actions.push_back(current_game_action);
+            }
             current_game_action.unref();
             return;
         }
@@ -250,7 +293,9 @@ void YGameState::do_process(double delta) {
             if(!current_game_action->process_action(static_cast<float>(delta)) && !current_game_action->waiting_for_step) {
                 current_game_action->end_action();
                 game_actions_done_since_started_counting+=1;
-                past_game_actions.push_back(current_game_action);
+                if (current_game_action->can_be_serialized) {
+                    past_game_actions.push_back(current_game_action);
+                }
                 current_game_action.unref();
                 return;
             }
@@ -262,7 +307,9 @@ void YGameState::do_process(double delta) {
                 if(!current_game_action->slow_process_action(static_cast<float>(delta)) && !current_game_action->waiting_for_step) {
                     current_game_action->end_action();
                     game_actions_done_since_started_counting+=1;
-                    past_game_actions.push_back(current_game_action);
+                    if (current_game_action->can_be_serialized) {
+                        past_game_actions.push_back(current_game_action);
+                    }
                     current_game_action.unref();
                     return;
                 }
@@ -285,47 +332,63 @@ void YGameState::do_process(double delta) {
         }
 
         if (overriding_game_actions_remaining > 0 && !is_playing_back) {
-            current_game_action = overriding_game_actions[0];
+            Ref<YGameAction> next_action = overriding_game_actions[0];
             overriding_game_actions.remove_at(0);
-            if (current_game_action.is_valid()) {
-                if (last_turn_player_id != current_game_action->player_turn) {
-                    emit_signal("changed_turn_player_id",last_turn_player_id,current_game_action->player_turn);
-                    last_turn_player_id = current_game_action->player_turn;
+            
+            if (next_action.is_valid()) {
+                if (next_action->runs_parallel) {
+                    current_parallel_actions.push_back(next_action);
+                    next_action->enter_action();
+                } else {
+                    current_game_action = next_action;
+                    if (current_game_action.is_valid()) {
+                        if (last_turn_player_id != current_game_action->player_turn) {
+                            emit_signal("changed_turn_player_id",last_turn_player_id,current_game_action->player_turn);
+                            last_turn_player_id = current_game_action->player_turn;
+                        }
+                        emit_signal("changed_current_action",current_game_action);
+                        current_game_action->enter_action();
+                    }
+                    return;
                 }
-                emit_signal("changed_current_action",current_game_action);
-                current_game_action->enter_action();
             }
-            return;
         }
 
         if (future_game_actions_remaining > 0) {
-            current_game_action = future_game_actions[0];
-            //print_line("Set the current game action to be the one in front of future_game_actions ",current_game_action);
+            Ref<YGameAction> next_action = future_game_actions[0];
             future_game_actions.remove_at(0);
-            //print_line("Popped the front of futuregameactions, is current game action valid? ",current_game_action," ",current_game_action.is_valid());
-            if (current_game_action.is_valid()) {
-                if (stop_playing_back_when_current_action_steps_done) {
-                    is_playing_back = false;
-                    current_game_action->is_playing_back = false;
-                    current_game_action->instant_execute = false;
-                } else if(is_playing_back) {
-                    current_game_action->is_playing_back = true;
-                }
-                int current_action_steps = current_game_action->get_all_steps_count();
-                if ((is_playing_back || stop_playing_back_when_current_action_steps_done) && current_action_steps == 0 && get_overridinge_game_action_count() == 0 && get_future_game_action_count() == 0) {
-                    stop_playing_back_when_current_action_steps_done=false;
-                    is_playing_back = false;
-                    current_game_action->is_playing_back = false;
-                }
+            
+            if (next_action.is_valid()) {
+                if (next_action->runs_parallel) {
+                    current_parallel_actions.push_back(next_action);
+                    next_action->enter_action();
+                } else {
+                    current_game_action = next_action;
+                    if (current_game_action.is_valid()) {
+                        if (stop_playing_back_when_current_action_steps_done) {
+                            is_playing_back = false;
+                            current_game_action->is_playing_back = false;
+                            current_game_action->instant_execute = false;
+                        } else if(is_playing_back) {
+                            current_game_action->is_playing_back = true;
+                        }
+                        int current_action_steps = current_game_action->get_all_steps_count();
+                        if ((is_playing_back || stop_playing_back_when_current_action_steps_done) && current_action_steps == 0 && get_overridinge_game_action_count() == 0 && get_future_game_action_count() == 0) {
+                            stop_playing_back_when_current_action_steps_done=false;
+                            is_playing_back = false;
+                            current_game_action->is_playing_back = false;
+                        }
 
-                emit_signal("changed_current_action",current_game_action);
-                current_game_action->enter_action();
+                        emit_signal("changed_current_action",current_game_action);
+                        current_game_action->enter_action();
 
-                if (stop_playing_back_when_current_action_steps_done && current_action_steps > 0) {
-                    is_playing_back = true;
-                    current_game_action->is_playing_back =true;
+                        if (stop_playing_back_when_current_action_steps_done && current_action_steps > 0) {
+                            is_playing_back = true;
+                            current_game_action->is_playing_back =true;
+                        }
+                        return;
+                    }
                 }
-                return;
             }
         }
         if (!showed_out_of_actions_message) {
@@ -349,6 +412,7 @@ Ref<YGameAction> YGameState::add_game_action(const Ref<YGameAction> &ygs, int de
     }
     return add_game_action_with_param(ygs,-1,Variant{},desired_game_state_id);
 }
+
 Ref<YGameAction> YGameState::add_game_action_with_param(const Ref<YGameAction> &ygs, int desired_initial_param, const Variant &desired_param_data, int desired_game_state_id) {
     if (is_playing_back) {
         return ygs;
@@ -428,17 +492,23 @@ Dictionary YGameState::serialize() {
 
     Array overriding_game_actions_array;
     for (const auto& game_action : overriding_game_actions) {
-        overriding_game_actions_array.push_back(game_action->serialize());
+        if (game_action->can_be_serialized) {
+            overriding_game_actions_array.push_back(game_action->serialize());
+        }
     }
 
     Array future_game_actions_array;
     for (const auto& game_action : future_game_actions) {
-        future_game_actions_array.push_back(game_action->serialize());
+        if (game_action->can_be_serialized) {
+            future_game_actions_array.push_back(game_action->serialize());
+        }
     }
 
     Array past_game_actions_array;
     for (const auto& game_action : past_game_actions) {
-        past_game_actions_array.push_back(game_action->serialize());
+        if (game_action->can_be_serialized) {
+            past_game_actions_array.push_back(game_action->serialize());
+        }
     }
 
     Dictionary state_parameters_dict;
@@ -451,9 +521,32 @@ Dictionary YGameState::serialize() {
     dict["future_actions"] = future_game_actions_array;
     dict["past_actions"] = past_game_actions_array;
 
-    if (!current_game_action.is_null() && current_game_action.is_valid())
+    if (!current_game_action.is_null() && current_game_action.is_valid() && current_game_action->can_be_serialized)
         dict["current_action"] = current_game_action->serialize();
 
+    if (!current_parallel_actions.is_empty()) {
+        Array parallel_actions_array;
+        for (const auto& action : current_parallel_actions) {
+            if (action->can_be_serialized) {
+                parallel_actions_array.push_back(action->serialize());
+            }
+        }
+        if (!parallel_actions_array.is_empty()) {
+            dict["parallel_actions"] = parallel_actions_array;
+        }
+    }
+
+    if (!future_parallel_actions.is_empty()) {
+        Array future_parallel_array;
+        for (const auto& action : future_parallel_actions) {
+            if (action->can_be_serialized) {
+                future_parallel_array.push_back(action->serialize());
+            }
+        }
+        if (!future_parallel_array.is_empty()) {
+            dict["future_parallel_actions"] = future_parallel_array;
+        }
+    }
     return dict;
 }
 
@@ -582,6 +675,18 @@ Dictionary YGameState::deserialize(const Dictionary dict, bool p_playback_after 
         }
     }
 
+    if (dict.has("parallel_actions")) {
+        Array parallel_actions_array = dict["parallel_actions"];
+        current_parallel_actions.clear();
+        deserialize_game_actions_into(current_parallel_actions, parallel_actions_array);
+    }
+
+    if (dict.has("future_parallel_actions")) {
+        Array future_parallel_array = dict["future_parallel_actions"];
+        future_parallel_actions.clear();
+        deserialize_game_actions_into(future_parallel_actions, future_parallel_array);
+    }
+
     if (p_playback_after) {
         is_playing_back = true;
         if(!has_started) {
@@ -590,4 +695,95 @@ Dictionary YGameState::deserialize(const Dictionary dict, bool p_playback_after 
         }
     }
     return dict;
+}
+
+void YGameState::end_parallel_action(int index) {
+    if (index >= 0 && index < current_parallel_actions.size()) {
+        if (current_parallel_actions[index].is_valid()) {
+            current_parallel_actions[index]->end_action();
+            game_actions_done_since_started_counting += 1;
+            if (current_parallel_actions[index]->can_be_serialized) {
+                past_game_actions.push_back(current_parallel_actions[index]);
+            }
+        }
+        current_parallel_actions.remove_at(index);
+    }
+}
+
+void YGameState::end_all_parallel_actions() {
+    for (int i = current_parallel_actions.size() - 1; i >= 0; i--) {
+        end_parallel_action(i);
+    }
+}
+
+void YGameState::check_future_parallel_actions() {
+    float current_time = YTime::get_singleton()->get_time();
+    
+    for (int i = future_parallel_actions.size() - 1; i >= 0; i--) {
+        Ref<YGameAction> action = future_parallel_actions[i];
+        if (!action.is_valid()) {
+            future_parallel_actions.remove_at(i);
+            continue;
+        }
+
+        // Check if it's time to check this action
+        if (action->last_start_check_time == 0.0f || 
+            current_time > action->last_start_check_time + action->start_check_interval) {
+            
+            action->last_start_check_time = current_time;
+            
+            // Check if action can start
+            if (action->only_starts_if()) {
+                // Check max parallel limit
+                if (action->max_in_parallel == -1 || 
+                    count_current_parallel_of_type(action->get_name()) < action->max_in_parallel) {
+                    
+                    current_parallel_actions.push_back(action);
+                    action->enter_action();
+                    future_parallel_actions.remove_at(i);
+                }
+            }
+        }
+    }
+}
+
+int YGameState::count_current_parallel_of_type(const String& action_name) const {
+    int count = 0;
+    for (const Ref<YGameAction>& action : current_parallel_actions) {
+        if (action.is_valid() && action->get_name() == action_name) {
+            count++;
+        }
+    }
+    return count;
+}
+
+Ref<YGameAction> YGameState::add_parallel_game_action(const Ref<YGameAction>& ygs, int desired_game_state_id) {
+    return add_parallel_game_action_with_param(ygs, -1, Variant{}, desired_game_state_id);
+}
+
+Ref<YGameAction> YGameState::add_parallel_game_action_with_param(const Ref<YGameAction>& ygs, int desired_initial_param, const Variant& desired_param_data, int desired_game_state_id) {
+    if (is_playing_back) {
+        return ygs;
+    }
+
+    if (desired_initial_param != -1) {
+        ygs->set_action_parameter(desired_initial_param, desired_param_data);
+    }
+
+    if (!has_started) {
+        YEngine::get_singleton()->game_state_starting(this);
+        has_started = true;
+    }
+
+    if (desired_game_state_id == -1) {
+        desired_game_state_id = next_game_action_unique_id;
+        next_game_action_unique_id++;
+    }
+
+    ygs->runs_parallel = true;
+    ygs->set_unique_id(desired_game_state_id);
+    ygs->created();
+    future_parallel_actions.push_back(ygs);
+    emit_signal("registered_action", ygs);
+    return ygs;
 }

@@ -12,6 +12,7 @@
 #include "ygameplayer.h"
 #include "yvisualaction.h"
 #include "yvisualelement3d.h"
+#include "yarntime.h"
 
 /// Forward Declaring YGameAction for use.
 class YGameAction;
@@ -63,6 +64,8 @@ public:
     Vector<Ref<YGameAction>> overriding_game_actions;
     Vector<Ref<YGameAction>> future_game_actions;
     Vector<Ref<YGameAction>> past_game_actions;
+    Vector<Ref<YGameAction>> current_parallel_actions;
+    Vector<Ref<YGameAction>> future_parallel_actions;
     HashMap<int,YGamePlayer*> game_players;
     HashMap<int,YVisualElement3D*> visual_elements_3d;
 
@@ -199,6 +202,8 @@ public:
         overriding_game_actions.clear();
         future_game_actions.clear();
         past_game_actions.clear();
+        current_parallel_actions.clear();
+        future_parallel_actions.clear();
         showed_out_of_actions_message=false;
     }
 
@@ -248,6 +253,34 @@ public:
         future_game_actions.clear();
         past_game_actions.clear();
     }
+
+
+    int get_parallel_action_count() const {
+        return current_parallel_actions.size();
+    }
+
+    Ref<YGameAction> get_parallel_action(int index) const {
+        if (index >= 0 && index < current_parallel_actions.size())
+            return current_parallel_actions[index];
+        return nullptr;
+    }
+
+    TypedArray<YGameAction> get_all_parallel_actions() const {
+        TypedArray<YGameAction> arr;
+        for (const Ref<YGameAction>& action : current_parallel_actions) {
+            if (action.is_valid()) {
+                arr.append(action);
+            }
+        }
+        return arr;
+    }
+
+    void end_parallel_action(int index);
+    void end_all_parallel_actions();
+    int count_current_parallel_of_type(const String& action_name) const;
+    void check_future_parallel_actions();
+    Ref<YGameAction> add_parallel_game_action(const Ref<YGameAction>& ygs, int desired_game_state_id = -1);
+    Ref<YGameAction> add_parallel_game_action_with_param(const Ref<YGameAction>& ygs, int desired_initial_param, const Variant& desired_param_data, int desired_game_state_id = -1);
 };
 
 #endif //YGAMESTATE_H

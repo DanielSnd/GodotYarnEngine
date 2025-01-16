@@ -558,7 +558,7 @@ PackedStringArray YEngine::find_resources_paths_in(const Variant &variant_path, 
         String file_name = dir->get_next();
         while (!file_name.is_empty()) {
             file_name = file_name.trim_suffix(".remap");
-            if (file_name.ends_with(".tres"))
+            if (file_name.ends_with(".tres") || file_name.ends_with(".res"))
                 if (!has_name_contains || file_name.contains(name_contains))
                     return_paths.append(file_name);
             file_name = dir->get_next();

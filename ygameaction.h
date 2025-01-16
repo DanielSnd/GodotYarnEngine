@@ -44,6 +44,7 @@ public:
     Variant get_step_data() const{return step_data;}
     void set_step_data(const Variant & b ){ step_data = b;}
 
+    
     YActionStep() {
         step_index=-1;
         step_taken=false;
@@ -53,6 +54,8 @@ public:
         step_has_to_reconsume = false;
         step_data ={};
     }
+
+    
     YActionStep(int p_index,int p_identifier) {
         step_index=p_index;
         step_taken=false;
@@ -83,8 +86,11 @@ public:
     bool get_instant_execute() const { return instant_execute; }
     int last_step_ran = 0;
     HashMap<int,Variant> action_parameters;
-    YGameAction* set_action_parameter(int param, const Variant& v) {action_parameters[param] = v; return this;}
+    HashMap<int,Variant> starting_parameters;
+    YGameAction* set_action_parameter(int param, const Variant& v);
 
+    void emit_action_parameter_changed(int param_id, const Variant& old_value, const Variant& new_value);
+    
     YGameAction* erase_action_parameter(int param) {
         if (action_parameters.has(param))
             action_parameters.erase(param);
@@ -162,6 +168,26 @@ public:
     bool waiting_for_step=false;
     bool waiting_for_step_no_processing=false;
 
+    bool can_be_serialized = true;
+    void set_can_be_serialized(bool f) { can_be_serialized = f; }
+    bool get_can_be_serialized() const { return can_be_serialized; }
+    
+    bool runs_parallel = false;
+    void set_runs_parallel(bool f) { runs_parallel = f; }
+    bool get_runs_parallel() const { return runs_parallel; }
+
+    int max_in_parallel = -1;
+    void set_max_in_parallel(int f) { max_in_parallel = f; }
+    int get_max_in_parallel() const { return max_in_parallel; }
+    
+    float start_check_interval = 3.0f;
+    void set_start_check_interval(float f) { start_check_interval = f; }
+    float get_start_check_interval() const { return start_check_interval; }
+
+    float last_start_check_time = 0.0f;
+    void set_last_start_check_time(float f) { last_start_check_time = f; }
+    float get_last_start_check_time() const { return last_start_check_time; }
+    
     bool get_is_last_step(int step_index) const {return step_index == action_steps.size()-1;}
     bool get_waiting_for_step() const {return waiting_for_step;}
     void wait_for_step(bool prevent_processing = false) ;
@@ -186,6 +212,7 @@ public:
     void set_priority(int f) { has_priority = f; }
     int get_priority() const { return has_priority; }
 
+    bool only_starts_if();
 
     int get_all_steps_count() const {
         return static_cast<int>(action_steps.size());
@@ -268,8 +295,11 @@ public:
     GDVIRTUAL1RC(bool, _on_slow_process_action,float)
     GDVIRTUAL1RC(Dictionary,_on_serialize,Dictionary)
     GDVIRTUAL1RC(Dictionary,_on_deserialize,Dictionary)
+    GDVIRTUAL0RC(bool, _only_starts_if)
 
     YGameAction();
+
+
 };
 
 

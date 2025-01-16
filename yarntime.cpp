@@ -77,6 +77,8 @@ void YTime::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_clock_formatted_day_month_year", "clock_time"), &YTime::clock_formatted_day_month_year,DEFVAL(0u));
     ClassDB::bind_method(D_METHOD("get_clock_formatted_full_date_time", "clock_time"), &YTime::clock_formatted_full_date_time,DEFVAL(0u));
 
+    ClassDB::bind_method(D_METHOD("get_registered_clock_callbacks"), &YTime::get_registered_clock_callbacks);
+
     ADD_SIGNAL(MethodInfo("clock_time_changed"));
     ADD_SIGNAL(MethodInfo("clock_hour_changed"));
     ADD_SIGNAL(MethodInfo("clock_day_changed"));
@@ -214,26 +216,52 @@ void YTime::set_is_debugging(bool val) {
 
 void YTime::handle_clock_callbacks_for(const int val) {
     if (reg_clock_callbacks.has(val)) {
+        if (is_debugging) {
+            print_line(vformat("[YTime] Found callbacks for clock time %d", val));
+        }
         auto _reg_event_callbacks = reg_clock_callbacks[val];
         Vector<Callable> callables_to_call;
         for (const auto& callback: _reg_event_callbacks.callbacks) {
             if (callback.callable.is_valid()) {
+                if (is_debugging) {
+                    print_line(vformat("[YTime] Adding valid callable for node %d", callback.node_inst_id));
+                }
                 callables_to_call.append(callback.callable);
                 if (count_node_callbacks.has(callback.node_inst_id)) {
                     const int current_count = count_node_callbacks[callback.node_inst_id];
                     if (current_count - 1 <=0 ) {
+                        if (is_debugging) {
+                            print_line(vformat("[YTime] Removing node %d from count callbacks", callback.node_inst_id));
+                        }
                         count_node_callbacks.erase(callback.node_inst_id);
                     } else {
+                        if (is_debugging) {
+                            print_line(vformat("[YTime] Reducing count for node %d from %d to %d", 
+                                callback.node_inst_id, current_count, current_count-1));
+                        }
                         count_node_callbacks[callback.node_inst_id] = current_count-1;
                     }
                 }
+            } else if (is_debugging) {
+                print_line("[YTime] Found invalid callable");
             }
         }
         _reg_event_callbacks.callbacks.clear();
         reg_clock_callbacks.erase(val);
-        for (const auto& to_call: callables_to_call)
-            if (!to_call.is_null() && to_call.is_valid())
+        
+        if (is_debugging) {
+            print_line(vformat("[YTime] Executing %d callables for clock time %d", 
+                callables_to_call.size(), val));
+        }
+        
+        for (const auto& to_call: callables_to_call) {
+            if (!to_call.is_null() && to_call.is_valid()) {
+                if (is_debugging) {
+                    print_line("[YTime] Calling callable");
+                }
                 const auto result = to_call.call();
+            }
+        }
     }
 }
 
@@ -247,7 +275,7 @@ void YTime::set_clock_and_emit_signal(const int val)  {
             emit_signal(SNAME("clock_day_changed"));
         }
     }
-    if (ABS(previous_clock - val) > 1) {
+    if (ABS(previous_clock - val) >= 1) {
         Vector<int> _passed_times_to_callback;
         for (const auto& errlist: reg_clock_callbacks) {
             if (errlist.key < clock) {
@@ -267,4 +295,21 @@ void YTime::set_clock_and_emit_signal(const int val)  {
     if (reg_clock_callbacks.has(val)) {
         handle_clock_callbacks_for(val);
     }
+}
+
+Dictionary YTime::get_registered_clock_callbacks() const {
+    Dictionary result;
+    
+    for (const KeyValue<int, RegTimeCallback> &E : reg_clock_callbacks) {
+        Array callbacks;
+        for (const RegTimeCallback::RegTimeCallbackInstance &callback : E.value.callbacks) {
+            Dictionary callback_info;
+            callback_info["node_id"] = callback.node_inst_id;
+            callback_info["callable"] = callback.callable;
+            callbacks.push_back(callback_info);
+        }
+        result[E.key] = callbacks;
+    }
+    
+    return result;
 }

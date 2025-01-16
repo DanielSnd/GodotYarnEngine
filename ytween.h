@@ -12,6 +12,7 @@
 #include "yarntime.h"
 
 class Tween;
+class SceneTree;
 class Control;
 class Node2D;
 
@@ -46,7 +47,7 @@ public:
     YTweenWrap() : Tween() {
         tween_list_id = 0;
     }
-    explicit YTweenWrap(bool valid) : Tween(valid) {
+    explicit YTweenWrap(SceneTree *p_parent_tree) : Tween(p_parent_tree) {
         tween_list_id = 0;
     }
 };
