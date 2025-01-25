@@ -84,7 +84,7 @@
 		</member>
 		<member name="player_controller" type="int" setter="set_player_controller" getter="get_player_controller" default="-1">
 		</member>
-		<member name="player_id" type="int" setter="set_player_id" getter="get_player_id" default="-356478832">
+		<member name="player_id" type="int" setter="set_player_id" getter="get_player_id" default="-551830944">
 		</member>
 		<member name="player_type" type="int" setter="set_player_type" getter="get_player_type" default="0">
 		</member>

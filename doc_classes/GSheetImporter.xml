@@ -16,13 +16,13 @@
 		class_name MySheetImporter
 		extends GSheetImporter
 
-		func get_sheet_id() -> String:
+		func get_sheet_id() -&gt; String:
 		    return "1234567890abcdef" # Your Google Sheet ID
 
-		func get_sheet_name() -> String:
+		func get_sheet_name() -&gt; String:
 		    return "Sheet1" # Your sheet name
 
-		func on_imported_data(import_type: String, data: Array) -> void:
+		func on_imported_data(import_type: String, data: Array) -&gt; void:
 		    for entry in data:
 		        print("Imported row: ", entry)
 		[/codeblock]
@@ -33,10 +33,10 @@
 		class_name MyCustomMenuItem
 		extends GSheetImporter
 
-		func get_menu_name() -> String:
+		func get_menu_name() -&gt; String:
 		    return "My Custom Action" # This will appear in the editor's tool menu
 
-		func on_menu_clicked() -> void:
+		func on_menu_clicked() -&gt; void:
 		    # Your custom logic here
 		    print("Custom menu item clicked!")
 		[/codeblock]
@@ -90,7 +90,7 @@
 
 				Example implementation:
 				[codeblock]
-				func on_imported_data(import_type: String, data: Array) -> void:
+				func on_imported_data(import_type: String, data: Array) -&gt; void:
 				    for row in data:
 				        var name = row["Name"]
 				        var value = row["Value"]
@@ -103,7 +103,7 @@
 			<description>
 				Initiates the import process by sending an HTTP request to the Google Sheets API.
 				The method automatically handles the creation of the HTTP request and connection setup.
-				
+
 				The imported data will be delivered through the [signal imported_data] signal and the [method on_imported_data] virtual method.
 			</description>
 		</method>
@@ -131,7 +131,7 @@
 			<param index="2" name="task_description" type="String" />
 			<description>
 				Initializes a progress bar for tracking the import process.
-				
+
 				[param steps] is the total number of steps in the operation.
 				[param task_name] is a short name for the import task.
 				[param task_description] is a longer description of what's being imported.
@@ -143,7 +143,7 @@
 			<param index="1" name="step_description" type="String" />
 			<description>
 				Updates the import progress bar to the specified step.
-				
+
 				[param step] is the current step number (should be between 0 and the total steps specified in [method start_import_progress_bar]).
 				[param step_description] is a description of the current step being executed.
 			</description>
@@ -157,7 +157,7 @@
 				Emitted when data has been successfully imported and parsed from the Google Sheet.
 				[param import_type] contains the sheet name that was imported.
 				[param data] contains an Array of Dictionary objects representing the imported rows.
-				
+
 				Each dictionary in the data array uses the sheet's column headers as keys and the cell values as values.
 			</description>
 		</signal>

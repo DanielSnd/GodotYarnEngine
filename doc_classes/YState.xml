@@ -29,7 +29,7 @@
 		[codeblock]
 		# Example: Transition when reaching a destination
 		func _pass_condition():
-		    return get_node_owner().position.distance_to(target) < 1.0
+		    return get_node_owner().position.distance_to(target) &lt; 1.0
 		[/codeblock]
 	</description>
 	<tutorials>
@@ -53,7 +53,7 @@
 
 				[codeblock]
 				func _fail_condition():
-				    return get_node_owner().health <= 0 # Fail if no health
+				    return get_node_owner().health &lt;= 0 # Fail if no health
 				[/codeblock]
 			</description>
 		</method>

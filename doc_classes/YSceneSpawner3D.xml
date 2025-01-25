@@ -12,12 +12,12 @@
 		- Rotation randomization
 		- Collision-based placement rules
 		- Automatic respawning
-		
+
 		The spawner works by:
 		1. Maintaining a list of spawnable scenes that can be configured in the editor or added through code
 		2. When spawning, it performs raycasts from above to find valid spawn positions
 		3. For each successful position, it instantiates the scene and applies the configured transformations
-		
+
 		[b]Spawn Position Selection:[/b]
 		The spawner uses raycasts to find valid spawn positions. For each spawn attempt:
 		- A random point is selected within [member placing_radius] of the spawner

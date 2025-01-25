@@ -34,7 +34,7 @@
 		    var parent = get_parent()
 		    
 		    # Don't dodge if we recently dodged
-		    if parent.time_since_last_dodge < dodge_cooldown:
+		    if parent.time_since_last_dodge &lt; dodge_cooldown:
 		        return false
 		        
 		    # Check if any projectiles are heading towards us
@@ -74,7 +74,7 @@
 				func _override_condition():
 				    # Example: Override if health is low and healing item is available
 				    var parent = get_parent()
-				    return parent.health < parent.max_health * 0.3 and parent.has_healing_item()
+				    return parent.health &lt; parent.max_health * 0.3 and parent.has_healing_item()
 				[/codeblock]
 			</description>
 		</method>

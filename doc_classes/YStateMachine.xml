@@ -31,7 +31,7 @@
 		# Check distance in states
 		func _process_state(delta):
 		    var distance = state_machine.get_state_target_distance()
-		    if distance < attack_range:
+		    if distance &lt; attack_range:
 		        # ... perform attack
 		[/codeblock]
 
@@ -83,7 +83,7 @@
 				[codeblock]
 				func _on_state_machine_started(owner):
 				    # Set initial state based on owner's condition
-				    if owner.health < owner.max_health:
+				    if owner.health &lt; owner.max_health:
 				        transition($HealState)
 				    else:
 				        transition($IdleState)
@@ -153,7 +153,7 @@
 
 				[codeblock]
 				# Transition to attack state when enemy is in range
-				if state_machine.get_state_target_distance() < attack_range:
+				if state_machine.get_state_target_distance() &lt; attack_range:
 				    state_machine.transition($AttackState)
 				[/codeblock]
 			</description>
