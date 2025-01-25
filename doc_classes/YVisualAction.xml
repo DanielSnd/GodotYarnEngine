@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YVisualAction" inherits="Resource" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A resource class for defining visual actions and animations.
+	</brief_description>
+	<description>
+		YVisualAction is a resource class that defines visual actions and animations that can be applied to visual elements in the game. It provides a way to encapsulate and reuse visual behavior definitions.
+	</description>
+	<tutorials>
+	</tutorials>
+</class>

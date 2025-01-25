@@ -1,0 +1,459 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YGameState" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		Core class that manages game state through a sequence of actions, players, and state parameters.
+	</brief_description>
+	<description>
+		YGameState is the central manager for game flow and state in the Yarn engine. It maintains:
+		- A queue of game actions to be executed
+		- A list of registered players
+		- State parameters that persist across actions
+		- Support for parallel actions running alongside the main action queue
+		- Serialization/deserialization of game state for save/load functionality
+
+		The state system works by executing actions in sequence, where each action can:
+		- Contain multiple steps that may require player input
+		- Modify state parameters
+		- Spawn new actions
+		- Control turn flow between players
+
+		[b]Example of basic game flow:[/b]
+		[codeblock]
+		# Create and register a player
+		var player = YGamePlayer.new()
+		player.player_type = 1  # e.g. PLAYER_TYPE_HUMAN
+		game_state.register_player(player)
+
+		# Create an action for player's turn
+		var turn_action = PlayerTurnAction.new()
+		turn_action.set_action_parameter("player_id", player.player_id)
+
+		# Add action to game state
+		game_state.add_game_action(turn_action)
+		[/codeblock]
+
+		[b]Example of action with steps:[/b]
+		[codeblock]
+		# In a custom YGameAction class
+		func _on_enter_action():
+			# Register steps that will execute in sequence
+			register_step(STEP_DRAW_CARD, {"count": 2})
+			register_step(STEP_CHOOSE_CARD, null)
+			register_step(STEP_PLAY_CARD, null)
+
+		func _on_stepped_action(step_index, step_id, step_data, is_ending):
+			match step_id:
+				STEP_DRAW_CARD:
+					# Draw cards logic
+					pass
+				STEP_CHOOSE_CARD:
+					# Wait for player input
+					wait_for_step(true)  # Prevents proceeding until released
+				STEP_PLAY_CARD:
+					# Play the chosen card
+					pass
+		[/codeblock]
+
+		[b]Example of parallel actions:[/b]
+		[codeblock]
+		# Create a background effect that runs alongside main actions
+		var effect = ParticleEffect.new()
+		effect.runs_parallel = true
+		effect.max_in_parallel = 1  # Only allow one instance
+		game_state.add_parallel_game_action(effect)
+		[/codeblock]
+
+		The state system supports playback of previous states by setting [code]is_playing_back[/code], which allows actions to skip animations or visual effects when reconstructing a previous state.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="add_game_action">
+			<return type="YGameAction" />
+			<param index="0" name="game_action" type="YGameAction" />
+			<param index="1" name="desired_id" type="int" default="-1" />
+			<description>
+				Adds a game action to the future actions queue. The action will execute when it reaches the front of the queue.
+				If [code]desired_id[/code] is specified, uses that ID for the action, otherwise generates a new unique ID.
+
+				Returns the added action for chaining.
+			</description>
+		</method>
+		<method name="add_game_action_with">
+			<return type="YGameAction" />
+			<param index="0" name="game_action" type="YGameAction" />
+			<param index="1" name="initial_parameter" type="int" default="-1" />
+			<param index="2" name="param_value" type="Variant" default="null" />
+			<param index="3" name="desired_id" type="int" default="-1" />
+			<description>
+				Similar to [method add_game_action], but also initializes an action parameter when adding the action.
+				Useful for setting up actions that need initial configuration.
+
+				[b]Example:[/b]
+				[codeblock]
+				# Add action with initial card count parameter
+				game_state.add_game_action_with(draw_action, PARAM_CARD_COUNT, 3)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="add_override_game_action">
+			<return type="YGameAction" />
+			<param index="0" name="game_action" type="YGameAction" />
+			<param index="1" name="desired_id" type="int" default="-1" />
+			<description>
+				Adds an action that will execute before any regular actions in the queue. Useful for interrupts or priority actions.
+				Actions with higher priority values will execute before lower priority ones.
+			</description>
+		</method>
+		<method name="add_override_game_action_with">
+			<return type="YGameAction" />
+			<param index="0" name="initial_parameter" type="YGameAction" />
+			<param index="1" name="param_value" type="int" default="-1" />
+			<param index="2" name="game_action" type="Variant" default="null" />
+			<param index="3" name="desired_id" type="int" default="-1" />
+			<description>
+				Combines [method add_override_game_action] with parameter initialization.
+				The action will be added to the override queue and initialized with the specified parameter.
+			</description>
+		</method>
+		<method name="add_parallel_game_action">
+			<return type="YGameAction" />
+			<param index="0" name="game_action" type="YGameAction" />
+			<param index="1" name="desired_id" type="int" default="-1" />
+			<description>
+				Adds an action that runs in parallel with the main action queue. Parallel actions continue executing alongside regular actions.
+				Useful for background effects, timers, or ongoing game systems.
+			</description>
+		</method>
+		<method name="add_parallel_game_action_with">
+			<return type="YGameAction" />
+			<param index="0" name="game_action" type="YGameAction" />
+			<param index="1" name="initial_parameter" type="int" default="-1" />
+			<param index="2" name="param_value" type="Variant" default="null" />
+			<param index="3" name="desired_id" type="int" default="-1" />
+			<description>
+				Combines [method add_parallel_game_action] with parameter initialization.
+				The parallel action will be initialized with the specified parameter before being added.
+			</description>
+		</method>
+		<method name="clear_all_game_actions">
+			<return type="void" />
+			<description>
+				Removes all actions from the game state, including current, future, past, and parallel actions.
+				Also resets the turn player and clears any waiting states.
+			</description>
+		</method>
+		<method name="clear_all_players">
+			<return type="void" />
+			<description>
+				Removes all registered players from the game state and resets the current turn player.
+				Players are properly cleaned up and freed from memory.
+			</description>
+		</method>
+		<method name="deserialize">
+			<return type="Dictionary" />
+			<param index="0" name="data" type="Dictionary" />
+			<param index="1" name="playback_after" type="bool" default="false" />
+			<param index="2" name="instant_playback" type="bool" default="false" />
+			<description>
+				Reconstructs the game state from serialized data. If [code]playback_after[/code] is true, will replay the actions
+				after loading. If [code]instant_playback[/code] is true, actions will execute without delays or animations.
+				Returns the deserialized data dictionary.
+			</description>
+		</method>
+		<method name="end_all_parallel_actions">
+			<return type="void" />
+			<description>
+				Immediately ends all currently running parallel actions. Each action's [method _on_exit_action] will be called
+				and the actions will be added to the history if they are serializable.
+			</description>
+		</method>
+		<method name="end_current_game_action" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Forces the current action to end immediately. Returns [code]true[/code] if an action was ended,
+				[code]false[/code] if there was no current action.
+			</description>
+		</method>
+		<method name="end_parallel_action">
+			<return type="void" />
+			<param index="0" name="index" type="int" default="0" />
+			<description>
+				Ends the parallel action at the specified index. The action's [method _on_exit_action] will be called
+				and it will be added to history if serializable.
+			</description>
+		</method>
+		<method name="get_all_parallel_actions" qualifiers="const">
+			<return type="YGameAction[]" />
+			<description>
+				Returns an array of all currently running parallel actions.
+				Useful for monitoring or managing ongoing background actions.
+			</description>
+		</method>
+		<method name="get_all_players">
+			<return type="YGamePlayer[]" />
+			<description>
+				Returns an array of all registered players in the game state.
+			</description>
+		</method>
+		<method name="get_all_state_parameters">
+			<return type="Dictionary" />
+			<description>
+				Returns a dictionary containing all current state parameters and their values.
+				Useful for debugging or saving the complete state.
+			</description>
+		</method>
+		<method name="get_current_game_action" qualifiers="const">
+			<return type="YGameAction" />
+			<description>
+				Returns the currently executing game action, or [code]null[/code] if no action is active.
+			</description>
+		</method>
+		<method name="get_current_game_action_name">
+			<return type="String" />
+			<description>
+				Returns the name of the currently executing action, or "NULL" if no action is active.
+				Useful for debugging and logging.
+			</description>
+		</method>
+		<method name="get_future_game_action_by_index" qualifiers="const">
+			<return type="YGameAction" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the action at the specified index in the future actions queue.
+				Returns [code]null[/code] if the index is invalid.
+			</description>
+		</method>
+		<method name="get_future_game_action_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the number of actions waiting in the future actions queue.
+			</description>
+		</method>
+		<method name="get_game_actions_counted" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the total number of actions that have been executed since the last counter reset.
+				Can be reset using [method restart_action_counting].
+			</description>
+		</method>
+		<method name="get_game_player">
+			<return type="YGamePlayer" />
+			<param index="0" name="player_id" type="int" />
+			<description>
+				Returns the player with the specified ID, or [code]null[/code] if no such player exists.
+			</description>
+		</method>
+		<method name="get_game_player_by_controller">
+			<return type="YGamePlayer" />
+			<param index="0" name="player_controller" type="int" />
+			<description>
+				Returns the first player found with the specified controller ID, or [code]null[/code] if none exists.
+				Useful for finding players based on input device or controller number.
+			</description>
+		</method>
+		<method name="get_game_player_by_type">
+			<return type="YGamePlayer" />
+			<param index="0" name="player_type" type="int" />
+			<description>
+				Returns the first player found with the specified player type, or [code]null[/code] if none exists.
+				Useful for finding players based on their role (e.g., human, AI, network).
+			</description>
+		</method>
+		<method name="get_next_game_action" qualifiers="const">
+			<return type="YGameAction" />
+			<description>
+				Returns the next action that will execute (either from override or future queue),
+				or [code]null[/code] if no actions are queued.
+			</description>
+		</method>
+		<method name="get_override_game_action_by_index" qualifiers="const">
+			<return type="YGameAction" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the action at the specified index in the override queue.
+				Returns [code]null[/code] if the index is invalid.
+			</description>
+		</method>
+		<method name="get_overriding_game_action_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the number of actions currently in the override queue.
+			</description>
+		</method>
+		<method name="get_parallel_action" qualifiers="const">
+			<return type="YGameAction" />
+			<param index="0" name="index" type="int" default="0" />
+			<description>
+				Returns the parallel action at the specified index, or [code]null[/code] if index is invalid.
+			</description>
+		</method>
+		<method name="get_parallel_action_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the number of currently running parallel actions.
+			</description>
+		</method>
+		<method name="get_past_game_action_by_index" qualifiers="const">
+			<return type="YGameAction" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns a completed action from the history at the specified index.
+				Useful for reviewing game history or implementing undo functionality.
+			</description>
+		</method>
+		<method name="get_past_game_action_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the number of actions in the history (completed actions).
+			</description>
+		</method>
+		<method name="get_previous_game_action" qualifiers="const">
+			<return type="YGameAction" />
+			<description>
+				Returns the most recently completed action, or [code]null[/code] if no actions have completed.
+			</description>
+		</method>
+		<method name="get_state_parameter">
+			<return type="Variant" />
+			<param index="0" name="param_id" type="int" />
+			<param index="1" name="param_default" type="Variant" />
+			<description>
+				Retrieves a state parameter value. Returns [code]param_default[/code] if the parameter doesn't exist.
+				State parameters persist across actions and can store any game state data.
+			</description>
+		</method>
+		<method name="has_current_game_action" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if there is a valid action currently executing.
+			</description>
+		</method>
+		<method name="has_current_turn_player" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if there is a player currently assigned as the turn player.
+			</description>
+		</method>
+		<method name="has_state_parameter" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="param_id" type="int" />
+			<description>
+				Returns [code]true[/code] if a state parameter with the specified ID exists.
+			</description>
+		</method>
+		<method name="register_player">
+			<return type="int" />
+			<param index="0" name="game_player" type="YGamePlayer" />
+			<description>
+				Registers a player with the game state and assigns them a unique ID. Returns the assigned player ID.
+				Players can be retrieved later using [method get_game_player].
+			</description>
+		</method>
+		<method name="register_player_specific_id">
+			<return type="int" />
+			<param index="0" name="game_player" type="YGamePlayer" />
+			<param index="1" name="desired_id" type="int" />
+			<description>
+				Similar to [method register_player], but allows specifying the player ID instead of auto-generating one.
+				Returns the assigned ID (same as [code]desired_id[/code] if successful).
+			</description>
+		</method>
+		<method name="remove_player">
+			<return type="bool" />
+			<param index="0" name="game_player" type="YGamePlayer" />
+			<description>
+				Removes the specified player from the game state. Returns [code]true[/code] if the player was found and removed.
+			</description>
+		</method>
+		<method name="remove_player_with_id">
+			<return type="bool" />
+			<param index="0" name="game_player_id" type="int" />
+			<description>
+				Removes the player with the specified ID from the game state.
+				Returns [code]true[/code] if a player with that ID was found and removed.
+			</description>
+		</method>
+		<method name="remove_state_parameter">
+			<return type="void" />
+			<param index="0" name="param_id" type="int" />
+			<description>
+				Removes the state parameter with the specified ID if it exists.
+			</description>
+		</method>
+		<method name="restart_action_counting">
+			<return type="void" />
+			<description>
+				Resets the counter that tracks how many actions have been executed.
+				Useful for statistics or achievement tracking.
+			</description>
+		</method>
+		<method name="serialize">
+			<return type="Dictionary" />
+			<description>
+				Converts the entire game state into a dictionary format that can be saved.
+				Includes all actions, players, parameters, and other state data.
+			</description>
+		</method>
+		<method name="set_state_parameter">
+			<return type="void" />
+			<param index="0" name="param_id" type="int" />
+			<param index="1" name="param_value" type="Variant" />
+			<description>
+				Sets a persistent state parameter that can be accessed by actions. These parameters persist across actions
+				and can be used to maintain game state.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="current_turn_player" type="YGamePlayer" setter="set_current_turn_player" getter="get_current_turn_player">
+			Reference to the player whose turn is currently active. Actions can check this to validate moves or determine
+			available options.
+		</member>
+		<member name="is_playing_back" type="bool" setter="set_is_playing_back" getter="get_is_playing_back" default="false">
+			When true, indicates the state is being reconstructed from saved data. Actions can check this to skip animations
+			or visual effects during playback.
+		</member>
+		<member name="prevent_proceed_to_next_action" type="int" setter="set_prevent_proceed_to_next_action" getter="get_prevent_proceed_to_next_action" default="0">
+			Counter that prevents the game state from proceeding to the next action.
+			Useful when waiting for animations or external events to complete.
+		</member>
+		<member name="wait_before_going_to_next_action" type="float" setter="set_wait_before_going_to_next_action" getter="get_wait_before_going_to_next_action" default="0.0">
+			Time in seconds to wait before proceeding to the next action.
+			Can be used to create pauses between actions for timing or visual purposes.
+		</member>
+		<member name="wait_before_going_to_next_step" type="float" setter="set_wait_before_going_to_next_step" getter="get_wait_before_going_to_next_step" default="0.0">
+			Time in seconds to wait before proceeding to the next step within an action.
+			Useful for controlling the pacing of multi-step actions.
+		</member>
+	</members>
+	<signals>
+		<signal name="changed_current_action">
+			<param index="0" name="new_action" type="YGameAction" />
+			<description>
+				Emitted when the current action changes. Provides the new action that has become active.
+			</description>
+		</signal>
+		<signal name="changed_turn_player_id">
+			<param index="0" name="player_turn_id_before" type="int" />
+			<param index="1" name="player_turn_id_after" type="int" />
+			<description>
+				Emitted when the turn changes from one player to another.
+				Provides both the previous and new player IDs.
+			</description>
+		</signal>
+		<signal name="ended_all_actions">
+			<description>
+				Emitted when all actions have been completed and no new actions are queued.
+				Useful for detecting when a sequence or game has finished.
+			</description>
+		</signal>
+		<signal name="registered_action">
+			<param index="0" name="new_action" type="YGameAction" />
+			<description>
+				Emitted when a new action is added to the game state.
+				Useful for monitoring or logging action creation.
+			</description>
+		</signal>
+	</signals>
+</class>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="CircleWithConeTexture2D" inherits="Texture2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+	</description>
+	<tutorials>
+	</tutorials>
+	<members>
+		<member name="circle_max_radius" type="float" setter="set_circle_max_radius" getter="get_circle_max_radius" default="500.0">
+		</member>
+		<member name="circle_max_smoothing" type="float" setter="set_circle_max_smoothing" getter="get_circle_max_smoothing" default="0.5">
+		</member>
+		<member name="circle_radius" type="float" setter="set_circle_start_radius" getter="get_circle_start_radius" default="0.5">
+		</member>
+		<member name="circle_smoothing" type="float" setter="set_circle_end_radius" getter="get_circle_end_radius" default="0.5">
+		</member>
+		<member name="color_inside" type="Color" setter="set_color_inside" getter="get_color_inside" default="Color(0, 0, 0, 1)">
+		</member>
+		<member name="color_outside" type="Color" setter="set_color_outside" getter="get_color_outside" default="Color(1, 1, 1, 1)">
+		</member>
+		<member name="cone_angle" type="float" setter="set_cone_angle" getter="get_cone_angle" default="0.5">
+		</member>
+		<member name="cone_from" type="Vector2" setter="set_cone_from" getter="get_cone_from" default="Vector2(0, 0)">
+		</member>
+		<member name="cone_smoothing" type="float" setter="set_cone_smoothing_angle" getter="get_cone_smoothing_angle" default="0.1">
+		</member>
+		<member name="cone_to" type="Vector2" setter="set_cone_to" getter="get_cone_to" default="Vector2(1, 0)">
+		</member>
+		<member name="height" type="int" setter="set_height" getter="get_height" default="64">
+		</member>
+		<member name="resource_local_to_scene" type="bool" setter="set_local_to_scene" getter="is_local_to_scene" overrides="Resource" default="false" />
+		<member name="width" type="int" setter="set_width" getter="get_width" default="64">
+		</member>
+	</members>
+</class>

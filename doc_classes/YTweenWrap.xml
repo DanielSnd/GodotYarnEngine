@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YTweenWrap" inherits="Tween" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A wrapper class for Tween with enhanced functionality.
+	</brief_description>
+	<description>
+		YTweenWrap extends the built-in Tween class to provide additional functionality and convenience methods for animation. It includes methods for chaining tweens, parallel execution, and simplified property tweening.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="set_ytrans">
+			<return type="PropertyTweener" />
+			<param index="0" name="trans" type="int" enum="Tween.TransitionType" />
+			<param index="1" name="param1" type="float" default="inf" />
+			<param index="2" name="param2" type="float" default="inf" />
+			<description>
+				Sets the transition type and parameters for the tween. Returns the PropertyTweener for method chaining.
+			</description>
+		</method>
+		<method name="set_ytrans_in_property">
+			<return type="PropertyTweener" />
+			<param index="0" name="property" type="PropertyTweener" />
+			<param index="1" name="trans" type="int" enum="Tween.TransitionType" />
+			<param index="2" name="param1" type="float" default="inf" />
+			<param index="3" name="param2" type="float" default="inf" />
+			<description>
+				Sets the transition type and parameters for a specific property tween.
+			</description>
+		</method>
+		<method name="ychain">
+			<return type="YTweenWrap" />
+			<description>
+				Creates a new tween that will start after the current one finishes.
+			</description>
+		</method>
+		<method name="yparallel">
+			<return type="YTweenWrap" />
+			<description>
+				Creates a new tween that will run in parallel with the current one.
+			</description>
+		</method>
+		<method name="ytween_property">
+			<return type="PropertyTweener" />
+			<param index="0" name="object" type="Object" />
+			<param index="1" name="property" type="NodePath" />
+			<param index="2" name="final_val" type="Variant" />
+			<param index="3" name="duration" type="float" />
+			<param index="4" name="ease" type="int" enum="Tween.EaseType" default="2" />
+			<param index="5" name="trans" type="int" enum="Tween.TransitionType" default="0" />
+			<param index="6" name="param1" type="float" default="inf" />
+			<param index="7" name="param2" type="float" default="inf" />
+			<description>
+				Creates a property tween with enhanced configuration options.
+			</description>
+		</method>
+	</methods>
+	<signals>
+		<signal name="finished_or_killed">
+			<description>
+				Emitted when the tween either completes naturally or is killed prematurely.
+			</description>
+		</signal>
+	</signals>
+</class>

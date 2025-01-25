@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YVisualElement3D" inherits="CharacterBody3D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A specialized CharacterBody3D node for visual game elements with enhanced 3D functionality.
+	</brief_description>
+	<description>
+		YVisualElement3D extends CharacterBody3D to provide additional functionality for visual game elements in 3D space. It serves as a base class for creating interactive 3D objects that require character body physics and visual representation.
+	</description>
+	<tutorials>
+	</tutorials>
+</class>

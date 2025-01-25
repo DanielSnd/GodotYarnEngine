@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YGameLog" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A utility class for logging messages and monitoring system output in your game.
+	</brief_description>
+	<description>
+		YGameLog provides a centralized logging system for your game. It can store both string messages and variant data, and can also intercept system output (prints, warnings, and errors).
+
+		The class maintains two separate logs:
+		- A string log for text messages
+		- A variant log for storing any type of data
+
+		It can also be configured to listen to system output (print statements, warnings, and errors) by calling [method enable_output_logging].
+
+		Example of basic usage:
+		[codeblock]
+		var game_log = YGameLog.new()
+
+		# Log some messages
+		game_log.log_message("Player spawned")
+		game_log.log_message("Score increased")
+
+		# Log some data
+		game_log.log_variant({"player_position": Vector3(0, 0, 0)})
+		game_log.log_variant(["item1", "item2", "item3"])
+
+		# Enable system output logging
+		game_log.enable_output_logging()
+		print("This will be captured") # Triggers system_log_printed signal
+		push_warning("Watch out!") # Triggers system_warning_printed signal
+		push_error("Something went wrong!") # Triggers system_error_printed signal
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="clear_log">
+			<return type="void" />
+			<description>
+				Clears all stored string messages from the log.
+			</description>
+		</method>
+		<method name="clear_variant_log">
+			<return type="void" />
+			<description>
+				Clears all stored variant data from the variant log.
+			</description>
+		</method>
+		<method name="enable_output_logging">
+			<return type="void" />
+			<description>
+				Enables the interception of system output (prints, warnings, and errors). Once enabled, the class will emit corresponding signals when system messages are generated.
+
+				[b]Note:[/b] This should be called early in your game's initialization if you want to capture all system output.
+			</description>
+		</method>
+		<method name="get_log_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the number of string messages currently stored in the log.
+			</description>
+		</method>
+		<method name="get_variant_log_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the number of variant entries currently stored in the variant log.
+			</description>
+		</method>
+		<method name="log_message">
+			<return type="void" />
+			<param index="0" name="new_message" type="String" />
+			<description>
+				Adds a new string message to the log. Emits the [signal on_message_logged] signal with the message.
+
+				Example:
+				[codeblock]
+				game_log.log_message("Player entered combat zone")
+				game_log.log_message("Achievement unlocked: First Victory")
+				[/codeblock]
+			</description>
+		</method>
+		<method name="log_variant">
+			<return type="void" />
+			<param index="0" name="new_message" type="Variant" />
+			<description>
+				Adds a new variant entry to the variant log. This can be used to log any type of data, such as dictionaries, arrays, or custom objects.
+
+				Example:
+				[codeblock]
+				# Log a dictionary with player stats
+				game_log.log_variant({
+					"health": 100,
+					"position": Vector3(10, 0, 5),
+					"inventory": ["sword", "shield", "potion"]
+				})
+
+				# Log an array of events
+				game_log.log_variant(["door_opened", "chest_found", "enemy_defeated"])
+				[/codeblock]
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="logged" type="PackedStringArray" setter="set_logged" getter="get_logged" default="PackedStringArray()">
+			An array containing all logged string messages. Can be accessed directly or modified using the setter/getter methods.
+		</member>
+		<member name="logged_variants" type="Array" setter="set_logged_variants" getter="get_logged_variants" default="[]">
+			An array containing all logged variant data. Can be accessed directly or modified using the setter/getter methods.
+		</member>
+	</members>
+	<signals>
+		<signal name="on_message_logged">
+			<param index="0" name="message" type="String" />
+			<description>
+				Emitted when a new message is added to the log using [method log_message].
+			</description>
+		</signal>
+		<signal name="system_error_printed">
+			<param index="0" name="printed" type="String" />
+			<description>
+				Emitted when a system error is printed (e.g., via [code]push_error()[/code]) and output logging is enabled.
+			</description>
+		</signal>
+		<signal name="system_log_printed">
+			<param index="0" name="printed" type="String" />
+			<description>
+				Emitted when a system print statement is executed (e.g., via [code]print()[/code]) and output logging is enabled.
+			</description>
+		</signal>
+		<signal name="system_warning_printed">
+			<param index="0" name="printed" type="String" />
+			<description>
+				Emitted when a system warning is printed (e.g., via [code]push_warning()[/code]) and output logging is enabled.
+			</description>
+		</signal>
+	</signals>
+</class>

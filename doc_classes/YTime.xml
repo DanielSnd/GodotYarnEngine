@@ -1,10 +1,34 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="YTime" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
-		A custom class for managing time-related functionalities.
+		A comprehensive time management system for games with support for game time, real time, and in-game clock simulation.
 	</brief_description>
 	<description>
-		This class provides functionalities for managing time, including pausing, tracking clock time, and handling time intervals.
+		YTime provides a robust time management system that handles multiple time-tracking features:
+
+		- Game time that can be paused
+		- Real time that continues even when paused
+		- In-game clock system with customizable months, days and callbacks
+		- Time-based event scheduling
+
+		The in-game clock system uses minutes as its base unit. For example, 1440 minutes = 1 day (24 hours * 60 minutes).
+
+		Example of basic usage:
+		[codeblock]
+		# Get the YTime singleton
+		var time = YTime.get_singleton()
+
+		# Start the in-game clock
+		time.is_clock_running = true
+		time.clock_interval = 1.0 # Update clock every second
+
+		# Register a callback for a specific time
+		time.register_clock_callback(self, 500, Callable(self, "_on_time_reached"))
+
+		# Format the current time
+		print(time.get_clock_formatted()) # Prints "HH:MM"
+		print(time.get_clock_formatted_full_date_time()) # Prints "DD Month YYYY, HH:MM"
+		[/codeblock]
 	</description>
 	<tutorials>
 	</tutorials>
@@ -12,91 +36,117 @@
 		<method name="attempt_pause">
 			<return type="bool" />
 			<description>
-				Attempts to pause the time.
+				Attempts to pause the game time. Returns [code]true[/code] if successful. To prevent rapid pause toggling, this will fail if less than 0.3 seconds have passed since the last unpause.
+			</description>
+		</method>
+		<method name="clear_clock_callbacks">
+			<return type="void" />
+			<param index="0" name="node" type="Node" />
+			<param index="1" name="clock_time" type="int" default="-1" />
+			<description>
+				Clears registered clock callbacks for the specified [param node]. If [param clock_time] is specified (not -1), only callbacks for that specific time will be cleared. Otherwise, all callbacks for the node will be removed.
+
+				Note: Callbacks are automatically cleared when the node exits the scene tree.
 			</description>
 		</method>
 		<method name="get_clock_day" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="clock_time" type="int" default="0" />
 			<description>
-				Returns the day of the month based on the provided clock time.
+				Returns the day of the month (1-[member clock_days_in_month]) for the given [param clock_time]. If [param clock_time] is 0, uses the current clock time.
 			</description>
 		</method>
 		<method name="get_clock_day_unconstrained" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="clock_time" type="int" default="0" />
 			<description>
-				Returns the day of the month without constraints based on the provided clock time.
+				Returns the total number of days elapsed since the start, without constraining to the month length. Unlike [method get_clock_day], this keeps counting up rather than cycling within [member clock_days_in_month].
 			</description>
 		</method>
 		<method name="get_clock_formatted" qualifiers="const">
 			<return type="String" />
 			<param index="0" name="clock_time" type="int" default="0" />
 			<description>
-				Returns the formatted clock time as a string.
+				Returns the time formatted as "HH:MM" for the given [param clock_time]. If [param clock_time] is 0, uses the current clock time.
+
+				Example: "13:45" for 1:45 PM
 			</description>
 		</method>
 		<method name="get_clock_formatted_day_month" qualifiers="const">
 			<return type="String" />
 			<param index="0" name="clock_time" type="int" default="0" />
 			<description>
-				Returns the formatted day and month of the clock time as a string.
+				Returns the date formatted as "DD Month" if [member clock_month_names] is set, otherwise "DD/MM" for the given [param clock_time].
+
+				Example: "15 Spring" or "15/03"
 			</description>
 		</method>
 		<method name="get_clock_formatted_day_month_year" qualifiers="const">
 			<return type="String" />
 			<param index="0" name="clock_time" type="int" default="0" />
 			<description>
-				Returns the formatted day, month, and year of the clock time as a string.
+				Returns the date formatted as "DD Month YYYY" if [member clock_month_names] is set, otherwise "DD/MM/YYYY" for the given [param clock_time].
+
+				Example: "15 Spring 1" or "15/03/1"
 			</description>
 		</method>
 		<method name="get_clock_formatted_full_date_time" qualifiers="const">
 			<return type="String" />
 			<param index="0" name="clock_time" type="int" default="0" />
 			<description>
-				Returns the formatted full date and time of the clock time as a string.
+				Returns the full date and time formatted as "DD Month YYYY, HH:MM" if [member clock_month_names] is set, otherwise "DD/MM/YYYY HH:MM" for the given [param clock_time].
+
+				Example: "15 Spring 1, 13:45" or "15/03/1 13:45"
 			</description>
 		</method>
 		<method name="get_clock_hour" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="clock_time" type="int" default="0" />
 			<description>
-				Returns the hour of the clock time.
+				Returns the hour (0-23) for the given [param clock_time]. If [param clock_time] is 0, uses the current clock time.
 			</description>
 		</method>
 		<method name="get_clock_hour_unconstrained" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="clock_time" type="int" default="0" />
 			<description>
-				Returns the hour of the clock time without constraints.
+				Returns the total number of hours elapsed without constraining to 24-hour cycles. Unlike [method get_clock_hour], this keeps counting up rather than cycling 0-23.
 			</description>
 		</method>
 		<method name="get_clock_minute" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="clock_time" type="int" default="0" />
 			<description>
-				Returns the minute of the clock time.
+				Returns the minute (0-59) for the given [param clock_time]. If [param clock_time] is 0, uses the current clock time.
 			</description>
 		</method>
 		<method name="get_clock_minute_of_day" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="clock_time" type="int" default="0" />
 			<description>
-				Returns the minute of the day based on the clock time.
+				Returns the total minutes elapsed in the current day (0-1439) for the given [param clock_time]. This is useful for comparing times within a day.
 			</description>
 		</method>
 		<method name="get_clock_month" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="clock_time" type="int" default="0" />
 			<description>
-				Returns the month of the year based on the clock time.
+				Returns the month (1-[member clock_months_in_year]) for the given [param clock_time]. If [param clock_time] is 0, uses the current clock time.
 			</description>
 		</method>
 		<method name="get_clock_year" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="clock_time" type="int" default="0" />
 			<description>
-				Returns the year based on the clock time.
+				Returns the year (starting from 1) for the given [param clock_time]. If [param clock_time] is 0, uses the current clock time.
+			</description>
+		</method>
+		<method name="get_registered_clock_callbacks" qualifiers="const">
+			<return type="Dictionary" />
+			<description>
+				Returns a dictionary containing all registered clock callbacks. The keys are clock times and the values are arrays of dictionaries containing "node_id" and "callable" for each callback.
+
+				This is primarily useful for debugging or saving game state.
 			</description>
 		</method>
 		<method name="has_clock_time_elapsed">
@@ -104,7 +154,7 @@
 			<param index="0" name="clock_time_checking" type="int" />
 			<param index="1" name="interval" type="int" />
 			<description>
-				Checks if the specified clock time has elapsed.
+				Returns [code]true[/code] if at least [param interval] minutes have passed since [param clock_time_checking].
 			</description>
 		</method>
 		<method name="has_pause_independent_time_elapsed" qualifiers="const">
@@ -112,7 +162,7 @@
 			<param index="0" name="time_checking" type="float" />
 			<param index="1" name="interval" type="float" />
 			<description>
-				Checks if the pause-independent time has elapsed.
+				Returns [code]true[/code] if at least [param interval] seconds have passed since [param time_checking] in real time (ignoring pause state).
 			</description>
 		</method>
 		<method name="has_time_elapsed" qualifiers="const">
@@ -120,47 +170,79 @@
 			<param index="0" name="time_checking" type="float" />
 			<param index="1" name="interval" type="float" />
 			<description>
-				Checks if the time has elapsed.
+				Returns [code]true[/code] if at least [param interval] seconds have passed since [param time_checking] in game time (affected by pause state).
+			</description>
+		</method>
+		<method name="register_clock_callback">
+			<return type="void" />
+			<param index="0" name="node" type="Node" />
+			<param index="1" name="clock_time" type="int" />
+			<param index="2" name="callback" type="Callable" />
+			<description>
+				Registers a [param callback] to be called when the clock reaches [param clock_time]. The callback is associated with [param node] and will be automatically cleared if the node exits the scene tree.
+
+				Example:
+				[codeblock]
+				# Call self._on_midnight() when clock reaches midnight (00:00)
+				var midnight = YTime.get_singleton().get_clock() + (24 * 60) - YTime.get_singleton().get_clock_minute_of_day()
+				YTime.get_singleton().register_clock_callback(self, midnight, Callable(self, "_on_midnight"))
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_clock_and_emit_signal">
 			<return type="void" />
 			<param index="0" name="clock" type="int" />
 			<description>
+				Sets the current clock time to [param clock] and emits the appropriate signals ([signal clock_time_changed], [signal clock_hour_changed], and/or [signal clock_day_changed]). Also processes any registered callbacks for times that have been passed.
 			</description>
 		</method>
 	</methods>
 	<members>
-		<member name="clock" type="int" setter="set_clock" getter="get_clock">
+		<member name="clock" type="int" setter="set_clock" getter="get_clock" default="0">
+			The current in-game clock time in minutes. One day is 1440 minutes (24 * 60).
 		</member>
-		<member name="clock_days_in_month" type="int" setter="set_clock_days_in_month" getter="get_clock_days_in_month">
+		<member name="clock_days_in_month" type="int" setter="set_clock_days_in_month" getter="get_clock_days_in_month" default="30">
+			The number of days in each in-game month. Default is 30.
 		</member>
-		<member name="clock_interval" type="float" setter="set_clock_interval" getter="get_clock_interval">
+		<member name="clock_interval" type="float" setter="set_clock_interval" getter="get_clock_interval" default="1.0">
+			The interval in seconds between clock updates when [member is_clock_running] is [code]true[/code]. Default is 1.0.
 		</member>
-		<member name="clock_month_names" type="PackedStringArray" setter="set_clock_month_names" getter="get_clock_month_names">
+		<member name="clock_month_names" type="PackedStringArray" setter="set_clock_month_names" getter="get_clock_month_names" default="PackedStringArray()">
+			Optional array of month names used in formatted date strings. If empty, numeric months will be used instead.
 		</member>
-		<member name="clock_months_in_year" type="int" setter="set_clock_months_in_year" getter="get_clock_months_in_year">
+		<member name="clock_months_in_year" type="int" setter="set_clock_months_in_year" getter="get_clock_months_in_year" default="4">
+			The number of months in each in-game year. Default is 4.
 		</member>
-		<member name="is_clock_running" type="bool" setter="set_is_clock_running" getter="get_is_clock_running">
+		<member name="is_clock_running" type="bool" setter="set_is_clock_running" getter="get_is_clock_running" default="false">
+			If [code]true[/code], the clock will automatically increment based on [member clock_interval].
 		</member>
-		<member name="is_paused" type="bool" setter="set_is_paused" getter="get_is_paused">
+		<member name="is_debugging" type="bool" setter="set_is_debugging" getter="get_is_debugging" default="false">
+			If [code]true[/code], debug information about clock callbacks will be printed.
 		</member>
-		<member name="pause_independent_time" type="float" setter="set_pause_independent_time" getter="get_pause_independent_time">
+		<member name="is_paused" type="bool" setter="set_is_paused" getter="get_is_paused" default="false">
+			If [code]true[/code], game time ([member time]) will not advance, but real time ([member pause_independent_time]) continues.
 		</member>
-		<member name="time" type="float" setter="set_time" getter="get_time">
+		<member name="pause_independent_time" type="float" setter="set_pause_independent_time" getter="get_pause_independent_time" default="0.0">
+			The current real time in seconds since the game started. Continues advancing even when paused.
+		</member>
+		<member name="time" type="float" setter="set_time" getter="get_time" default="0.0">
+			The current game time in seconds since the game started. Stops advancing when paused.
 		</member>
 	</members>
 	<signals>
 		<signal name="clock_day_changed">
 			<description>
+				Emitted when the in-game day changes. This occurs when the hour changes from 23 to 0.
 			</description>
 		</signal>
 		<signal name="clock_hour_changed">
 			<description>
+				Emitted when the in-game hour changes.
 			</description>
 		</signal>
 		<signal name="clock_time_changed">
 			<description>
+				Emitted whenever the in-game clock time changes, either through automatic updates or manual setting.
 			</description>
 		</signal>
 	</signals>

@@ -1,16 +1,52 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="YEngine" inherits="Node" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
+		Core singleton class providing essential engine functionality and utilities.
 	</brief_description>
 	<description>
+		YEngine is a core singleton class that provides essential functionality and utilities for the Yarn Engine module. It includes methods for resource management, scene spawning, button handling, menu management, and various utility functions for game development.
+
+		The class manages important subsystems like [YSave], [YTime], [YTween], and [YGameState], providing centralized access to their functionality.
 	</description>
 	<tutorials>
 	</tutorials>
 	<methods>
+		<method name="EKey">
+			<return type="String" />
+			<param index="0" name="dict" type="Dictionary" />
+			<param index="1" name="value" type="int" />
+			<description>
+				Returns a string key from a dictionary based on an integer value. Useful for enum-to-string conversions.
+
+				Example:
+				[codeblock]
+				var dict = {
+				    "IDLE": 0,
+				    "WALK": 1,
+				    "RUN": 2
+				}
+				print(YEngine.EKey(dict, 1)) # Prints: "WALK"
+				[/codeblock]
+			</description>
+		</method>
+		<method name="are_resources_virtually_the_same">
+			<return type="bool" />
+			<param index="0" name="resource_a" type="Resource" />
+			<param index="1" name="resource_b" type="Resource" />
+			<description>
+				Compares two resources and returns [code]true[/code] if they are functionally equivalent, even if they are different instances. This method compares all properties except internal ones like "script", "scripts", "resource_path", and "resource_local_to_scene".
+			</description>
+		</method>
 		<method name="button_click_callable">
 			<return type="Callable" />
 			<param index="0" name="callable" type="Callable" />
 			<description>
+				Creates a button click handler that prevents rapid repeated clicks by enforcing a 0.15 second cooldown between clicks. Use this to prevent button spamming.
+
+				Example:
+				[codeblock]
+				button.pressed.connect(YEngine.button_click_callable(Callable(self, "on_button_pressed")))
+				[/codeblock]
 			</description>
 		</method>
 		<method name="button_click_callable_if_modulate">
@@ -18,6 +54,56 @@
 			<param index="0" name="callable" type="Callable" />
 			<param index="1" name="control" type="Control" />
 			<description>
+				Similar to [method button_click_callable], but only executes if the provided control's modulate alpha value is greater than 0.94. This is useful for buttons that should only be clickable when fully visible.
+			</description>
+		</method>
+		<method name="check_flag_value" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="flags" type="int" />
+			<param index="1" name="check_flag" type="int" />
+			<description>
+				Checks if a specific bit flag is set in the given flags integer. The flag number must be between 1 and 32 inclusive.
+
+				Example:
+				[codeblock]
+				var flags = 5 # Binary: 101
+				print(YEngine.check_flag_value(flags, 1)) # true
+				print(YEngine.check_flag_value(flags, 2)) # false
+				print(YEngine.check_flag_value(flags, 3)) # true
+				[/codeblock]
+			</description>
+		</method>
+		<method name="find_node_with_method">
+			<return type="Node" />
+			<param index="0" name="parent_node" type="Node" />
+			<param index="1" name="node_type" type="String" />
+			<description>
+				Searches through the children of [param parent_node] and returns the first node that has the specified method.
+			</description>
+		</method>
+		<method name="find_node_with_type">
+			<return type="Node" />
+			<param index="0" name="parent_node" type="Node" />
+			<param index="1" name="node_type" type="String" />
+			<description>
+				Searches through the children of [param parent_node] and returns the first node that matches the specified type name.
+			</description>
+		</method>
+		<method name="find_packedscenes_in">
+			<return type="PackedScene[]" />
+			<param index="0" name="path" type="Variant" />
+			<param index="1" name="name_contains" type="String" default="&quot;&quot;" />
+			<description>
+				Searches for [PackedScene] resources in the specified path(s). The [param path] can be a single path string or an array of paths. If [param name_contains] is provided, only scenes whose filenames contain this string will be returned.
+
+				Example:
+				[codeblock]
+				# Find all .tscn files in res://scenes
+				var scenes = YEngine.find_packedscenes_in("res://scenes")
+
+				# Find scenes containing "enemy" in their filename
+				var enemy_scenes = YEngine.find_packedscenes_in("res://scenes", "enemy")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="find_resources_in">
@@ -25,6 +111,7 @@
 			<param index="0" name="path" type="Variant" />
 			<param index="1" name="name_contains" type="String" default="&quot;&quot;" />
 			<description>
+				Searches for resources in the specified path(s). The [param path] can be a single path string or an array of paths. If [param name_contains] is provided, only resources whose filenames contain this string will be returned.
 			</description>
 		</method>
 		<method name="find_resources_paths_in">
@@ -32,34 +119,165 @@
 			<param index="0" name="path" type="Variant" />
 			<param index="1" name="name_contains" type="String" default="&quot;&quot;" />
 			<description>
+				Similar to [method find_resources_in], but returns an array of resource file paths instead of loaded resources.
+			</description>
+		</method>
+		<method name="get_all_game_resources_of_type">
+			<return type="Dictionary" />
+			<param index="0" name="resource_type" type="int" />
+			<description>
+				Returns a dictionary of all registered game resources of the specified type. The dictionary keys are resource IDs and values are the corresponding resources.
+			</description>
+		</method>
+		<method name="get_all_game_resources_types">
+			<return type="Array" />
+			<description>
+				Returns an array of all registered game resource types.
 			</description>
 		</method>
 		<method name="get_current_scene">
 			<return type="Node" />
 			<description>
+				Returns the current scene root node from the SceneTree.
+			</description>
+		</method>
+		<method name="get_diverging_variables_in_resources">
+			<return type="PackedStringArray" />
+			<param index="0" name="resource_a" type="Resource" />
+			<param index="1" name="resource_b" type="Resource" />
+			<description>
+				Returns an array of property names that have different values between two resources. This is useful for debugging or comparing resource differences.
+			</description>
+		</method>
+		<method name="get_game_resource">
+			<return type="Resource" />
+			<param index="0" name="resource_type" type="int" />
+			<param index="1" name="resource_id" type="int" />
+			<description>
+				Retrieves a registered game resource of the specified type and ID. If the resource isn't loaded but a path is registered, it will load the resource first.
 			</description>
 		</method>
 		<method name="get_menu_stack">
 			<return type="Node[]" />
 			<description>
+				Returns the current menu stack as an array of nodes. The last element is the topmost menu.
 			</description>
 		</method>
 		<method name="get_menu_stack_size" qualifiers="const">
 			<return type="int" />
 			<description>
+				Returns the number of menus currently in the menu stack.
+			</description>
+		</method>
+		<method name="get_random_point_on_top_of_mesh">
+			<return type="Vector3" />
+			<param index="0" name="mesh_instance_3d" type="MeshInstance3D" />
+			<param index="1" name="random_number_generator" type="RandomNumberGenerator" />
+			<description>
+				Returns a random point on top of the specified mesh in global coordinates. Useful for spawning objects on surfaces.
+			</description>
+		</method>
+		<method name="has_game_resource">
+			<return type="bool" />
+			<param index="0" name="resource_type" type="int" />
+			<param index="1" name="resource_id" type="int" />
+			<description>
+				Returns [code]true[/code] if a game resource of the specified type and ID exists (either loaded or as a registered path).
+			</description>
+		</method>
+		<method name="is_top_of_menu_stack" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="menu_to_check" type="Node" />
+			<description>
+				Returns [code]true[/code] if the specified menu node is at the top of the menu stack.
+			</description>
+		</method>
+		<method name="remove_game_resource">
+			<return type="void" />
+			<param index="0" name="resource_type" type="int" />
+			<param index="1" name="resource_id" type="int" />
+			<description>
+				Removes a registered game resource of the specified type and ID from the resource registry.
+			</description>
+		</method>
+		<method name="seeded_shuffle">
+			<return type="Array" />
+			<param index="0" name="array" type="Array" />
+			<param index="1" name="seed" type="int" />
+			<description>
+				Returns a new array with the elements of the input array randomly shuffled using the specified seed. This ensures consistent shuffling results for the same seed value.
+			</description>
+		</method>
+		<method name="set_flag_value">
+			<return type="int" />
+			<param index="0" name="flags" type="int" />
+			<param index="1" name="flag" type="int" />
+			<param index="2" name="set_value" type="bool" />
+			<description>
+				Sets or clears a specific bit flag in the given flags integer and returns the new flags value. The flag number must be between 1 and 32 inclusive.
+			</description>
+		</method>
+		<method name="set_game_resource">
+			<return type="void" />
+			<param index="0" name="resource_type" type="int" />
+			<param index="1" name="resource_id" type="int" />
+			<param index="2" name="resource" type="Resource" />
+			<description>
+				Registers a game resource with the specified type and ID in the resource registry.
+			</description>
+		</method>
+		<method name="set_game_resource_path">
+			<return type="void" />
+			<param index="0" name="resource_type" type="int" />
+			<param index="1" name="resource_id" type="int" />
+			<param index="2" name="resource_path" type="String" />
+			<description>
+				Registers a path to a game resource with the specified type and ID. The resource will be loaded when first accessed.
+			</description>
+		</method>
+		<method name="spawn">
+			<return type="Node" />
+			<param index="0" name="packed_scene" type="PackedScene" />
+			<param index="1" name="parent" type="Node" />
+			<param index="2" name="global_pos" type="Variant" />
+			<param index="3" name="force_readable_name" type="bool" default="false" />
+			<description>
+				Instantiates a [PackedScene] as a child of [param parent] at the specified global position. If [param force_readable_name] is true, the instance will keep its scene filename as its node name.
+
+				Example:
+				[codeblock]
+				var scene = preload("res://enemy.tscn")
+				var pos = Vector3(0, 1, 0)
+				var enemy = YEngine.spawn(scene, get_parent(), pos)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="string_to_hash">
+			<return type="int" />
+			<param index="0" name="input_string" type="String" />
+			<description>
+				Converts a string to a 32-bit hash value using CRC32. Useful for generating consistent numeric IDs from strings.
 			</description>
 		</method>
 	</methods>
 	<members>
-		<member name="can_button_click" type="bool" setter="set_can_button_click" getter="get_can_button_click" default="false">
+		<member name="can_button_click" type="bool" setter="set_can_button_click" getter="get_can_button_click" default="true">
+			Controls whether button clicks are currently allowed. Used to prevent rapid clicking.
 		</member>
 		<member name="last_button_click_time" type="float" setter="set_last_button_click_time" getter="get_last_button_click_time" default="0.0">
+			Stores the time of the last button click. Used for click throttling.
 		</member>
 	</members>
 	<signals>
 		<signal name="changed_pause">
 			<param index="0" name="pause_value" type="bool" />
 			<description>
+				Emitted when the pause state changes. [param pause_value] indicates the new pause state.
+			</description>
+		</signal>
+		<signal name="initialized">
+			<description>
+				Emitted when the YEngine instance has completed initialization and is ready to use.
 			</description>
 		</signal>
 	</signals>

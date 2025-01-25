@@ -4,8 +4,8 @@
 
 #ifndef ASSETPLACER_H
 #define ASSETPLACER_H
-#include "yscenespawner3d_gizmo_plugin.h"
 #if TOOLS_ENABLED
+#include "yscenespawner3d_gizmo_plugin.h"
 #include "scene/resources/style_box_flat.h"
 #include "YSpecialPoint3DGizmoPlugin.h"
 #include "editor/plugins/node_3d_editor_plugin.h"
@@ -679,13 +679,7 @@ class AssetPlacerPlugin : public EditorPlugin {
     void editor_changed_scene_deferred();
 
         AssetPlacerPlugin() {
-            Ref<YSpecialPoint3DGizmoPlugin> gizmo_plugin;
-            gizmo_plugin.instantiate();
-            Node3DEditor::get_singleton()->add_gizmo_plugin(gizmo_plugin);
-
-            Ref<YSceneSpawner3DGizmoPlugin> yscenespawner_gizmo_plugin;
-            yscenespawner_gizmo_plugin.instantiate();
-            Node3DEditor::get_singleton()->add_gizmo_plugin(yscenespawner_gizmo_plugin);
+            
             parent_node_3d_ = nullptr;
             ticks_late_initialized = 0;
             preview_brush = nullptr;

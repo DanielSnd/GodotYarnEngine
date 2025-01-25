@@ -387,6 +387,13 @@ void yarnengine::AssetPlacerPlugin::_selected_item() {
 void yarnengine::AssetPlacerPlugin::_notification(int p_what) {
     switch (p_what) {
         case NOTIFICATION_ENTER_TREE: {
+            Ref<YSpecialPoint3DGizmoPlugin> gizmo_plugin;
+            gizmo_plugin.instantiate();
+            Node3DEditor::get_singleton()->add_gizmo_plugin(gizmo_plugin);
+
+            Ref<YSceneSpawner3DGizmoPlugin> yscenespawner_gizmo_plugin;
+            yscenespawner_gizmo_plugin.instantiate();
+            Node3DEditor::get_singleton()->add_gizmo_plugin(yscenespawner_gizmo_plugin);
         } break;
         case NOTIFICATION_READY: {
             SceneTree::get_singleton()->connect("process_frame",callable_mp(this,&AssetPlacerPlugin::late_initialize),CONNECT_ONE_SHOT);

@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YGameAction" inherits="Resource" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A game action that represents a single step or sequence of steps in game logic, with support for serialization and step-by-step execution.
+	</brief_description>
+	<description>
+		YGameAction is a fundamental class in the Yarn engine that represents a discrete piece of game logic. Actions can:
+		- Execute in sequence or parallel
+		- Contain multiple steps with associated data
+		- Store parameters that persist during execution
+		- Control their own execution flow through waiting and stepping
+		- Be serialized for save/load functionality
+
+		Actions work closely with [YGameState] to create complex game behaviors. Each action can:
+		- Register steps during [method _on_enter_action]
+		- Process those steps sequentially
+		- Wait for external input or events
+		- Maintain state through parameters
+		- Execute in parallel with other actions
+
+		[b]Example of a basic combat action:[/b]
+		[codeblock]
+		class CombatAction extends YGameAction:
+			const STEP_SELECT_TARGET = 1
+			const STEP_CALCULATE_DAMAGE = 2
+			const STEP_APPLY_DAMAGE = 3
+			const PARAM_ATTACKER = 1
+			const PARAM_TARGET = 2
+			const PARAM_DAMAGE = 3
+
+			func _on_enter_action():
+				# Set up the combat sequence
+				register_step(STEP_SELECT_TARGET, null)
+				register_step(STEP_CALCULATE_DAMAGE, null)
+				register_step(STEP_APPLY_DAMAGE, null)
+
+			func _on_stepped_action(step_index, step_id, step_data, is_ending):
+				match step_id:
+					STEP_SELECT_TARGET:
+						# Wait for player to select target
+						wait_for_step(true)  # Will be released when target selected
+					STEP_CALCULATE_DAMAGE:
+						var attacker = get_action_parameter(PARAM_ATTACKER, null)
+						var target = get_action_parameter(PARAM_TARGET, null)
+						var damage = calculate_damage(attacker, target)
+						set_action_parameter(PARAM_DAMAGE, damage)
+					STEP_APPLY_DAMAGE:
+						var target = get_action_parameter(PARAM_TARGET, null)
+						var damage = get_action_parameter(PARAM_DAMAGE, 0)
+						apply_damage(target, damage)
+		[/codeblock]
+
+		[b]Example of a parallel background action:[/b]
+		[codeblock]
+		class WeatherEffectAction extends YGameAction:
+			func _init():
+				runs_parallel = true
+				max_in_parallel = 1
+				start_check_interval = 5.0  # Check every 5 seconds
+
+			func _only_starts_if():
+				# 20% chance to start when checked
+				return randf()
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="_on_created" qualifiers="virtual">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_deserialize" qualifiers="virtual const">
+			<return type="Dictionary" />
+			<param index="0" name="dict" type="Dictionary" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_enter_action" qualifiers="virtual">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_exit_action" qualifiers="virtual">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_process_action" qualifiers="virtual const">
+			<return type="bool" />
+			<param index="0" name="delta" type="float" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_serialize" qualifiers="virtual const">
+			<return type="Dictionary" />
+			<param index="0" name="dict" type="Dictionary" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_stepped_action" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="step_index" type="int" />
+			<param index="1" name="step_identifier" type="int" />
+			<param index="2" name="step_data" type="Variant" />
+			<param index="3" name="is_ending" type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_waiting_step_released" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="step_index" type="int" />
+			<param index="1" name="step_identifier" type="int" />
+			<param index="2" name="step_data" type="Variant" />
+			<param index="3" name="is_ending" type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="_only_starts_if" qualifiers="virtual const">
+			<return type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="check_is_last_step" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="step_index" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="check_waiting_for_step" qualifiers="const">
+			<return type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="copy_parameters_from">
+			<return type="YGameAction" />
+			<param index="0" name="other_action" type="YGameAction" />
+			<description>
+			</description>
+		</method>
+		<method name="copy_parameters_to">
+			<return type="YGameAction" />
+			<param index="0" name="other_action" type="YGameAction" />
+			<description>
+			</description>
+		</method>
+		<method name="deserialize">
+			<return type="Dictionary" />
+			<param index="0" name="dict" type="Dictionary" />
+			<description>
+			</description>
+		</method>
+		<method name="end_action">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="erase_action_parameter">
+			<return type="YGameAction" />
+			<param index="0" name="param_id" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="erase_action_parameters">
+			<return type="YGameAction" />
+			<param index="0" name="parameters_in_array" type="Array" />
+			<description>
+			</description>
+		</method>
+		<method name="get_action_parameter">
+			<return type="Variant" />
+			<param index="0" name="param_id" type="int" />
+			<param index="1" name="param_default" type="Variant" />
+			<description>
+			</description>
+		</method>
+		<method name="get_all_action_parameters">
+			<return type="Dictionary" />
+			<description>
+			</description>
+		</method>
+		<method name="get_all_action_parameters_named">
+			<return type="Dictionary" />
+			<param index="0" name="naming_dictionary" type="Dictionary" />
+			<description>
+			</description>
+		</method>
+		<method name="get_all_steps_count" qualifiers="const">
+			<return type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="get_from_step_data">
+			<return type="Variant" />
+			<param index="0" name="step_data" type="Array" />
+			<param index="1" name="get_index" type="int" />
+			<param index="2" name="get_default" type="Variant" />
+			<description>
+			</description>
+		</method>
+		<method name="get_step_by_index" qualifiers="const">
+			<return type="YActionStep" />
+			<param index="0" name="step_index" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="get_steps_consumed" qualifiers="const">
+			<return type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="has_action_parameter" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="param_id" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="has_elapsed_since_started" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="interval" type="float" />
+			<description>
+			</description>
+		</method>
+		<method name="has_pause_indp_elapsed_since_started" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="interval" type="float" />
+			<description>
+			</description>
+		</method>
+		<method name="increment_action_parameter">
+			<return type="YGameAction" />
+			<param index="0" name="param_id" type="int" />
+			<param index="1" name="increment_amount" type="Variant" />
+			<description>
+			</description>
+		</method>
+		<method name="register_step">
+			<return type="void" />
+			<param index="0" name="step_identifier" type="int" />
+			<param index="1" name="step_data" type="Variant" />
+			<description>
+			</description>
+		</method>
+		<method name="release_step">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="remove_action_parameter">
+			<return type="YGameAction" />
+			<param index="0" name="param_id" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="serialize">
+			<return type="Dictionary" />
+			<description>
+			</description>
+		</method>
+		<method name="set_action_parameter">
+			<return type="YGameAction" />
+			<param index="0" name="param_id" type="int" />
+			<param index="1" name="param_value" type="Variant" />
+			<description>
+			</description>
+		</method>
+		<method name="set_action_parameters">
+			<return type="YGameAction" />
+			<param index="0" name="parameters_in_array" type="int" />
+			<param index="1" name="_unnamed_arg1" type="Array" />
+			<description>
+			</description>
+		</method>
+		<method name="set_turn_player_id">
+			<return type="YGameAction" />
+			<param index="0" name="player_id" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="wait_for_step">
+			<return type="void" />
+			<param index="0" name="prevent_processing" type="bool" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="can_be_serialized" type="bool" setter="set_can_be_serialized" getter="get_can_be_serialized" default="true">
+		</member>
+		<member name="is_debugging" type="bool" setter="set_is_debugging" getter="get_is_debugging" default="false">
+		</member>
+		<member name="is_instant_execute" type="bool" setter="set_instant_execute" getter="get_instant_execute" default="false">
+		</member>
+		<member name="max_in_parallel" type="int" setter="set_max_in_parallel" getter="get_max_in_parallel" default="-1">
+		</member>
+		<member name="pause_indp_time_started" type="float" setter="set_pause_indp_time_started" getter="get_pause_indp_time_started" default="0.0">
+		</member>
+		<member name="priority" type="int" setter="set_priority" getter="get_priority" default="-1">
+		</member>
+		<member name="runs_parallel" type="bool" setter="set_runs_parallel" getter="get_runs_parallel" default="false">
+		</member>
+		<member name="start_check_interval" type="float" setter="set_start_check_interval" getter="get_start_check_interval" default="3.0">
+		</member>
+		<member name="time_started" type="float" setter="set_time_started" getter="get_time_started" default="0.0">
+		</member>
+		<member name="turn_player_id" type="int" setter="set_player_turn" getter="get_player_turn" default="-1">
+		</member>
+		<member name="unique_id" type="int" setter="set_unique_id" getter="get_unique_id" default="0">
+		</member>
+	</members>
+	<signals>
+		<signal name="action_stepped">
+			<param index="0" name="step_index" type="int" />
+			<description>
+			</description>
+		</signal>
+		<signal name="ended_action">
+			<param index="0" name="action_name" type="String" />
+			<description>
+			</description>
+		</signal>
+		<signal name="on_changed_action_parameter">
+			<param index="0" name="param_id" type="int" />
+			<param index="1" name="old_value" type="Variant" />
+			<param index="2" name="new_value" type="Variant" />
+			<description>
+			</description>
+		</signal>
+		<signal name="registered_step">
+			<param index="0" name="step_index" type="int" />
+			<description>
+			</description>
+		</signal>
+		<signal name="released_waited_step">
+			<param index="0" name="step_index" type="int" />
+			<description>
+			</description>
+		</signal>
+		<signal name="started_action">
+			<param index="0" name="action_name" type="String" />
+			<description>
+			</description>
+		</signal>
+		<signal name="waiting_for_step">
+			<param index="0" name="step_index" type="int" />
+			<description>
+			</description>
+		</signal>
+	</signals>
+</class>

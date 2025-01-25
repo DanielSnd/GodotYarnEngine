@@ -12,6 +12,7 @@ class YSpecialPoint3DGizmoPlugin : public EditorNode3DGizmoPlugin {
     GDCLASS(YSpecialPoint3DGizmoPlugin, EditorNode3DGizmoPlugin);
 
 public:
+    bool has_created_material = false;
     bool has_gizmo(Node3D *p_spatial) override;
     String get_gizmo_name() const override;
     int get_priority() const override;

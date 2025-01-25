@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YSceneSpawner3D" inherits="Node3D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="add_spawnable_scene">
+			<return type="void" />
+			<param index="0" name="path" type="String" />
+			<description>
+			</description>
+		</method>
+		<method name="clear_spawnable_scenes">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="free_spawned_objects" qualifiers="const">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="get_spawnable_scene" qualifiers="const">
+			<return type="String" />
+			<param index="0" name="index" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="get_spawnable_scene_count" qualifiers="const">
+			<return type="int" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="_spawnable_scenes" type="String[]" setter="_set_spawnable_scenes" getter="_get_spawnable_scenes" default="[]">
+		</member>
+		<member name="align_to_ground" type="bool" setter="set_align_to_ground" getter="get_align_to_ground" default="false">
+		</member>
+		<member name="auto_spawn_on_ready" type="bool" setter="set_auto_spawn_on_ready" getter="get_auto_spawn_on_ready" default="false">
+		</member>
+		<member name="debug_show_spawn_area" type="bool" setter="set_debug_show_spawn_area" getter="get_debug_show_spawn_area" default="false">
+		</member>
+		<member name="debug_spawn_messages" type="bool" setter="set_debug_spawn_messages" getter="get_debug_spawn_messages" default="false">
+		</member>
+		<member name="despawn_when_destroyed" type="bool" setter="set_despawn_when_destroyed" getter="get_despawn_when_destroyed" default="false">
+		</member>
+		<member name="force_spawn_under" type="bool" setter="set_force_spawn_under" getter="get_force_spawn_under" default="false">
+		</member>
+		<member name="lock_to_layer" type="int" setter="set_lock_to_layer" getter="get_lock_to_layer" default="0">
+		</member>
+		<member name="min_max_random_scale" type="Vector2" setter="set_min_max_random_scale" getter="get_min_max_random_scale" default="Vector2(1, 1)">
+		</member>
+		<member name="placing_radius" type="float" setter="set_placing_radius" getter="get_placing_radius" default="10.0">
+		</member>
+		<member name="prevent_spawn_under" type="bool" setter="set_prevent_spawn_under" getter="get_prevent_spawn_under" default="false">
+		</member>
+		<member name="prevent_stacking_layer" type="int" setter="set_prevent_stacking_layer" getter="get_prevent_stacking_layer" default="0">
+		</member>
+		<member name="prevent_stacking_radius" type="float" setter="set_prevent_stacking_radius" getter="get_prevent_stacking_radius" default="0.0">
+		</member>
+		<member name="random_y_rotate" type="bool" setter="set_random_y_rotate" getter="get_random_y_rotate" default="false">
+		</member>
+		<member name="random_y_scale" type="bool" setter="set_random_y_scale" getter="get_random_y_scale" default="false">
+		</member>
+		<member name="random_z_rotate" type="bool" setter="set_random_z_rotate" getter="get_random_z_rotate" default="false">
+		</member>
+		<member name="randomize_scale" type="bool" setter="set_randomize_scale" getter="get_randomize_scale" default="false">
+		</member>
+		<member name="respawn_only_until_maximum" type="int" setter="set_respawn_only_until_maximum" getter="get_respawn_only_until_maximum" default="0">
+		</member>
+		<member name="respawns_after_time" type="int" setter="set_respawns_after_time" getter="get_respawns_after_time" default="0">
+		</member>
+		<member name="spawn_amount" type="Vector2i" setter="set_spawn_amount" getter="get_spawn_amount" default="Vector2i(1, 1)">
+		</member>
+		<member name="under_value" type="float" setter="set_under_value" getter="get_under_value" default="0.0">
+		</member>
+	</members>
+</class>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YBoxContainer" inherits="Container" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="add_spacer">
+			<return type="Control" />
+			<param index="0" name="begin" type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="animated_free_child">
+			<return type="Tween" />
+			<param index="0" name="child" type="Control" />
+			<param index="1" name="exiting_offset" type="Vector2" />
+			<param index="2" name="duration" type="float" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="alignment" type="int" setter="set_alignment" getter="get_alignment" enum="YBoxContainer.AlignmentMode" default="0">
+		</member>
+		<member name="positioning" type="int" setter="set_positioning" getter="get_positioning" enum="YBoxContainer.PositioningMethod" default="0">
+		</member>
+		<member name="tween_duration" type="float" setter="set_tween_duration" getter="get_tween_duration">
+		</member>
+		<member name="tween_ease_type" type="int" setter="set_tween_ease_type" getter="get_tween_ease_type" enum="Tween.EaseType">
+		</member>
+		<member name="tween_new_element_offset" type="Vector2" setter="set_tween_new_element_offset" getter="get_tween_new_element_offset">
+		</member>
+		<member name="tween_overshoot" type="float" setter="set_tween_overshoot" getter="get_tween_overshoot">
+		</member>
+		<member name="tween_transition" type="int" setter="set_tween_transition_type" getter="get_tween_transition_type" enum="Tween.TransitionType">
+		</member>
+		<member name="vertical" type="bool" setter="set_vertical" getter="is_vertical" default="false">
+		</member>
+	</members>
+	<signals>
+		<signal name="child_position_change">
+			<param index="0" name="child" type="Node" />
+			<param index="1" name="new_pos" type="Vector2" />
+			<param index="2" name="new_size" type="Vector2" />
+			<description>
+			</description>
+		</signal>
+	</signals>
+	<constants>
+		<constant name="ALIGNMENT_BEGIN" value="0" enum="AlignmentMode">
+		</constant>
+		<constant name="ALIGNMENT_CENTER" value="1" enum="AlignmentMode">
+		</constant>
+		<constant name="ALIGNMENT_END" value="2" enum="AlignmentMode">
+		</constant>
+		<constant name="POSITION_INSTANT" value="0" enum="PositioningMethod">
+		</constant>
+		<constant name="POSITION_YTWEEN" value="1" enum="PositioningMethod">
+		</constant>
+		<constant name="POSITION_MANUAL" value="2" enum="PositioningMethod">
+		</constant>
+	</constants>
+	<theme_items>
+		<theme_item name="separation" data_type="constant" type="int" default="0">
+		</theme_item>
+	</theme_items>
+</class>

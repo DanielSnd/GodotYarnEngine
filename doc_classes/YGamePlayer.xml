@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YGamePlayer" inherits="Node" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="_on_deserialize" qualifiers="virtual const">
+			<return type="Dictionary" />
+			<param index="0" name="dict" type="Dictionary" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_player_registered" qualifiers="virtual">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_serialize" qualifiers="virtual const">
+			<return type="Dictionary" />
+			<param index="0" name="dict" type="Dictionary" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_turn_ended" qualifiers="virtual">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_turn_started" qualifiers="virtual">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="deserialize">
+			<return type="Dictionary" />
+			<param index="0" name="dict" type="Dictionary" />
+			<description>
+			</description>
+		</method>
+		<method name="get_all_player_parameters">
+			<return type="Dictionary" />
+			<description>
+			</description>
+		</method>
+		<method name="get_player_parameter">
+			<return type="Variant" />
+			<param index="0" name="param_id" type="int" />
+			<param index="1" name="param_default" type="Variant" />
+			<description>
+			</description>
+		</method>
+		<method name="has_player_parameter" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="param_id" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="remove_player_parameter">
+			<return type="void" />
+			<param index="0" name="param_id" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="serialize">
+			<return type="Dictionary" />
+			<description>
+			</description>
+		</method>
+		<method name="set_player_parameter">
+			<return type="void" />
+			<param index="0" name="param_id" type="int" />
+			<param index="1" name="param_value" type="Variant" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="is_remote" type="bool" setter="set_is_remote" getter="get_is_remote" default="false">
+		</member>
+		<member name="owns_current_turn" type="bool" setter="set_owns_current_turn" getter="get_owns_current_turn" default="false">
+		</member>
+		<member name="player_controller" type="int" setter="set_player_controller" getter="get_player_controller" default="-1">
+		</member>
+		<member name="player_id" type="int" setter="set_player_id" getter="get_player_id" default="-356478832">
+		</member>
+		<member name="player_type" type="int" setter="set_player_type" getter="get_player_type" default="0">
+		</member>
+	</members>
+</class>

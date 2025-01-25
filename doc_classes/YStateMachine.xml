@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YStateMachine" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A flexible finite state machine with support for state overriding and weighted random transitions.
+	</brief_description>
+	<description>
+		YStateMachine provides a robust implementation of a finite state machine (FSM) with advanced features like state overriding and conditional transitions. It manages state transitions, handles state processing, and supports parallel state execution.
+
+		[b]Basic Setup:[/b]
+		1. Create a YStateMachine node
+		2. Add YState nodes as children
+		3. Call [method start_state_machine] with the owner node
+
+		[codeblock]
+		# Basic state machine setup
+		@onready var state_machine = $StateMachine
+
+		func _ready():
+		    state_machine.start_state_machine(self)
+		[/codeblock]
+
+		[b]State Targeting:[/b]
+		The state machine can track a target node or position for navigation and distance checking:
+
+		[codeblock]
+		# Set a target for states to use
+		state_machine.state_target = get_node("Enemy")
+		# Or set just a position
+		state_machine.set_state_target_position(Vector3(10, 0, 10))
+
+		# Check distance in states
+		func _process_state(delta):
+		    var distance = state_machine.get_state_target_distance()
+		    if distance
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="_on_process" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="delta" type="float" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_set_state_target" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="new_state_target" type="Node" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_set_state_target_position" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="new_state_target_position" type="Variant" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_state_machine_started" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="node_owner" type="Node" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_transition" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="new_state" type="YState" />
+			<description>
+			</description>
+		</method>
+		<method name="finished_navigation">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="get_fsm_owner" qualifiers="const">
+			<return type="Node" />
+			<description>
+			</description>
+		</method>
+		<method name="get_state_target_2d" qualifiers="const">
+			<return type="Node2D" />
+			<description>
+			</description>
+		</method>
+		<method name="get_state_target_3d" qualifiers="const">
+			<return type="Node3D" />
+			<description>
+			</description>
+		</method>
+		<method name="get_state_target_distance" qualifiers="const">
+			<return type="float" />
+			<description>
+			</description>
+		</method>
+		<method name="get_state_target_position" qualifiers="const">
+			<return type="Variant" />
+			<description>
+			</description>
+		</method>
+		<method name="process">
+			<return type="void" />
+			<param index="0" name="delta" type="float" />
+			<description>
+			</description>
+		</method>
+		<method name="set_state_target_position">
+			<return type="void" />
+			<param index="0" name="_unnamed_arg0" type="Variant" />
+			<description>
+			</description>
+		</method>
+		<method name="start_state_machine">
+			<return type="void" />
+			<param index="0" name="node_owner" type="Node" />
+			<description>
+			</description>
+		</method>
+		<method name="transition">
+			<return type="void" />
+			<param index="0" name="new_state" type="YState" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="current_state" type="YState" setter="set_current_state" getter="get_current_state">
+		</member>
+		<member name="overrider_check_interval" type="int" setter="set_overrider_check_interval" getter="get_overrider_check_interval" default="2">
+		</member>
+		<member name="print_debugs" type="bool" setter="set_print_debugs" getter="get_print_debugs" default="false">
+		</member>
+		<member name="run_on_server_only" type="bool" setter="set_run_on_server_only" getter="get_run_on_server_only" default="false">
+		</member>
+		<member name="state_target" type="Node" setter="set_state_target" getter="get_state_target">
+		</member>
+	</members>
+	<signals>
+		<signal name="attempt_override">
+			<description>
+			</description>
+		</signal>
+		<signal name="state_target_changed">
+			<description>
+			</description>
+		</signal>
+		<signal name="state_transitioned">
+			<description>
+			</description>
+		</signal>
+	</signals>
+</class>

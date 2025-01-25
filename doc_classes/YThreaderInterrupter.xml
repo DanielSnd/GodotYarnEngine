@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YThreaderInterrupter" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A utility class for managing thread interruption.
+	</brief_description>
+	<description>
+		YThreaderInterrupter provides functionality to safely interrupt and cancel threaded operations. It helps manage the lifecycle of threaded tasks and ensures clean cancellation.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="cancel">
+			<return type="void" />
+			<description>
+				Cancels the current operation and signals threads to stop.
+			</description>
+		</method>
+		<method name="is_cancelled">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the operation has been cancelled.
+			</description>
+		</method>
+	</methods>
+</class>

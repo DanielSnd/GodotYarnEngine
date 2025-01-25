@@ -11,8 +11,6 @@
 
 
 YSceneSpawner3DGizmoPlugin::YSceneSpawner3DGizmoPlugin() {
-	const Color gizmo_color = SceneTree::get_singleton()->get_debug_collisions_color();
-    create_material("shape_material", gizmo_color);
     // const float gizmo_value = gizmo_color.get_v();
     // const Color gizmo_color_disabled = Color(gizmo_value, gizmo_value, gizmo_value, 0.65);
     // create_material("shape_material_disabled", gizmo_color_disabled);
@@ -34,6 +32,12 @@ int YSceneSpawner3DGizmoPlugin::get_priority() const {
 }
 
 void YSceneSpawner3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
+	if (!created_material) {
+		created_material = true;
+		
+		const Color gizmo_color = SceneTree::get_singleton()->get_debug_collisions_color();
+	create_material("shape_material", gizmo_color);
+	}
 	auto *cs = Object::cast_to<YSceneSpawner3D>(p_gizmo->get_node_3d());
 
 	p_gizmo->clear();

@@ -14,10 +14,7 @@
 class YSpecialPoint3D;
 
 YSpecialPoint3DGizmoPlugin::YSpecialPoint3DGizmoPlugin() {
-    Color desired_color = Color(1.0,1.0,1.0,1.0);
-    create_icon_material("yspecialpoint_gizmo_3d_icon",
-        EditorNode::get_singleton()->get_editor_theme()->
-        get_icon(SNAME("GizmoDecal"), EditorStringName(EditorIcons)),false,desired_color);
+    has_created_material = false;
 }
 
 bool YSpecialPoint3DGizmoPlugin::has_gizmo(Node3D *p_spatial) {
@@ -33,6 +30,13 @@ int YSpecialPoint3DGizmoPlugin::get_priority() const {
 }
 
 void YSpecialPoint3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
+    if (!has_created_material && EditorNode::get_singleton() != nullptr) {
+        has_created_material = true;
+        Color desired_color = Color(1.0,1.0,1.0,1.0);
+        create_icon_material("yspecialpoint_gizmo_3d_icon",
+            EditorNode::get_singleton()->get_editor_theme()->
+            get_icon(SNAME("GizmoDecal"), EditorStringName(EditorIcons)),false,desired_color);
+    }
     YSpecialPoint3D *specialpoint = Object::cast_to<YSpecialPoint3D>(p_gizmo->get_node_3d());
 
     const Ref<StandardMaterial3D> icon = get_material("yspecialpoint_gizmo_3d_icon", p_gizmo);

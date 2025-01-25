@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YSpecialPoint3D" inherits="Node3D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A 3D node that represents a point in space that can be connected to other points to form a navigation network.
+	</brief_description>
+	<description>
+		YSpecialPoint3D nodes can be placed in the 3D world and automatically connected to form a navigation network. These points can be used for pathfinding, creating waypoint systems, or defining special locations in your game world.
+
+		Each point maintains a list of connections to other points, storing both the connected point's ID and the distance between them. When creating connections automatically, the system performs both distance checks and physics raycasts to ensure valid paths.
+
+		[b]Internal Implementation:[/b]
+		- Points are stored in a static array and dictionary for efficient lookup and iteration
+		- Connections between points are stored using ObjectIDs and corresponding distances
+		- Pathfinding uses Dijkstra's algorithm with distance-based weights
+		- Physics raycasts are used to prevent connections through walls or obstacles
+
+		[b]Connection System:[/b]
+		When using [method create_connections], the system:
+		1. Checks the distance between each pair of points
+		2. Performs physics raycasts to detect obstacles
+		3. Creates bidirectional connections between valid pairs
+		4. Stores connection distances for pathfinding
+
+		Example usage for creating a patrol path:
+		[codeblock]
+		# Place points in the world
+		var point1 = YSpecialPoint3D.new()
+		var point2 = YSpecialPoint3D.new()
+		add_child(point1)
+		add_child(point2)
+		point1.position = Vector3(0, 0, 0)
+		point2.position = Vector3(10, 0, 0)
+
+		# Create connections between points within 15 units
+		# The second parameter (collision mask) determines which physics layers block connections
+		YSpecialPoint3D.create_connections(15.0, 0b00000000000000000000000000000100)
+
+		# Find path between two positions using Dijkstra's algorithm
+		var path = YSpecialPoint3D.get_dijkstra_path_from_to(Vector3.ZERO, Vector3(10, 0, 0))
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="add_connection">
+			<return type="void" />
+			<param index="0" name="yspecialpoint3d" type="YSpecialPoint3D" />
+			<param index="1" name="dist" type="float" default="-1.0" />
+			<description>
+				Adds a connection from this point to another YSpecialPoint3D. If [param dist] is not specified (or less than 0), it will be automatically calculated as the distance between the two points.
+			</description>
+		</method>
+		<method name="create_connections" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="max_dist" type="float" />
+			<param index="1" name="blocking_collisionmask" type="int" default="4294967295" />
+			<description>
+				Creates connections between all YSpecialPoint3D nodes within [param max_dist] units of each other. For each potential connection:
+				1. Checks if the points are within [param max_dist] of each other
+				2. Performs a physics raycast using [param blocking_collisionmask] to check for obstacles
+				3. Creates bidirectional connections if the path is clear
+
+				The [param blocking_collisionmask] determines which physics layers will block connections between points. For example, to only check against the third physics layer, use: [code]0b00000000000000000000000000000100[/code]
+			</description>
+		</method>
+		<method name="get_closest_point_to" qualifiers="static">
+			<return type="YSpecialPoint3D" />
+			<param index="0" name="global_pos" type="Vector3" />
+			<description>
+				Returns the closest YSpecialPoint3D to the given global position. Returns [code]null[/code] if no points exist.
+			</description>
+		</method>
+		<method name="get_connection_count">
+			<return type="int" />
+			<description>
+				Returns the number of connections this point has to other points.
+			</description>
+		</method>
+		<method name="get_connection_in_index">
+			<return type="YSpecialPoint3D" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the YSpecialPoint3D connected at the given index. Returns [code]null[/code] if the index is invalid.
+			</description>
+		</method>
+		<method name="get_dijkstra_path_from_to" qualifiers="static">
+			<return type="Vector3[]" />
+			<param index="0" name="start" type="Vector3" />
+			<param index="1" name="end" type="Vector3" />
+			<description>
+				Finds the shortest path between two positions using Dijkstra's algorithm. The implementation:
+				1. Finds the closest points to the start and end positions
+				2. Uses a priority queue based on accumulated distance
+				3. Explores connections outward from the start point
+				4. Reconstructs the path once the end point is reached
+
+				Returns an array of [Vector3] positions representing the path. Returns an empty array if no path is found or if the algorithm exceeds its iteration limit (2000 steps).
+			</description>
+		</method>
+		<method name="get_point_count" qualifiers="static">
+			<return type="int" />
+			<description>
+				Returns the total number of YSpecialPoint3D nodes in the scene.
+			</description>
+		</method>
+		<method name="get_point_with_index" qualifiers="static">
+			<return type="YSpecialPoint3D" />
+			<param index="0" name="index" type="int" />
+			<description>
+				Returns the YSpecialPoint3D at the given index. Returns [code]null[/code] if the index is invalid.
+			</description>
+		</method>
+		<method name="get_points_in_range_of" qualifiers="static">
+			<return type="Node[]" />
+			<param index="0" name="origin" type="Vector3" />
+			<param index="1" name="range" type="float" />
+			<description>
+				Returns an array of YSpecialPoint3D nodes within [param range] units of the [param origin] position.
+			</description>
+		</method>
+		<method name="has_connection" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="yspecialpoint3d" type="YSpecialPoint3D" />
+			<description>
+				Returns [code]true[/code] if this point has a connection to the specified YSpecialPoint3D.
+			</description>
+		</method>
+		<method name="remove_connection">
+			<return type="void" />
+			<param index="0" name="yspecialpoint3d" type="YSpecialPoint3D" />
+			<description>
+				Removes the connection to the specified YSpecialPoint3D if it exists.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="point_priority" type="int" setter="set_point_priority" getter="get_point_priority" default="0">
+			Priority value that can be used for custom pathfinding logic or gameplay mechanics. Higher values typically indicate higher priority.
+		</member>
+		<member name="point_status" type="int" setter="set_point_status" getter="get_point_status" default="0">
+			Status value that can be used to mark points as active, inactive, or any other custom state.
+		</member>
+		<member name="point_type" type="int" setter="set_point_type" getter="get_point_type" default="0">
+			Type identifier that can be used to categorize points (e.g., patrol points, cover points, spawn points).
+		</member>
+	</members>
+</class>

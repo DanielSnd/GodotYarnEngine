@@ -1,20 +1,69 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="YSave" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
-		YSave is a custom class designed for managing saving and loading game data.
+		A singleton class that handles saving, loading, and managing persistent game data and events.
 	</brief_description>
 	<description>
-		This class provides functionality for saving and loading game data, managing settings, and handling events.
+		YSave provides a robust system for managing persistent game data through save files and settings. It supports:
+		- Hierarchical data storage using "/" separated keys
+		- Event registration and callback system for game events
+		- Automatic save file backups
+		- Settings management
+		- Save file details/metadata
+
+		Data is stored in JSON format and can be accessed using simple key-value pairs or hierarchical paths.
+
+		Example of basic usage:
+		[codeblock]
+		# Save some data
+		YSave.set_to_save("player/health", 100)
+		YSave.set_to_save("player/position", Vector3(0, 0, 0))
+		YSave.request_save()
+
+		# Load data with defaults
+		var health = YSave.get_from_save("player/health", 100)
+		var position = YSave.get_from_save("player/position", Vector3.ZERO)
+		[/codeblock]
 	</description>
 	<tutorials>
 	</tutorials>
 	<methods>
+		<method name="clear_registered_event_callbacks">
+			<return type="void" />
+			<param index="0" name="node" type="Node" />
+			<param index="1" name="event_id" type="int" default="-1" />
+			<description>
+				Clears registered event callbacks for the specified [param node]. If [param event_id] is provided, only callbacks for that specific event are cleared. If [param event_id] is -1 (default), all callbacks for the node are cleared.
+
+				This method is automatically called when a node with registered callbacks is removed from the scene tree.
+			</description>
+		</method>
+		<method name="deserialize_registered_events">
+			<return type="void" />
+			<param index="0" name="registered_events_array" type="Array" />
+			<description>
+				Deserializes an array of registered events into the internal events system. The array should be in the format [code][event_id1, time1, event_id2, time2, ...][/code].
+
+				This is primarily used internally when loading save data.
+			</description>
+		</method>
 		<method name="get_from_save">
 			<return type="Variant" />
 			<param index="0" name="save_key" type="String" />
 			<param index="1" name="default" type="Variant" />
 			<description>
-				Retrieves data from the save file using the provided key.
+				Retrieves data from the save file using the provided [param save_key]. Returns [param default] if the key doesn't exist.
+
+				The key can be a simple string or a hierarchical path using "/" as separator.
+
+				Example:
+				[codeblock]
+				# Simple key
+				var score = YSave.get_from_save("highscore", 0)
+
+				# Hierarchical path
+				var health = YSave.get_from_save("player/stats/health", 100)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_from_settings">
@@ -22,81 +71,159 @@
 			<param index="0" name="settings_key" type="String" />
 			<param index="1" name="default" type="Variant" />
 			<description>
-				Retrieves data from the settings using the provided key.
+				Retrieves data from the settings file using the provided [param settings_key]. Returns [param default] if the key doesn't exist.
+
+				Similar to [method get_from_save], but operates on the settings file instead of the save file.
+
+				Example:
+				[codeblock]
+				var volume = YSave.get_from_settings("audio/master_volume", 1.0)
+				var fullscreen = YSave.get_from_settings("video/fullscreen", false)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_registered_event_callbacks" qualifiers="const">
+			<return type="Dictionary" />
+			<description>
+				Returns a dictionary containing all registered event callbacks. The dictionary format is:
+				[codeblock]
+				{
+				    event_id1: [
+				        {node_id: instance_id, callable: Callable},
+				        ...
+				    ],
+				    event_id2: [
+				        ...
+				    ]
+				}
+				[/codeblock]
+
+				This is primarily used for debugging purposes.
 			</description>
 		</method>
 		<method name="get_registered_event_time">
 			<return type="int" />
 			<param index="0" name="event_id" type="int" />
 			<description>
-				Returns the time when the specified event was registered.
+				Returns the timestamp when the specified event was registered. Returns -1 if the event hasn't been registered.
 			</description>
 		</method>
 		<method name="get_registered_events">
 			<return type="Array" />
 			<description>
-				Returns an array of registered events.
+				Returns an array of all registered events in the format [code][Vector2i(event_id1, time1), Vector2i(event_id2, time2), ...][/code].
+			</description>
+		</method>
+		<method name="has_registered_event" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="event_id" type="int" />
+			<description>
+				Returns [code]true[/code] if the specified event has been registered.
 			</description>
 		</method>
 		<method name="has_time_elapsed_since_registered_event">
 			<return type="bool" />
-			<param index="0" name="current_time" type="int" />
-			<param index="1" name="elapsed_time" type="int" />
-			<param index="2" name="_unnamed_arg2" type="int" />
+			<param index="0" name="event_id" type="int" />
+			<param index="1" name="current_time" type="int" />
+			<param index="2" name="elapsed_time" type="int" />
 			<description>
-				Checks if the specified time has elapsed since the registered event.
+				Returns [code]true[/code] if the specified amount of time has elapsed since the event was registered.
+
+				Example:
+				[codeblock]
+				# Check if 5 minutes have passed since the player found the key
+				var current_time = Time.get_unix_time_from_system()
+				if YSave.has_time_elapsed_since_registered_event("found_key", current_time, 300):
+				    print("5 minutes have passed since finding the key!")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="load_registered_events_from_save_data">
 			<return type="void" />
 			<description>
-				Loads registered events from the save data.
+				Loads registered events from the current save data. Events are stored under the "regevents" key in the save file.
 			</description>
 		</method>
 		<method name="load_save_details">
-			<return type="void" />
-			<param index="0" name="desired_path" type="String" />
-			<param index="1" name="_unnamed_arg1" type="Variant" default="&quot;&quot;" />
+			<return type="Dictionary" />
+			<param index="0" name="desired_path" type="String" default="&quot;&quot;" />
 			<description>
-				Loads save details from the specified path.
+				Loads and returns the save details (metadata) from a save file. If [param desired_path] is empty, uses the current save path.
+
+				Save details are stored under the "save_details" key in the save file and can include information like save time, player location, etc.
 			</description>
 		</method>
 		<method name="load_settings">
 			<return type="bool" />
 			<description>
-				Loads settings from the settings file.
+				Loads settings from the settings file. Returns [code]true[/code] if successful.
+
+				The settings file is stored in JSON format at the path specified by [member settings_path].
+			</description>
+		</method>
+		<method name="register_event_callback">
+			<return type="void" />
+			<param index="0" name="node" type="Node" />
+			<param index="1" name="event_id" type="int" />
+			<param index="2" name="callback" type="Callable" />
+			<description>
+				Registers a callback to be executed when an event occurs for the first time. The callback is only triggered when [method set_registered_event_time] is called for an event that hasn't been registered before.
+
+				Example:
+				[codeblock]
+				# Register a callback for when the player finds a key
+				YSave.register_event_callback(self, "found_key", callable(self, "_on_key_found"))
+
+				# Later, when the key is found:
+				YSave.set_registered_event_time("found_key", Time.get_unix_time_from_system())
+				# This will trigger the _on_key_found callback
+				[/codeblock]
+
+				[b]Note:[/b] Callbacks are automatically cleared when the node is removed from the scene tree.
 			</description>
 		</method>
 		<method name="remove_registered_event">
 			<return type="void" />
 			<param index="0" name="event_id" type="int" />
 			<description>
-				Removes the specified event from the registered events.
+				Removes the specified event from the registered events list.
 			</description>
 		</method>
 		<method name="request_load">
 			<return type="bool" />
 			<description>
-				Requests loading of the save data.
+				Loads the save file and emits the "loaded_save" signal with the loaded data. Returns [code]true[/code] if successful.
+
+				The save file is loaded from the path specified by [member save_path].
 			</description>
 		</method>
 		<method name="request_save">
 			<return type="void" />
 			<param index="0" name="immediate" type="bool" default="false" />
 			<description>
-				Requests saving of the data.
+				Requests a save operation. If [param immediate] is [code]true[/code], saves immediately. Otherwise, queues the save to occur after a short delay (to prevent frequent saves).
+
+				Before saving, the "before_prepare_save" and "prepare_save" signals are emitted to allow other nodes to prepare their data.
 			</description>
 		</method>
 		<method name="reset_save">
 			<return type="YSave" />
 			<description>
-				Resets the save data to its initial state.
+				Resets the save data to an empty state and creates a backup of the current save file. Emits the "executed_save_reset" signal.
+
+				The backup is stored at the path specified by [member save_backup_path].
 			</description>
 		</method>
 		<method name="save_settings">
 			<return type="void" />
 			<description>
-				Saves the current settings.
+				Saves the current settings to the settings file and emits the "saved" signal.
+			</description>
+		</method>
+		<method name="serialize_registered_events">
+			<return type="Array" />
+			<description>
+				Returns an array of registered events in a format suitable for saving. The array format is [code][event_id1, time1, event_id2, time2, ...][/code].
 			</description>
 		</method>
 		<method name="set_registered_event_time">
@@ -104,13 +231,24 @@
 			<param index="0" name="event_id" type="int" />
 			<param index="1" name="time_happened" type="int" />
 			<description>
-				Sets the time when the specified event happened.
+				Sets the time when an event occurred. If this is the first time the event is registered, any callbacks registered for this event will be executed.
+
+				If [param time_happened] is -1, the event is removed from the registered events list.
+
+				Example:
+				[codeblock]
+				# Register when the player found a key
+				YSave.set_registered_event_time("found_key", Time.get_unix_time_from_system())
+
+				# Remove the event
+				YSave.set_registered_event_time("found_key", -1)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_registered_events_to_save_data">
 			<return type="void" />
 			<description>
-				Sets registered events to the save data.
+				Stores the current registered events in the save data under the "regevents" key.
 			</description>
 		</method>
 		<method name="set_save_detail">
@@ -118,7 +256,14 @@
 			<param index="0" name="save_detail" type="String" />
 			<param index="1" name="detail_value" type="Variant" />
 			<description>
-				Sets a detail in the save data.
+				Sets a detail (metadata) in the save file. Save details are stored under the "save_details" key.
+
+				Example:
+				[codeblock]
+				# Store the save time and player location
+				YSave.set_save_detail("save_time", Time.get_unix_time_from_system())
+				YSave.set_save_detail("player_location", "Forest")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_to_save">
@@ -126,7 +271,20 @@
 			<param index="0" name="save_key" type="String" />
 			<param index="1" name="save" type="Variant" />
 			<description>
-				Sets data to the save file using the provided key.
+				Sets data in the save file using the provided key. The key can be a simple string or a hierarchical path using "/" as separator.
+
+				Returns the YSave instance for method chaining.
+
+				Example:
+				[codeblock]
+				# Simple key
+				YSave.set_to_save("score", 1000)
+
+				# Hierarchical path
+				YSave.set_to_save("player/inventory/gold", 500)
+				    .set_to_save("player/position", Vector3(0, 0, 0))
+				    .request_save()
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_to_settings">
@@ -134,43 +292,65 @@
 			<param index="0" name="settings_key" type="String" />
 			<param index="1" name="setting" type="Variant" />
 			<description>
-				Sets data to the settings using the provided key.
+				Sets data in the settings file using the provided key. Similar to [method set_to_save], but operates on the settings file.
+
+				Returns the YSave instance for method chaining.
+
+				Example:
+				[codeblock]
+				YSave.set_to_settings("audio/master_volume", 0.8)
+				    .set_to_settings("video/fullscreen", true)
+				    .save_settings()
+				[/codeblock]
 			</description>
 		</method>
 	</methods>
 	<members>
+		<member name="is_debugging" type="bool" setter="set_is_debugging" getter="get_is_debugging" default="false">
+			When enabled, prints detailed debug information about event registration and callback execution.
+		</member>
 		<member name="save_backup_path" type="String" setter="set_save_backup_path" getter="get_save_backup_path" default="&quot;user://game.save.backup&quot;">
+			The file path where save backups are stored.
 		</member>
 		<member name="save_data" type="Dictionary" setter="set_save_data" getter="get_save_data" default="{}">
+			The current save data dictionary. This is automatically loaded from and saved to the save file.
 		</member>
 		<member name="save_path" type="String" setter="set_save_path" getter="get_save_path" default="&quot;user://game.save&quot;">
+			The file path where the save file is stored.
 		</member>
-		<member name="save_requested" type="bool" setter="set_save_requested" getter="get_save_requested" default="true">
+		<member name="save_requested" type="bool" setter="set_save_requested" getter="get_save_requested" default="false">
+			Indicates whether a save operation has been requested but not yet executed.
 		</member>
 		<member name="settings_path" type="String" setter="set_settings_path" getter="get_settings_path" default="&quot;user://game.settings&quot;">
+			The file path where the settings file is stored.
 		</member>
 	</members>
 	<signals>
+		<signal name="before_prepare_save">
+			<description>
+				Emitted just before preparing for a save operation. Use this signal to prepare any data that needs to be saved.
+			</description>
+		</signal>
 		<signal name="executed_save_reset">
 			<description>
-				Emitted when the save reset operation has been executed.
+				Emitted when the save data has been reset using [method reset_save].
 			</description>
 		</signal>
 		<signal name="loaded_save">
 			<param index="0" name="save_data" type="Dictionary" />
 			<description>
-				Emitted when the save data has been loaded.
+				Emitted when save data has been loaded, providing the loaded data dictionary.
 			</description>
 		</signal>
 		<signal name="prepare_save">
 			<description>
-				Emitted when preparing for a save operation.
+				Emitted when preparing for a save operation, after "before_prepare_save". Use this signal for any final preparations before the actual save occurs.
 			</description>
 		</signal>
 		<signal name="saved">
 			<param index="0" name="save_path" type="String" />
 			<description>
-				Emitted when the save operation has been completed.
+				Emitted when a save operation has completed successfully, providing the path where the data was saved.
 			</description>
 		</signal>
 	</signals>

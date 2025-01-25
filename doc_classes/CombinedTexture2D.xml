@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="CombinedTexture2D" inherits="Texture2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+	</description>
+	<tutorials>
+	</tutorials>
+	<members>
+		<member name="additive_back" type="Vector3" setter="set_additive_back" getter="get_additive_back" default="Vector3(0, 0, 0)">
+		</member>
+		<member name="additive_front" type="Vector3" setter="set_additive_front" getter="get_additive_front" default="Vector3(0, 0, 0)">
+		</member>
+		<member name="back_offset" type="Vector2" setter="set_back_offset" getter="get_back_offset" default="Vector2(0, 0)">
+		</member>
+		<member name="back_scale" type="Vector2" setter="set_back_scale" getter="get_back_scale" default="Vector2(1, 1)">
+		</member>
+		<member name="black_on_back_overrides_front" type="bool" setter="set_black_on_back_overrides_front" getter="get_black_on_back_overrides_front" default="false">
+		</member>
+		<member name="black_on_back_overrides_under" type="int" setter="set_black_on_black_overrides_under" getter="get_black_on_black_overrides_under" default="0">
+		</member>
+		<member name="front_crop_out" type="Vector4i" setter="set_front_crop_out" getter="get_front_crop_out" default="Vector4i(0, 0, 0, 0)">
+		</member>
+		<member name="front_flips_h" type="bool" setter="set_front_flips_h" getter="get_front_flips_h" default="false">
+		</member>
+		<member name="front_offset" type="Vector2" setter="set_front_offset" getter="get_front_offset" default="Vector2(0, 0)">
+		</member>
+		<member name="front_scale" type="Vector2" setter="set_front_scale" getter="get_front_scale" default="Vector2(1, 1)">
+		</member>
+		<member name="height" type="int" setter="set_height" getter="get_height" default="64">
+		</member>
+		<member name="modulate_back" type="Color" setter="set_modulate_back" getter="get_modulate_back" default="Color(1, 1, 1, 1)">
+		</member>
+		<member name="modulate_front" type="Color" setter="set_modulate_front" getter="get_modulate_front" default="Color(1, 1, 1, 1)">
+		</member>
+		<member name="only_use_front_full_alpha" type="bool" setter="set_only_use_front_full_alpha" getter="get_only_use_front_full_alpha" default="false">
+		</member>
+		<member name="resource_local_to_scene" type="bool" setter="set_local_to_scene" getter="is_local_to_scene" overrides="Resource" default="false" />
+		<member name="show_based_on_back_alpha" type="bool" setter="set_show_based_on_back_alpha" getter="get_show_based_on_back_alpha" default="false">
+		</member>
+		<member name="show_based_on_back_alpha_under" type="int" setter="set_show_based_on_back_alpha_under" getter="get_show_based_on_back_alpha_under" default="0">
+		</member>
+		<member name="texture_back" type="Texture2D" setter="set_texture_back" getter="get_texture_back">
+		</member>
+		<member name="texture_front" type="Texture2D" setter="set_texture_front" getter="get_texture_front">
+		</member>
+		<member name="texture_overlay" type="Texture2D" setter="set_texture_overlay" getter="get_texture_overlay">
+		</member>
+		<member name="width" type="int" setter="set_width" getter="get_width" default="64">
+		</member>
+	</members>
+</class>

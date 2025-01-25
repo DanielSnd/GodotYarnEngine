@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YBoneAttachment3D" inherits="Node3D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_external_skeleton" qualifiers="const">
+			<return type="NodePath" />
+			<description>
+			</description>
+		</method>
+		<method name="get_use_external_skeleton" qualifiers="const">
+			<return type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="on_skeleton_update">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="set_external_skeleton">
+			<return type="void" />
+			<param index="0" name="external_skeleton" type="NodePath" />
+			<description>
+			</description>
+		</method>
+		<method name="set_use_external_skeleton">
+			<return type="void" />
+			<param index="0" name="use_external_skeleton" type="bool" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="bone_idx" type="int" setter="set_bone_idx" getter="get_bone_idx" default="-1">
+		</member>
+		<member name="bone_name" type="String" setter="set_bone_name" getter="get_bone_name" default="&quot;&quot;">
+		</member>
+		<member name="ignore_scale" type="bool" setter="set_ignore_scale" getter="get_ignore_scale" default="false">
+		</member>
+		<member name="override_pose" type="bool" setter="set_override_pose" getter="get_override_pose" default="false">
+		</member>
+	</members>
+</class>

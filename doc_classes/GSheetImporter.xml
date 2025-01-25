@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="GSheetImporter" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="end_import_progress_bar">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="get_sheet_id" qualifiers="virtual const">
+			<return type="String" />
+			<description>
+			</description>
+		</method>
+		<method name="get_sheet_name" qualifiers="virtual const">
+			<return type="String" />
+			<description>
+			</description>
+		</method>
+		<method name="on_imported_data" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="import_type" type="String" />
+			<param index="1" name="data" type="Array" />
+			<description>
+			</description>
+		</method>
+		<method name="request_import">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="save_resource_if_different">
+			<return type="void" />
+			<param index="0" name="resource_path" type="String" />
+			<param index="1" name="resource" type="Resource" />
+			<description>
+			</description>
+		</method>
+		<method name="start_import_progress_bar">
+			<return type="void" />
+			<param index="0" name="steps" type="int" />
+			<param index="1" name="task_name" type="String" />
+			<param index="2" name="task_description" type="String" />
+			<description>
+			</description>
+		</method>
+		<method name="step_import_progress_bar">
+			<return type="void" />
+			<param index="0" name="step" type="int" />
+			<param index="1" name="step_description" type="String" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<signals>
+		<signal name="imported_data">
+			<param index="0" name="import_type" type="String" />
+			<param index="1" name="data" type="Array" />
+			<description>
+			</description>
+		</signal>
+	</signals>
+</class>

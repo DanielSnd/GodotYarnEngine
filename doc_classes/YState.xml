@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YState" inherits="Node" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A node representing a single state in a state machine with advanced override capabilities.
+	</brief_description>
+	<description>
+		YState represents a single state within a YStateMachine. It provides virtual methods for state behavior, transition conditions, and movement control. States can be configured with auto-override conditions and various check types for state transitions.
+
+		[b]State Overriding:[/b]
+		States can automatically override other states based on conditions. This is useful for creating interrupt states like "taking damage" or "falling". To use auto-override:
+		1. Enable [member auto_override]
+		2. Set a [member check_type] and [member check_value]
+		3. Specify the [member check_node] and [member check_property] to monitor
+		4. Optionally set [member weight] for random selection between multiple valid overrides
+
+		[codeblock]
+		# Example: Create a "TakeDamage" state that interrupts when health drops
+		@onready var take_damage_state = $TakeDamage
+		take_damage_state.auto_override = true
+		take_damage_state.check_type = YState.SMALLER_THAN
+		take_damage_state.check_node = $Player
+		take_damage_state.check_property = "health"
+		take_damage_state.check_value = 50.0
+		[/codeblock]
+
+		[b]Conditional Transitions:[/b]
+		States can automatically transition to other states using [member pass_condition_state] and [member fail_condition_state]. Override the [method _pass_condition] and [method _fail_condition] virtual methods to define the conditions.
+
+		[codeblock]
+		# Example: Transition when reaching a destination
+		func _pass_condition():
+		    return get_node_owner().position.distance_to(target)
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="_can_move" qualifiers="virtual const">
+			<return type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="_fail_condition" qualifiers="virtual const">
+			<return type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="_get_speed" qualifiers="virtual const">
+			<return type="float" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_enter_state" qualifiers="virtual">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_exit_state" qualifiers="virtual">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_finished_navigation" qualifiers="virtual">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_process_state" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="delta" type="float" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_ready" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="fsm" type="YStateMachine" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_state_machine_setup" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="fsm" type="YStateMachine" />
+			<description>
+			</description>
+		</method>
+		<method name="_override_animation" qualifiers="virtual const">
+			<return type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="_pass_condition" qualifiers="virtual const">
+			<return type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="can_move">
+			<return type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="enter_state">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="exit_state">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="finished_navigation">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="get_last_transitioned_from_or_null" qualifiers="const">
+			<return type="Node" />
+			<description>
+			</description>
+		</method>
+		<method name="get_node_owner" qualifiers="const">
+			<return type="Node" />
+			<description>
+			</description>
+		</method>
+		<method name="get_speed">
+			<return type="float" />
+			<description>
+			</description>
+		</method>
+		<method name="override_animation">
+			<return type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="process_state">
+			<return type="void" />
+			<param index="0" name="_unnamed_arg0" type="float" />
+			<description>
+			</description>
+		</method>
+		<method name="state_machine_setup">
+			<return type="void" />
+			<param index="0" name="fsm" type="YStateMachine" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="auto_override" type="bool" setter="set_auto_override" getter="get_auto_override" default="false">
+		</member>
+		<member name="check_node" type="Node" setter="set_autooverride_check_node" getter="get_autooverride_check_node">
+		</member>
+		<member name="check_property" type="String" setter="set_autooverride_check_property" getter="get_autooverride_check_property" default="&quot;&quot;">
+		</member>
+		<member name="check_type" type="int" setter="set_autooverride_check_type" getter="get_autooverride_check_type" enum="YState.CheckType" default="0">
+		</member>
+		<member name="check_value" type="float" setter="set_autooverride_check_value" getter="get_autooverride_check_value" default="0.0">
+		</member>
+		<member name="cooldown" type="float" setter="set_autooverride_cooldown" getter="get_autooverride_cooldown" default="0.0">
+		</member>
+		<member name="fail_condition_state" type="YState" setter="set_fail_condition_state" getter="get_fail_condition_state">
+		</member>
+		<member name="ignore_if_states" type="NodePath[]" setter="set_autooverride_ignore_if_states" getter="get_autooverride_ignore_if_states" default="[]">
+		</member>
+		<member name="only_if_states" type="NodePath[]" setter="set_autooverride_only_if_states" getter="get_autooverride_only_if_states" default="[]">
+		</member>
+		<member name="pass_condition_state" type="YState" setter="set_pass_condition_state" getter="get_pass_condition_state">
+		</member>
+		<member name="prevent_repeat" type="bool" setter="set_autooverride_prevent_repeat" getter="get_autooverride_prevent_repeat" default="false">
+		</member>
+		<member name="print_debugs" type="bool" setter="set_print_debugs" getter="get_print_debugs" default="false">
+		</member>
+		<member name="state_machine" type="YStateMachine" setter="set_state_machine" getter="get_state_machine">
+		</member>
+		<member name="weight" type="int" setter="set_autooverride_weight" getter="get_autooverride_weight" default="1">
+		</member>
+	</members>
+	<constants>
+		<constant name="NONE" value="0" enum="CheckType">
+		</constant>
+		<constant name="TRUE" value="1" enum="CheckType">
+		</constant>
+		<constant name="FALSE" value="2" enum="CheckType">
+		</constant>
+		<constant name="EQUAL" value="3" enum="CheckType">
+		</constant>
+		<constant name="NOT_EQUAL" value="4" enum="CheckType">
+		</constant>
+		<constant name="BIGGER_THAN" value="5" enum="CheckType">
+		</constant>
+		<constant name="SMALLER_THAN" value="6" enum="CheckType">
+		</constant>
+		<constant name="BIGGER_THAN_OR_EQUAL" value="7" enum="CheckType">
+		</constant>
+		<constant name="SMALLER_THAN_OR_EQUAL" value="8" enum="CheckType">
+		</constant>
+	</constants>
+</class>

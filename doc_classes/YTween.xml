@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YTween" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A utility class for creating and managing tweens.
+	</brief_description>
+	<description>
+		YTween provides a simplified interface for creating and managing tweens in the game. It includes methods for common tween operations like alpha fading, position animation, and modulation changes.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="create_tween">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="tag" type="int" default="0" />
+			<description>
+				Creates a new tween instance associated with the specified owner node.
+			</description>
+		</method>
+		<method name="create_unique_tween">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="tag" type="int" default="0" />
+			<description>
+				Creates a unique tween, killing any existing tweens with the same tag on the owner.
+			</description>
+		</method>
+		<method name="kill_tweens">
+			<return type="void" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="tag" type="int" default="0" />
+			<description>
+				Kills all tweens associated with the specified owner and tag.
+			</description>
+		</method>
+		<method name="tween_alpha">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="alpha" type="float" default="1.0" />
+			<param index="2" name="duration" type="float" default="0.22" />
+			<param index="3" name="ease" type="int" enum="Tween.EaseType" default="2" />
+			<param index="4" name="transition" type="int" enum="Tween.TransitionType" default="4" />
+			<param index="5" name="delay" type="float" default="0.0" />
+			<param index="6" name="tag" type="int" default="0" />
+			<description>
+				Creates a tween that animates the alpha value of the owner node.
+			</description>
+		</method>
+		<method name="tween_alpha_unique">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="alpha" type="float" default="1.0" />
+			<param index="2" name="duration" type="float" default="0.22" />
+			<param index="3" name="ease" type="int" enum="Tween.EaseType" default="2" />
+			<param index="4" name="transition" type="int" enum="Tween.TransitionType" default="4" />
+			<param index="5" name="delay" type="float" default="0.0" />
+			<param index="6" name="tag" type="int" default="0" />
+			<description>
+			</description>
+		</method>
+		<method name="tween_global_position_unique">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="global_position" type="Variant" default="1.0" />
+			<param index="2" name="duration" type="float" default="0.22" />
+			<param index="3" name="ease" type="int" enum="Tween.EaseType" default="2" />
+			<param index="4" name="transition" type="int" enum="Tween.TransitionType" default="4" />
+			<param index="5" name="delay" type="float" default="0.0" />
+			<param index="6" name="tag" type="int" default="0" />
+			<description>
+			</description>
+		</method>
+		<method name="tween_modulate">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="color" type="Color" default="1.0" />
+			<param index="2" name="duration" type="float" default="0.22" />
+			<param index="3" name="ease" type="int" enum="Tween.EaseType" default="2" />
+			<param index="4" name="transition" type="int" enum="Tween.TransitionType" default="4" />
+			<param index="5" name="delay" type="float" default="0.0" />
+			<param index="6" name="tag" type="int" default="0" />
+			<description>
+			</description>
+		</method>
+		<method name="tween_modulate_unique">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="color" type="Color" default="1.0" />
+			<param index="2" name="duration" type="float" default="0.22" />
+			<param index="3" name="ease" type="int" enum="Tween.EaseType" default="2" />
+			<param index="4" name="transition" type="int" enum="Tween.TransitionType" default="4" />
+			<param index="5" name="delay" type="float" default="0.0" />
+			<param index="6" name="tag" type="int" default="0" />
+			<description>
+			</description>
+		</method>
+		<method name="tween_position_rotation_scale_unique">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="position" type="Variant" />
+			<param index="2" name="rotation" type="Variant" />
+			<param index="3" name="scale" type="Variant" default="1.0" />
+			<param index="4" name="duration" type="float" default="0.22" />
+			<param index="5" name="ease" type="int" enum="Tween.EaseType" default="2" />
+			<param index="6" name="transition" type="int" enum="Tween.TransitionType" default="4" />
+			<param index="7" name="delay" type="float" default="0.0" />
+			<param index="8" name="tag" type="int" default="0" />
+			<description>
+			</description>
+		</method>
+		<method name="tween_position_rotation_unique">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="position" type="Variant" />
+			<param index="2" name="rotation" type="Variant" default="1.0" />
+			<param index="3" name="duration" type="float" default="0.22" />
+			<param index="4" name="ease" type="int" enum="Tween.EaseType" default="2" />
+			<param index="5" name="transition" type="int" enum="Tween.TransitionType" default="4" />
+			<param index="6" name="delay" type="float" default="0.0" />
+			<param index="7" name="tag" type="int" default="0" />
+			<description>
+			</description>
+		</method>
+		<method name="tween_position_unique">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="position" type="Variant" default="1.0" />
+			<param index="2" name="duration" type="float" default="0.22" />
+			<param index="3" name="ease" type="int" enum="Tween.EaseType" default="2" />
+			<param index="4" name="transition" type="int" enum="Tween.TransitionType" default="4" />
+			<param index="5" name="delay" type="float" default="0.0" />
+			<param index="6" name="tag" type="int" default="0" />
+			<description>
+			</description>
+		</method>
+		<method name="tween_scale">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="scale" type="float" default="1.0" />
+			<param index="2" name="duration" type="float" default="0.22" />
+			<param index="3" name="ease" type="int" enum="Tween.EaseType" default="2" />
+			<param index="4" name="transition" type="int" enum="Tween.TransitionType" default="4" />
+			<param index="5" name="delay" type="float" default="0.0" />
+			<param index="6" name="tag" type="int" default="0" />
+			<description>
+			</description>
+		</method>
+		<method name="tween_scale_unique">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="scale" type="float" default="1.0" />
+			<param index="2" name="duration" type="float" default="0.22" />
+			<param index="3" name="ease" type="int" enum="Tween.EaseType" default="2" />
+			<param index="4" name="transition" type="int" enum="Tween.TransitionType" default="4" />
+			<param index="5" name="delay" type="float" default="0.0" />
+			<param index="6" name="tag" type="int" default="0" />
+			<description>
+			</description>
+		</method>
+	</methods>
+</class>

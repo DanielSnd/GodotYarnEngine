@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YActionStep" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_step_data" qualifiers="const">
+			<return type="Variant" />
+			<description>
+			</description>
+		</method>
+		<method name="get_step_index" qualifiers="const">
+			<return type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="set_step_data">
+			<return type="void" />
+			<param index="0" name="step_data" type="Variant" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="step_identifier" type="int" setter="set_step_identifier" getter="get_step_identifier" default="0">
+		</member>
+		<member name="step_taken" type="bool" setter="set_step_taken" getter="get_step_taken" default="false">
+		</member>
+		<member name="step_waiting" type="bool" setter="set_step_waiting" getter="get_step_waiting" default="false">
+		</member>
+	</members>
+</class>

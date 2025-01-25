@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YThreader" inherits="Node" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A node that manages thread pools and threaded operations.
+	</brief_description>
+	<description>
+		YThreader provides functionality for managing thread pools and executing tasks across multiple threads. It includes methods for queuing jobs, managing thread synchronization, and handling thread-safe operations.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="is_main_thread" qualifiers="static">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the current execution is on the main thread.
+			</description>
+		</method>
+		<method name="lock_mutex">
+			<return type="void" />
+			<description>
+				Locks the threader's mutex for thread-safe operations.
+			</description>
+		</method>
+		<method name="queue_job">
+			<return type="void" />
+			<param index="0" name="p_callable" type="Callable" />
+			<description>
+				Queues a job to be executed by the thread pool.
+			</description>
+		</method>
+		<method name="unlock_mutex">
+			<return type="void" />
+			<description>
+				Unlocks the threader's mutex after thread-safe operations.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="thread_count" type="int" setter="set_thread_count" getter="get_thread_count" default="1">
+			The number of threads in the thread pool.
+		</member>
+	</members>
+</class>

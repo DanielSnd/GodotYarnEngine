@@ -1,9 +1,259 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="YPhysics" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
+		A utility class providing various physics operations and queries.
 	</brief_description>
 	<description>
+		YPhysics provides a collection of static methods for performing physics queries and checks in both 2D and 3D space. This includes raycasts, shape casts, collision checks, and motion casting.
+
+		All methods are static and can be called directly without instantiating the class.
 	</description>
 	<tutorials>
 	</tutorials>
+	<methods>
+		<method name="cast_motion_2d" qualifiers="static">
+			<return type="PackedFloat32Array" />
+			<param index="0" name="shape" type="Shape3D" />
+			<param index="1" name="world_transform" type="Transform3D" />
+			<param index="2" name="margin" type="float" default="0.04" />
+			<param index="3" name="motion" type="Vector3" default="Vector2(0, 0)" />
+			<param index="4" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="5" name="collision_mask" type="int" default="4294967295" />
+			<param index="6" name="exclude" type="RID[]" default="[]" />
+			<description>
+				Casts a 2D shape through space to detect collisions. Returns a [PackedFloat32Array] containing two values:
+				- Index 0: The closest safe distance (between 0 and 1) that the shape can move without collision
+				- Index 1: The closest unsafe distance where a collision would occur
+				Returns an empty array if no collision is detected.
+			</description>
+		</method>
+		<method name="cast_motion_3d" qualifiers="static">
+			<return type="PackedFloat32Array" />
+			<param index="0" name="shape" type="Shape3D" />
+			<param index="1" name="world_transform" type="Transform3D" />
+			<param index="2" name="margin" type="float" default="0.04" />
+			<param index="3" name="motion" type="Vector3" default="Vector3(0, 0, 0)" />
+			<param index="4" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="5" name="collision_mask" type="int" default="4294967295" />
+			<param index="6" name="exclude" type="RID[]" default="[]" />
+			<description>
+				Similar to [method cast_motion_2d] but for 3D shapes. Returns a [PackedFloat32Array] containing safe and unsafe distances.
+			</description>
+		</method>
+		<method name="check_collision_sphere" qualifiers="static">
+			<return type="Object" />
+			<param index="0" name="world_position" type="Vector3" />
+			<param index="1" name="radius" type="float" default="1.0" />
+			<param index="2" name="collision_mask" type="int" default="4294967295" />
+			<param index="3" name="exclude" type="RID[]" default="[]" />
+			<description>
+				Checks for collision with a sphere at the given position. Returns the first colliding object, or [code]null[/code] if no collision is found.
+				Only checks for collisions with physics bodies (not areas).
+			</description>
+		</method>
+		<method name="check_rest_info_3d" qualifiers="static">
+			<return type="Dictionary" />
+			<param index="0" name="shape" type="Shape3D" />
+			<param index="1" name="world_transform" type="Transform3D" />
+			<param index="2" name="margin" type="float" default="0.04" />
+			<param index="3" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="4" name="collision_mask" type="int" default="4294967295" />
+			<param index="5" name="exclude" type="RID[]" default="[]" />
+			<description>
+				Returns information about the shape's collision state at rest. The returned dictionary contains:
+				- "point": [Vector3] The point of contact
+				- "normal": [Vector3] The collision normal
+				- "rid": [RID] The RID of the colliding object
+				- "collider_id": The object ID of the collider
+				- "shape": The shape index of the collider
+				- "linear_velocity": [Vector3] The linear velocity of the collider
+				Returns an empty dictionary if no collision is found.
+			</description>
+		</method>
+		<method name="free_line_check" qualifiers="static">
+			<return type="bool" />
+			<param index="0" name="ray_origin" type="Vector3" />
+			<param index="1" name="ray_end" type="Vector3" />
+			<param index="2" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="3" name="collision_mask" type="int" default="4294967295" />
+			<param index="4" name="exclude" type="RID[]" default="[]" />
+			<description>
+				Performs a simple line check between two points. Returns [code]true[/code] if there is a collision, [code]false[/code] otherwise.
+				This is more efficient than [method raycast3d_to] when you only need to know if there is a collision.
+			</description>
+		</method>
+		<method name="free_sphere_check" qualifiers="static">
+			<return type="bool" />
+			<param index="0" name="world_position" type="Vector3" />
+			<param index="1" name="radius" type="float" default="1.0" />
+			<param index="2" name="collision_mask" type="int" default="4294967295" />
+			<param index="3" name="exclude" type="RID[]" default="[]" />
+			<description>
+				Checks if a sphere at the given position would collide with anything. Returns [code]true[/code] if there is a collision.
+				Similar to [method check_collision_sphere] but returns a boolean instead of the colliding object.
+			</description>
+		</method>
+		<method name="intersect_point_3d" qualifiers="static">
+			<return type="Dictionary[]" />
+			<param index="0" name="world_position" type="Vector3" />
+			<param index="1" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="2" name="max_results" type="int" default="32" />
+			<param index="3" name="collision_mask" type="int" default="4294967295" />
+			<param index="4" name="exclude" type="RID[]" default="[]" />
+			<description>
+			</description>
+		</method>
+		<method name="intersect_shape_3d" qualifiers="static">
+			<return type="Dictionary[]" />
+			<param index="0" name="world_position" type="Shape3D" />
+			<param index="1" name="margin" type="Transform3D" />
+			<param index="2" name="collide_type" type="float" default="0.04" />
+			<param index="3" name="max_results" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="4" name="collision_mask" type="int" default="32" />
+			<param index="5" name="exclude" type="int" default="4294967295" />
+			<param index="6" name="_unnamed_arg6" type="RID[]" default="[]" />
+			<description>
+			</description>
+		</method>
+		<method name="intersect_sphere" qualifiers="static">
+			<return type="Dictionary[]" />
+			<param index="0" name="world_position" type="Vector3" />
+			<param index="1" name="radius" type="float" />
+			<param index="2" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="3" name="max_results" type="int" default="32" />
+			<param index="4" name="collision_mask" type="int" default="4294967295" />
+			<param index="5" name="exclude" type="RID[]" default="[]" />
+			<description>
+			</description>
+		</method>
+		<method name="raycast2d" qualifiers="static">
+			<return type="Dictionary" />
+			<param index="0" name="ray_origin" type="Vector2" />
+			<param index="1" name="ray_direction" type="Vector2" />
+			<param index="2" name="ray_distance" type="float" />
+			<param index="3" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="4" name="collision_mask" type="int" default="4294967295" />
+			<param index="5" name="exclude" type="RID[]" default="[]" />
+			<description>
+				Casts a ray in 2D space using a direction and distance. Returns a dictionary containing collision information:
+				- "position": [Vector2] The point where the ray collided
+				- "normal": [Vector2] The normal of the surface at the collision point
+				- "collider_id": The object ID of the collider
+				- "collider": The actual object that was hit
+				- "shape": The shape index of the collider
+				- "rid": [RID] The RID of the object that was hit
+				Returns an empty dictionary if no collision occurred.
+
+				[codeblock]
+				# Example: Check if there's ground below
+				var result = YPhysics.raycast2d(position, Vector2.DOWN, 100.0)
+				if !result.is_empty():
+				    var hit_pos = result["position"]
+				    var normal = result["normal"]
+				    var hit_object = result["collider"]
+				[/codeblock]
+			</description>
+		</method>
+		<method name="raycast2d_to" qualifiers="static">
+			<return type="Dictionary" />
+			<param index="0" name="ray_origin" type="Vector2" />
+			<param index="1" name="ray_end" type="Vector2" />
+			<param index="2" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="3" name="collision_mask" type="int" default="4294967295" />
+			<param index="4" name="exclude" type="RID[]" default="[]" />
+			<description>
+			</description>
+		</method>
+		<method name="raycast3d" qualifiers="static">
+			<return type="Dictionary" />
+			<param index="0" name="ray_origin" type="Vector3" />
+			<param index="1" name="ray_direction" type="Vector3" />
+			<param index="2" name="ray_distance" type="float" />
+			<param index="3" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="4" name="collision_mask" type="int" default="4294967295" />
+			<param index="5" name="exclude" type="RID[]" default="[]" />
+			<description>
+				Casts a ray in 3D space using a direction and distance. Returns a dictionary containing collision information:
+				- "position": [Vector3] The point where the ray collided
+				- "normal": [Vector3] The normal of the surface at the collision point
+				- "collider_id": The object ID of the collider
+				- "collider": The actual object that was hit
+				- "shape": The shape index of the collider
+				- "rid": [RID] The RID of the object that was hit
+				- "face_index": The index of the face that was hit (if applicable)
+				Returns an empty dictionary if no collision occurred.
+
+				[codeblock]
+				# Example: Check if there's an obstacle ahead
+				var result = YPhysics.raycast3d(player_position, player_forward, 10.0)
+				if !result.is_empty():
+				    var hit_pos = result["position"]
+				    var hit_normal = result["normal"]
+				    var hit_object = result["collider"]
+				    print("Hit object: ", hit_object.name)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="raycast3d_to" qualifiers="static">
+			<return type="Dictionary" />
+			<param index="0" name="ray_origin" type="Vector3" />
+			<param index="1" name="ray_end" type="Vector3" />
+			<param index="2" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="3" name="collision_mask" type="int" default="4294967295" />
+			<param index="4" name="exclude" type="RID[]" default="[]" />
+			<description>
+			</description>
+		</method>
+		<method name="shapecast" qualifiers="static">
+			<return type="Dictionary[]" />
+			<param index="0" name="shape" type="Shape3D" />
+			<param index="1" name="world_transform" type="Transform3D" />
+			<param index="2" name="margin" type="float" default="0.04" />
+			<param index="3" name="motion" type="Vector3" default="Vector3(0, 0, 0)" />
+			<param index="4" name="max_results" type="int" default="32" />
+			<param index="5" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="6" name="collision_mask" type="int" default="4294967295" />
+			<param index="7" name="exclude" type="RID[]" default="[]" />
+			<description>
+				Casts a shape through space and returns an array of dictionaries containing information about all collisions.
+				Each dictionary contains:
+				- "rid": [RID] The RID of the colliding object
+				- "collider_id": The object ID of the collider
+				- "collider": The actual object that was hit
+				- "shape": The shape index of the collider
+
+				[codeblock]
+				# Example: Check if a box can move forward
+				var box_shape = BoxShape3D.new()
+				box_shape.size = Vector3(1, 1, 1)
+				var results = YPhysics.shapecast(box_shape, transform, 0.04, Vector3.FORWARD * 5)
+				for collision in results:
+				    print("Collided with: ", collision["collider"].name)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="spherecast" qualifiers="static">
+			<return type="Dictionary[]" />
+			<param index="0" name="world_position" type="Vector3" />
+			<param index="1" name="radius" type="float" default="1.0" />
+			<param index="2" name="motion" type="Vector3" default="Vector3(0, 0, 0)" />
+			<param index="3" name="max_results" type="int" default="32" />
+			<param index="4" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="5" name="collision_mask" type="int" default="4294967295" />
+			<param index="6" name="exclude" type="RID[]" default="[]" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<constants>
+		<constant name="COLLIDE_WITH_BODIES" value="0" enum="CollideType">
+			Collision detection will only check against physics bodies.
+		</constant>
+		<constant name="COLLIDE_WITH_AREAS" value="1" enum="CollideType">
+			Collision detection will only check against physics areas.
+		</constant>
+		<constant name="COLLIDE_WITH_BOTH" value="2" enum="CollideType">
+			Collision detection will check against both physics bodies and areas.
+		</constant>
+	</constants>
 </class>

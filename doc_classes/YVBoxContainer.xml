@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YVBoxContainer" inherits="YBoxContainer" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A vertical box container with enhanced functionality.
+	</brief_description>
+	<description>
+		YVBoxContainer is a specialized vertical box container that extends YBoxContainer. It arranges child controls vertically and provides additional features for managing vertical layouts.
+	</description>
+	<tutorials>
+	</tutorials>
+</class>

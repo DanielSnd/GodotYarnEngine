@@ -441,9 +441,14 @@ AOBakeEditorPlugin::AOBakeEditorPlugin() {
 	singleton = this;
     Ref<AOBakeInspectorPlugin> plugin;
     plugin.instantiate();
-    add_inspector_plugin(plugin);
-	EditorPlugin::add_tool_menu_item("Create BakeableMeshInstance",callable_mp(this,&AOBakeEditorPlugin::CreateBakeableMeshInstance));
-	created_menu_item=true;
+    add_inspector_plugin(plugin);\
+    
+//     case NOTIFICATION_ENTER_TREE: {
+				// EditorNode::get_singleton()->add_tool_menu_item("Create BakeableMeshInstance", callable_mp(this, &AOBakeEditorPlugin::CreateBakeableMeshInstance));					
+			// } break;
+    
+    // Defer the menu item creation to _enter_tree()
+    created_menu_item = false;
 }
 
 void AOBakeEditorPlugin::CreateBakeableMeshInstance() {

@@ -1,40 +1,128 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="YMenu" inherits="Panel" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
+		A base menu class that provides menu stack management, transitions, and navigation functionality.
 	</brief_description>
 	<description>
+		YMenu is a specialized [Panel] class that provides core menu functionality including:
+		- Menu stack management for handling multiple open menus
+		- Smooth fade transitions between menus
+		- Back button and UI cancel handling
+		- Menu state management
+
+		YMenu automatically handles adding/removing itself from the menu stack and provides virtual methods that can be overridden in GDScript to customize menu behavior.
+
+		Example of basic menu usage:
+		[codeblock]
+		extends YMenu
+
+		func _ready():
+			# Set up back button
+			var back_btn = $BackButton 
+			set_back_button(back_btn)
+
+			# Enable UI cancel (Esc key) to trigger back button
+			ui_cancel_presses_back_button = true
+
+		func _on_started_menu():
+			# Called when menu is first shown
+			print("Menu started!")
+
+		func _on_back_button_pressed():
+			# Custom back button handling
+			print("Going back...")
+		[/codeblock]
 	</description>
 	<tutorials>
 	</tutorials>
 	<methods>
+		<method name="_can_back_button_auto_close_menu" qualifiers="virtual const">
+			<return type="bool" />
+			<description>
+				Virtual method that determines if pressing the back button should automatically close this menu.
+				Override and return [code]false[/code] to prevent automatic closing.
+
+				Default implementation returns [code]true[/code].
+			</description>
+		</method>
 		<method name="_on_back_button_pressed" qualifiers="virtual">
 			<return type="void" />
 			<description>
+				Virtual method called when the back button is pressed. Override to add custom back button behavior.
+
+				The default implementation will close the menu if [method _can_back_button_auto_close_menu] returns [code]true[/code].
+			</description>
+		</method>
+		<method name="_on_back_to_menu" qualifiers="virtual">
+			<return type="void" />
+			<description>
+				Virtual method called when returning to this menu from a child menu.
+				Override to refresh or update menu state when it becomes active again.
+			</description>
+		</method>
+		<method name="_on_fade_out" qualifiers="virtual">
+			<return type="void" />
+			<description>
+				Virtual method called when the menu starts fading out.
+				Override to add custom behavior during the fade out transition.
 			</description>
 		</method>
 		<method name="_on_started_menu" qualifiers="virtual">
 			<return type="void" />
 			<description>
+				Virtual method called when the menu is first shown.
+				Override to initialize menu state or trigger animations.
 			</description>
 		</method>
 		<method name="add_to_menu_stack">
 			<return type="void" />
 			<description>
+				Adds this menu to the global menu stack managed by [YEngine].
+				Called automatically when the menu enters the scene tree.
+			</description>
+		</method>
+		<method name="calculate_ideal_control_center" qualifiers="static">
+			<return type="Vector2" />
+			<param index="0" name="control_size" type="Vector2" />
+			<param index="1" name="control_parent" type="Control" />
+			<description>
+				Static utility method that calculates the position to center a control within its parent.
+
+				[codeblock]
+				# Center a popup in its parent
+				var popup = $Popup
+				popup.position = YMenu.calculate_ideal_control_center(popup.size, get_parent())
+				[/codeblock]
 			</description>
 		</method>
 		<method name="fade_out">
 			<return type="Tween" />
 			<description>
+				Starts a fade out animation for this menu.
+				Returns the [Tween] controlling the animation.
+
+				[codeblock]
+				func close_menu():
+					var tween = fade_out()
+					await tween.finished
+					queue_free()
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_can_click_buttons">
 			<return type="bool" />
 			<description>
+				Returns [code]true[/code] if buttons in the menu can currently be clicked.
+				Buttons are clickable when:
+				- The menu is active (top of menu stack)
+				- Enough time has passed since the last button click (prevents rapid clicking)
+				- The menu is fully visible (not mid-transition)
 			</description>
 		</method>
 		<method name="get_is_active">
 			<return type="bool" />
 			<description>
+				Returns [code]true[/code] if this menu is currently the active menu (top of the menu stack).
 			</description>
 		</method>
 		<method name="instantiate_child_menu">
@@ -43,6 +131,15 @@
 			<param index="1" name="child_menu_scene" type="PackedScene" />
 			<param index="2" name="auto_start" type="bool" default="true" />
 			<description>
+				Creates a new child menu from the provided scene and adds it as a child of [param parent_node].
+
+				If [param auto_start] is [code]true[/code], calls [method _on_started_menu] on the new menu.
+				The new menu will automatically connect its "go_back_to_menu" signal to this menu.
+
+				[codeblock]
+				func _on_settings_button_pressed():
+					var settings_menu = instantiate_child_menu(get_parent(), preload("res://settings_menu.tscn"))
+				[/codeblock]
 			</description>
 		</method>
 		<method name="instantiate_replacement_menu">
@@ -51,6 +148,19 @@
 			<param index="1" name="child_menu_scene" type="PackedScene" />
 			<param index="2" name="auto_start" type="bool" default="true" />
 			<description>
+				Similar to [method instantiate_child_menu], but removes this menu after creating the new one.
+				Useful for transitioning between menus in the same layer of the menu hierarchy.
+
+				[codeblock]
+				func _on_next_level_button_pressed():
+					instantiate_replacement_menu(get_parent(), next_level_menu_scene)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="is_top_of_menu_stack">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if this menu is at the top of the menu stack.
 			</description>
 		</method>
 		<method name="on_back_button_pressed">
@@ -71,39 +181,55 @@
 		<method name="remove_from_menu_stack">
 			<return type="void" />
 			<description>
+				Removes this menu from the global menu stack.
+				Called automatically when the menu exits the scene tree.
 			</description>
 		</method>
 		<method name="set_back_button">
 			<return type="void" />
 			<param index="0" name="back_button" type="Control" />
 			<description>
+				Sets up the back button for this menu. The provided control must have a "pressed" signal.
+				When pressed, will trigger [method _on_back_button_pressed].
 			</description>
 		</method>
 		<method name="set_is_active">
 			<return type="void" />
 			<param index="0" name="active" type="bool" />
 			<description>
+				Sets whether this menu is active. If set to [code]true[/code], moves this menu to the top of the stack.
 			</description>
 		</method>
 		<method name="set_last_clicked_time">
 			<return type="void" />
 			<description>
+				Updates the last button click time. Used internally to prevent rapid button clicking.
 			</description>
 		</method>
 	</methods>
 	<members>
 		<member name="auto_start_menu" type="bool" setter="set_auto_start_menu" getter="get_auto_start_menu" default="false">
+			If [code]true[/code], automatically calls [method _on_started_menu] when the menu enters the scene tree.
 		</member>
-		<member name="can_go_back_to_menu" type="bool" setter="set_can_go_back_to_menu" getter="get_can_go_back_to_menu" default="false">
+		<member name="ui_cancel_presses_back_button" type="bool" setter="set_ui_cancel_presses_back_button" getter="get_ui_cancel_presses_back_button" default="false">
+			If [code]true[/code], pressing the UI cancel action (usually Esc key) will trigger the back button functionality.
 		</member>
 	</members>
 	<signals>
 		<signal name="go_back_to_menu">
 			<description>
+				Emitted when the menu is closing via back button navigation.
+				Connected automatically to parent menus when using [method instantiate_child_menu].
+			</description>
+		</signal>
+		<signal name="on_back_to_menu">
+			<description>
+				Emitted when returning to this menu from a child menu.
 			</description>
 		</signal>
 		<signal name="started_menu">
 			<description>
+				Emitted when the menu starts ([method _on_started_menu] is called).
 			</description>
 		</signal>
 	</signals>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="AOBakeableMeshInstance" inherits="MeshInstance3D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A specialized MeshInstance3D that can bake ambient occlusion data.
+	</brief_description>
+	<description>
+		AOBakeableMeshInstance extends MeshInstance3D to provide ambient occlusion baking functionality. It allows you to bake ambient occlusion data directly onto meshes, providing better visual quality and performance compared to real-time ambient occlusion.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_debug_vertex" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the currently selected debug vertex index. Used for debugging the ambient occlusion baking process.
+			</description>
+		</method>
+		<method name="set_debug_vertex">
+			<return type="void" />
+			<param index="0" name="v" type="int" />
+			<description>
+				Sets the debug vertex index to [param v]. This allows inspection of specific vertices during the ambient occlusion baking process.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="auto_set_mesh_from_bake" type="bool" setter="set_auto_set_mesh_from_bake" getter="get_auto_set_mesh_from_bake" default="false">
+			If [code]true[/code], automatically updates the mesh after baking ambient occlusion.
+		</member>
+		<member name="baked_mesh" type="Mesh" setter="set_baked_mesh" getter="get_baked_mesh">
+			The mesh containing the baked ambient occlusion data.
+		</member>
+		<member name="environment_color" type="Color" setter="set_environment_color" getter="get_environment_color" default="Color(1, 0.980392, 0.901961, 1)">
+			The color of the environment light used in ambient occlusion calculations.
+		</member>
+		<member name="occlusion_angle" type="float" setter="set_occlusion_angle" getter="get_occlusion_angle" default="135.0">
+			The maximum angle in degrees used to determine if a surface point is occluded.
+		</member>
+		<member name="occlusion_color" type="Color" setter="set_occlusion_color" getter="get_occlusion_color" default="Color(0.799, 0.811, 0.823, 1)">
+			The color applied to occluded areas.
+		</member>
+		<member name="occlusion_distance" type="float" setter="set_occlusion_distance" getter="get_occlusion_distance" default="10.0">
+			The maximum distance to check for occlusion during the baking process.
+		</member>
+	</members>
+</class>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YStateOverride" inherits="Node" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A node that manages conditional state overrides based on custom logic.
+	</brief_description>
+	<description>
+		YStateOverride provides a way to create custom state override conditions beyond the basic property checking provided by YState's auto-override system. This is useful for complex conditions that involve multiple checks or custom logic.
+
+		[b]Basic Usage:[/b]
+		1. Add a YStateOverride node as a child of the node containing your states
+		2. Set the [member override_with_state] to specify which state to transition to
+		3. Override [method _override_condition] to define when the override should occur
+		4. Optionally set [member ignore_if_state] to prevent overriding during specific states
+
+		[codeblock]
+		# Custom override condition example
+		extends YStateOverride
+
+		func _override_condition():
+		    # Override to attack state if enemy is close and we have enough stamina
+		    var enemy_distance = get_parent().get_closest_enemy_distance()
+		    var stamina = get_parent().stamina
+		    return enemy_distance
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="_on_state_machine_setup" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="fsm" type="YStateMachine" />
+			<description>
+			</description>
+		</method>
+		<method name="_override_condition" qualifiers="virtual const">
+			<return type="bool" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="ignore_if_state" type="YState" setter="set_ignore_if_state" getter="get_ignore_if_state">
+		</member>
+		<member name="override_with_state" type="YState" setter="set_override_with_state" getter="get_override_with_state">
+		</member>
+	</members>
+</class>
