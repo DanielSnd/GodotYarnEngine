@@ -12,7 +12,7 @@
 		2. Set a [member check_type] and [member check_value]
 		3. Specify the [member check_node] and [member check_property] to monitor
 		4. Optionally set [member weight] for random selection between multiple valid overrides
-
+		
 		[codeblock]
 		# Example: Create a "TakeDamage" state that interrupts when health drops
 		@onready var take_damage_state = $TakeDamage
@@ -29,7 +29,8 @@
 		[codeblock]
 		# Example: Transition when reaching a destination
 		func _pass_condition():
-		    return get_node_owner().position.distance_to(target)
+		    return get_node_owner().position.distance_to(target) < 1.0
+		[/codeblock]
 	</description>
 	<tutorials>
 	</tutorials>
@@ -37,26 +38,58 @@
 		<method name="_can_move" qualifiers="virtual const">
 			<return type="bool" />
 			<description>
+				Virtual method that determines if movement is allowed in this state. Override to control when the entity can move.
+
+				[codeblock]
+				func _can_move():
+				    return not is_stunned # Prevent movement while stunned
+				[/codeblock]
 			</description>
 		</method>
 		<method name="_fail_condition" qualifiers="virtual const">
 			<return type="bool" />
 			<description>
+				Virtual method that determines if the state should fail and transition to [member fail_condition_state]. Override to define failure conditions.
+
+				[codeblock]
+				func _fail_condition():
+				    return get_node_owner().health <= 0 # Fail if no health
+				[/codeblock]
 			</description>
 		</method>
 		<method name="_get_speed" qualifiers="virtual const">
 			<return type="float" />
 			<description>
+				Virtual method that returns the movement speed for this state. Override to define state-specific speeds.
+
+				[codeblock]
+				func _get_speed():
+				    return 2.0 if is_sprinting else 1.0
+				[/codeblock]
 			</description>
 		</method>
 		<method name="_on_enter_state" qualifiers="virtual">
 			<return type="void" />
 			<description>
+				Virtual method called when entering this state. Use it to initialize state-specific behavior.
+
+				[codeblock]
+				func _on_enter_state():
+				    $AnimationPlayer.play("idle")
+				    emit_signal("state_entered")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="_on_exit_state" qualifiers="virtual">
 			<return type="void" />
 			<description>
+				Virtual method called when exiting this state. Use it to clean up state-specific resources.
+
+				[codeblock]
+				func _on_exit_state():
+				    $Timer.stop()
+				    clear_targets()
+				[/codeblock]
 			</description>
 		</method>
 		<method name="_on_finished_navigation" qualifiers="virtual">
@@ -90,6 +123,12 @@
 		<method name="_pass_condition" qualifiers="virtual const">
 			<return type="bool" />
 			<description>
+				Virtual method that determines if the state should transition to [member pass_condition_state]. Override to define success conditions.
+
+				[codeblock]
+				func _pass_condition():
+				    return target_reached and has_item
+				[/codeblock]
 			</description>
 		</method>
 		<method name="can_move">
@@ -147,52 +186,71 @@
 	</methods>
 	<members>
 		<member name="auto_override" type="bool" setter="set_auto_override" getter="get_auto_override" default="false">
+			If [code]true[/code], enables automatic state override based on conditions. When enabled, the state will attempt to take control when its conditions are met.
 		</member>
 		<member name="check_node" type="Node" setter="set_autooverride_check_node" getter="get_autooverride_check_node">
+			The node to monitor for auto-override conditions. This node's [member check_property] will be compared against [member check_value] using [member check_type].
 		</member>
 		<member name="check_property" type="String" setter="set_autooverride_check_property" getter="get_autooverride_check_property" default="&quot;&quot;">
+			The property name to monitor on [member check_node] for auto-override conditions.
 		</member>
 		<member name="check_type" type="int" setter="set_autooverride_check_type" getter="get_autooverride_check_type" enum="YState.CheckType" default="0">
+			The type of comparison to perform between [member check_property] and [member check_value] for auto-override conditions.
 		</member>
 		<member name="check_value" type="float" setter="set_autooverride_check_value" getter="get_autooverride_check_value" default="0.0">
+			The value to compare against [member check_property] using [member check_type] for auto-override conditions.
 		</member>
 		<member name="cooldown" type="float" setter="set_autooverride_cooldown" getter="get_autooverride_cooldown" default="0.0">
+			Minimum time in seconds between auto-override attempts. Use this to prevent rapid state switching.
 		</member>
 		<member name="fail_condition_state" type="YState" setter="set_fail_condition_state" getter="get_fail_condition_state">
 		</member>
 		<member name="ignore_if_states" type="NodePath[]" setter="set_autooverride_ignore_if_states" getter="get_autooverride_ignore_if_states" default="[]">
+			List of states that will prevent this state from overriding when active.
 		</member>
 		<member name="only_if_states" type="NodePath[]" setter="set_autooverride_only_if_states" getter="get_autooverride_only_if_states" default="[]">
+			List of states that must be active for this state to override. If empty, can override during any state.
 		</member>
 		<member name="pass_condition_state" type="YState" setter="set_pass_condition_state" getter="get_pass_condition_state">
 		</member>
 		<member name="prevent_repeat" type="bool" setter="set_autooverride_prevent_repeat" getter="get_autooverride_prevent_repeat" default="false">
+			If [code]true[/code], prevents this state from overriding immediately after being overridden itself.
 		</member>
 		<member name="print_debugs" type="bool" setter="set_print_debugs" getter="get_print_debugs" default="false">
 		</member>
 		<member name="state_machine" type="YStateMachine" setter="set_state_machine" getter="get_state_machine">
 		</member>
 		<member name="weight" type="int" setter="set_autooverride_weight" getter="get_autooverride_weight" default="1">
+			When multiple states can override at the same time, states with higher weights are more likely to be chosen.
 		</member>
 	</members>
 	<constants>
 		<constant name="NONE" value="0" enum="CheckType">
+			No condition check will be performed.
 		</constant>
 		<constant name="TRUE" value="1" enum="CheckType">
+			Override if property is true.
 		</constant>
 		<constant name="FALSE" value="2" enum="CheckType">
+			Override if property is false.
 		</constant>
 		<constant name="EQUAL" value="3" enum="CheckType">
+			Override if property equals value.
 		</constant>
 		<constant name="NOT_EQUAL" value="4" enum="CheckType">
+			Override if property does not equal value.
 		</constant>
 		<constant name="BIGGER_THAN" value="5" enum="CheckType">
+			Override if property is greater than value.
 		</constant>
 		<constant name="SMALLER_THAN" value="6" enum="CheckType">
+			Override if property is less than value.
 		</constant>
 		<constant name="BIGGER_THAN_OR_EQUAL" value="7" enum="CheckType">
+			Override if property is greater than or equal to value.
 		</constant>
 		<constant name="SMALLER_THAN_OR_EQUAL" value="8" enum="CheckType">
+			Override if property is less than or equal to value.
 		</constant>
 	</constants>
 </class>

@@ -1,8 +1,55 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="GSheetImporter" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
+		A utility class for importing and parsing data from Google Sheets.
 	</brief_description>
 	<description>
+		GSheetImporter provides functionality to fetch and parse data from Google Sheets documents. It handles HTTP requests to the Google Sheets API, parses the JSON response, and emits the data in a structured format.
+
+		The importer supports progress tracking through progress bar methods and automatically handles resource saving with conflict detection.
+
+		There are two ways to use this class through GDScript files placed in the [code]res://importers/[/code] folder:
+
+		[b]1. As a Google Sheet Importer:[/b]
+		Create a script that implements the following methods:
+		[codeblock]
+		class_name MySheetImporter
+		extends GSheetImporter
+
+		func get_sheet_id() -> String:
+		    return "1234567890abcdef" # Your Google Sheet ID
+
+		func get_sheet_name() -> String:
+		    return "Sheet1" # Your sheet name
+
+		func on_imported_data(import_type: String, data: Array) -> void:
+		    for entry in data:
+		        print("Imported row: ", entry)
+		[/codeblock]
+
+		[b]2. As a Custom Menu Item:[/b]
+		Create a script that implements these methods instead:
+		[codeblock]
+		class_name MyCustomMenuItem
+		extends GSheetImporter
+
+		func get_menu_name() -> String:
+		    return "My Custom Action" # This will appear in the editor's tool menu
+
+		func on_menu_clicked() -> void:
+		    # Your custom logic here
+		    print("Custom menu item clicked!")
+		[/codeblock]
+
+		[b]Editor Integration:[/b]
+		When running in the editor, the class automatically:
+		- Scans the [code]res://importers/[/code] directory for .gd files
+		- For sheet importers: Adds an "Import {sheet_name}" entry to the editor's tool menu
+		- For custom menu items: Adds the [method get_menu_name] result to the tool menu
+		- Handles progress bars automatically through the editor's progress display
+		- Manages cleanup and reloading of menu items
+
+		[b]Note:[/b] The [code]res://importers/[/code] directory must exist for the automatic script detection to work.
 	</description>
 	<tutorials>
 	</tutorials>
@@ -10,16 +57,26 @@
 		<method name="end_import_progress_bar">
 			<return type="void" />
 			<description>
+				Signals the end of an import operation's progress tracking. This method is called automatically when the import process completes, but can also be called manually if needed.
 			</description>
 		</method>
 		<method name="get_sheet_id" qualifiers="virtual const">
 			<return type="String" />
 			<description>
+				Virtual method that must be implemented by inheriting classes to provide the Google Sheet ID.
+				The Sheet ID can be found in the Google Sheets URL between /d/ and /edit.
+
+				Example URL: https://docs.google.com/spreadsheets/d/[b]1234567890abcdef[/b]/edit
+				The sheet ID would be "1234567890abcdef"
 			</description>
 		</method>
 		<method name="get_sheet_name" qualifiers="virtual const">
 			<return type="String" />
 			<description>
+				Virtual method that must be implemented by inheriting classes to provide the sheet name to import.
+				This is the name of the specific sheet tab in the Google Sheets document.
+
+				Note: If the sheet name contains spaces, they will be automatically encoded in the URL.
 			</description>
 		</method>
 		<method name="on_imported_data" qualifiers="virtual">
@@ -27,11 +84,27 @@
 			<param index="0" name="import_type" type="String" />
 			<param index="1" name="data" type="Array" />
 			<description>
+				Virtual method called when data has been successfully imported and parsed.
+				[param import_type] is the sheet name that was imported.
+				[param data] is an Array of Dictionary objects, where each Dictionary represents a row from the sheet with column headers as keys.
+
+				Example implementation:
+				[codeblock]
+				func on_imported_data(import_type: String, data: Array) -> void:
+				    for row in data:
+				        var name = row["Name"]
+				        var value = row["Value"]
+				        print("Imported: ", name, " = ", value)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="request_import">
 			<return type="void" />
 			<description>
+				Initiates the import process by sending an HTTP request to the Google Sheets API.
+				The method automatically handles the creation of the HTTP request and connection setup.
+				
+				The imported data will be delivered through the [signal imported_data] signal and the [method on_imported_data] virtual method.
 			</description>
 		</method>
 		<method name="save_resource_if_different">
@@ -39,6 +112,16 @@
 			<param index="0" name="resource_path" type="String" />
 			<param index="1" name="resource" type="Resource" />
 			<description>
+				Saves a resource to disk only if it differs from an existing resource at the same path.
+				This method includes smart diffing to only update changed properties.
+
+				[param resource_path] is the path where the resource should be saved.
+				[param resource] is the Resource instance to save.
+
+				If a resource already exists at the specified path, it will:
+				1. Compare the new resource with the existing one
+				2. Update only the changed properties in the existing resource
+				3. Save only if changes were detected
 			</description>
 		</method>
 		<method name="start_import_progress_bar">
@@ -47,6 +130,11 @@
 			<param index="1" name="task_name" type="String" />
 			<param index="2" name="task_description" type="String" />
 			<description>
+				Initializes a progress bar for tracking the import process.
+				
+				[param steps] is the total number of steps in the operation.
+				[param task_name] is a short name for the import task.
+				[param task_description] is a longer description of what's being imported.
 			</description>
 		</method>
 		<method name="step_import_progress_bar">
@@ -54,6 +142,10 @@
 			<param index="0" name="step" type="int" />
 			<param index="1" name="step_description" type="String" />
 			<description>
+				Updates the import progress bar to the specified step.
+				
+				[param step] is the current step number (should be between 0 and the total steps specified in [method start_import_progress_bar]).
+				[param step_description] is a description of the current step being executed.
 			</description>
 		</method>
 	</methods>
@@ -62,6 +154,11 @@
 			<param index="0" name="import_type" type="String" />
 			<param index="1" name="data" type="Array" />
 			<description>
+				Emitted when data has been successfully imported and parsed from the Google Sheet.
+				[param import_type] contains the sheet name that was imported.
+				[param data] contains an Array of Dictionary objects representing the imported rows.
+				
+				Each dictionary in the data array uses the sheet's column headers as keys and the cell values as values.
 			</description>
 		</signal>
 	</signals>

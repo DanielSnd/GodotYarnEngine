@@ -20,7 +20,34 @@
 		    # Override to attack state if enemy is close and we have enough stamina
 		    var enemy_distance = get_parent().get_closest_enemy_distance()
 		    var stamina = get_parent().stamina
-		    return enemy_distance
+		    return enemy_distance < 2.0 and stamina > 20.0
+		[/codeblock]
+
+		[b]Complex Override Logic:[/b]
+		YStateOverride is particularly useful when you need to check multiple conditions or perform complex calculations:
+
+		[codeblock]
+		extends YStateOverride
+
+		func _override_condition():
+		    # Check multiple conditions for a dodge state
+		    var parent = get_parent()
+		    
+		    # Don't dodge if we recently dodged
+		    if parent.time_since_last_dodge < dodge_cooldown:
+		        return false
+		        
+		    # Check if any projectiles are heading towards us
+		    for projectile in get_tree().get_nodes_in_group("projectiles"):
+		        if is_projectile_threatening(projectile):
+		            return true
+		            
+		    return false
+		    
+		func is_projectile_threatening(projectile):
+		    # Complex logic to determine if we should dodge...
+		    return false
+		[/codeblock]
 	</description>
 	<tutorials>
 	</tutorials>
@@ -29,18 +56,35 @@
 			<return type="void" />
 			<param index="0" name="fsm" type="YStateMachine" />
 			<description>
+				Virtual method called when the state machine is being set up. Override to perform initialization that requires access to the state machine.
+
+				[codeblock]
+				func _on_state_machine_setup(fsm):
+				    # Connect to signals or cache references
+				    fsm.state_transitioned.connect(_on_state_changed)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="_override_condition" qualifiers="virtual const">
 			<return type="bool" />
 			<description>
+				Virtual method that determines if the state should be overridden. Override this to implement custom override conditions.
+
+				[codeblock]
+				func _override_condition():
+				    # Example: Override if health is low and healing item is available
+				    var parent = get_parent()
+				    return parent.health < parent.max_health * 0.3 and parent.has_healing_item()
+				[/codeblock]
 			</description>
 		</method>
 	</methods>
 	<members>
 		<member name="ignore_if_state" type="YState" setter="set_ignore_if_state" getter="get_ignore_if_state">
+			If set, prevents this override from occurring when this state is active. Useful for preventing override loops or ensuring certain states complete.
 		</member>
 		<member name="override_with_state" type="YState" setter="set_override_with_state" getter="get_override_with_state">
+			The state to transition to when [method _override_condition] returns true and [member ignore_if_state] is not active.
 		</member>
 	</members>
 </class>

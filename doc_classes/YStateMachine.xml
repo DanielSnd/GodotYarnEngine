@@ -31,7 +31,12 @@
 		# Check distance in states
 		func _process_state(delta):
 		    var distance = state_machine.get_state_target_distance()
-		    if distance
+		    if distance < attack_range:
+		        # ... perform attack
+		[/codeblock]
+
+		[b]Multiplayer Support:[/b]
+		Set [member run_on_server_only] to true to ensure state logic only runs on the server in multiplayer games.
 	</description>
 	<tutorials>
 	</tutorials>
@@ -40,12 +45,27 @@
 			<return type="void" />
 			<param index="0" name="delta" type="float" />
 			<description>
+				Virtual method called during state machine processing. Override to add custom processing logic.
+
+				[codeblock]
+				func _on_process(delta):
+				    # Update target position based on player input
+				    if Input.is_action_pressed("move_to_cursor"):
+				        set_state_target_position(get_cursor_position())
+				[/codeblock]
 			</description>
 		</method>
 		<method name="_on_set_state_target" qualifiers="virtual">
 			<return type="void" />
 			<param index="0" name="new_state_target" type="Node" />
 			<description>
+				Virtual method called when setting a new state target. Override to handle target changes.
+
+				[codeblock]
+				func _on_set_state_target(new_target):
+				    if new_target is Enemy:
+				        emit_signal("enemy_targeted", new_target)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="_on_set_state_target_position" qualifiers="virtual">
@@ -58,6 +78,16 @@
 			<return type="void" />
 			<param index="0" name="node_owner" type="Node" />
 			<description>
+				Virtual method called when the state machine starts. Use it to perform initialization.
+
+				[codeblock]
+				func _on_state_machine_started(owner):
+				    # Set initial state based on owner's condition
+				    if owner.health < owner.max_health:
+				        transition($HealState)
+				    else:
+				        transition($IdleState)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="_on_transition" qualifiers="virtual">
@@ -89,6 +119,7 @@
 		<method name="get_state_target_distance" qualifiers="const">
 			<return type="float" />
 			<description>
+				Returns the distance between the state machine owner and the current target. Returns -1 if no target is set.
 			</description>
 		</method>
 		<method name="get_state_target_position" qualifiers="const">
@@ -118,32 +149,47 @@
 			<return type="void" />
 			<param index="0" name="new_state" type="YState" />
 			<description>
+				Transitions to a new state, calling exit on the current state and enter on the new state.
+
+				[codeblock]
+				# Transition to attack state when enemy is in range
+				if state_machine.get_state_target_distance() < attack_range:
+				    state_machine.transition($AttackState)
+				[/codeblock]
 			</description>
 		</method>
 	</methods>
 	<members>
 		<member name="current_state" type="YState" setter="set_current_state" getter="get_current_state">
+			The currently active state in the state machine. Change this using [method transition] instead of setting directly.
 		</member>
 		<member name="overrider_check_interval" type="int" setter="set_overrider_check_interval" getter="get_overrider_check_interval" default="2">
+			Number of frames between checking for state overrides. Higher values improve performance but make overrides less responsive.
 		</member>
 		<member name="print_debugs" type="bool" setter="set_print_debugs" getter="get_print_debugs" default="false">
+			Enables debug message printing for state transitions and overrides.
 		</member>
 		<member name="run_on_server_only" type="bool" setter="set_run_on_server_only" getter="get_run_on_server_only" default="false">
+			If [code]true[/code], state processing and transitions only occur on the server in multiplayer games.
 		</member>
 		<member name="state_target" type="Node" setter="set_state_target" getter="get_state_target">
+			The current target node for state behaviors. States can check distance to this target using [method get_state_target_distance].
 		</member>
 	</members>
 	<signals>
 		<signal name="attempt_override">
 			<description>
+				Emitted when the state machine checks for potential state overrides. YStateOverride nodes listen for this signal.
 			</description>
 		</signal>
 		<signal name="state_target_changed">
 			<description>
+				Emitted when the state target changes through [member state_target] or [method set_state_target_position].
 			</description>
 		</signal>
 		<signal name="state_transitioned">
 			<description>
+				Emitted when a state transition occurs through [method transition].
 			</description>
 		</signal>
 	</signals>
