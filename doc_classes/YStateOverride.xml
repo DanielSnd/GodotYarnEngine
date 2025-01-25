@@ -20,7 +20,7 @@
 		    # Override to attack state if enemy is close and we have enough stamina
 		    var enemy_distance = get_parent().get_closest_enemy_distance()
 		    var stamina = get_parent().stamina
-		    return enemy_distance < 2.0 and stamina > 20.0
+		    return enemy_distance &lt; 2.0 and stamina &gt; 20.0
 		[/codeblock]
 
 		[b]Complex Override Logic:[/b]

@@ -12,7 +12,7 @@
 		2. Set a [member check_type] and [member check_value]
 		3. Specify the [member check_node] and [member check_property] to monitor
 		4. Optionally set [member weight] for random selection between multiple valid overrides
-		
+
 		[codeblock]
 		# Example: Create a "TakeDamage" state that interrupts when health drops
 		@onready var take_damage_state = $TakeDamage
