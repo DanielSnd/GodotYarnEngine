@@ -100,7 +100,8 @@ void YEngine::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("find_node_with_type","parent_node","node_type"), &YEngine::find_node_with_type);
 
-    ClassDB::bind_method(D_METHOD("find_node_with_method","parent_node","node_type"), &YEngine::find_node_with_type);
+    ClassDB::bind_method(D_METHOD("find_node_with_method","parent_node","method_name"), &YEngine::find_node_with_method);
+
 
     ClassDB::bind_method(D_METHOD("set_flag_value","flags","flag","set_value"), &YEngine::set_flag_value);
     ClassDB::bind_method(D_METHOD("check_flag_value","flags","check_flag"), &YEngine::check_flag_value);
