@@ -160,7 +160,13 @@ void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 
 	// Remove singletons first
 	if (Engine::get_singleton()->has_singleton("YEngine")) {
+		YEngine* engine = Object::cast_to<YEngine>(Engine::get_singleton()->get_singleton_object("YEngine"));
 		Engine::get_singleton()->remove_singleton("YEngine");
+		if (engine) {
+			memdelete(engine);
+		}
+		
+		// Remove other singletons...
 		Engine::get_singleton()->remove_singleton("YSave");
 		Engine::get_singleton()->remove_singleton("YTime");
 		Engine::get_singleton()->remove_singleton("YPhysics");
@@ -169,6 +175,7 @@ void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 		Engine::get_singleton()->remove_singleton("YTween");
 	}
 
+	// Cleanup refs
 	if (yarn_time_ref.is_valid()) yarn_time_ref.unref();
 	if (yarn_save_ref.is_valid()) yarn_save_ref.unref();
 	if (yarn_physics_ref.is_valid()) yarn_physics_ref.unref();

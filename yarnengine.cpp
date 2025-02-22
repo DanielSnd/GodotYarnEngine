@@ -185,10 +185,19 @@ Array YEngine::seeded_shuffle(Array array_to_shuffle,int seed_to_use) {
 
 void YEngine::cleanup_node() {
     if (is_inside_tree()) {
+        // First remove from tree to prevent duplicate cleanup
+        get_parent()->remove_child(this);
+        
+        // Clear references
         ysave = nullptr;
         ytime = nullptr;
         ytween = nullptr;
         ygamestate = nullptr;
+        
+        // Clear singleton if this is the singleton instance
+        if (singleton == this) {
+            singleton = nullptr;
+        }
         
         queue_free();
     }
@@ -372,11 +381,14 @@ YEngine::YEngine() {
 
 YEngine::~YEngine() {
     is_exiting = true;
-    if (singleton != nullptr && singleton == this) {
+    // Remove singleton reference if not already cleared
+    if (singleton == this) {
         singleton = nullptr;
     }
+    
+    // Clear any remaining references
     if (using_game_state) {
-        using_game_state=false;
+        using_game_state = false;
         ygamestate = nullptr;
     }
     ytween = nullptr;
