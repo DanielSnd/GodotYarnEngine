@@ -160,9 +160,9 @@ void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 
 	// Remove singletons first
 	if (Engine::get_singleton()->has_singleton("YEngine")) {
-		YEngine* engine = Object::cast_to<YEngine>(Engine::get_singleton()->get_singleton_object("YEngine"));
+		YEngine* engine = YEngine::get_singleton();
 		Engine::get_singleton()->remove_singleton("YEngine");
-		if (engine) {
+		if (engine != nullptr) {
 			memdelete(engine);
 		}
 		
