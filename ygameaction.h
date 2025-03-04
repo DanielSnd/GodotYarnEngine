@@ -298,7 +298,9 @@ public:
     GDVIRTUAL0RC(bool, _only_starts_if)
 
     YGameAction();
-
+    ~YGameAction() {
+        
+    }
 
 };
 

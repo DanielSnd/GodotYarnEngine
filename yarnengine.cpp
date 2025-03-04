@@ -179,7 +179,6 @@ Array YEngine::seeded_shuffle(Array array_to_shuffle,int seed_to_use) {
         array_to_shuffle[j] = array_to_shuffle[i];
         array_to_shuffle[i] = tmp;
     }
-    rng.unref();
     return array_to_shuffle;
 }
 
@@ -236,10 +235,20 @@ void YEngine::_notification(int p_what) {
         // case NOTIFICATION_ENTER_WORLD: {
         // } break;
         case NOTIFICATION_EXIT_TREE: {
+            
             break;
         }
         case NOTIFICATION_PARENTED: {
             if (Engine::get_singleton()->is_editor_hint()) {
+            }
+        }
+        case NOTIFICATION_WM_CLOSE_REQUEST: {
+            if (using_game_state) {
+                if (ygamestate != nullptr) {
+                    ygamestate->clear_all_game_actions();
+                    ygamestate = nullptr;
+                }
+                using_game_state = false;
             }
         }
         case NOTIFICATION_READY: {

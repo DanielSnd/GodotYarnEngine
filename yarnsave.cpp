@@ -159,7 +159,6 @@ bool YSave::load_settings() {
     jason.instantiate();
     Error error = jason->parse(file_string);
     if(error != Error::OK) {
-        jason.unref();
         print_line(vformat("Parse JSON failed. Error at line %d: %s", jason->get_error_line(), jason->get_error_message()));
         return false;
     }
@@ -300,7 +299,6 @@ bool YSave::request_load() {
     jason.instantiate();
     Error error = jason->parse(file_string);
     if(error != Error::OK) {
-        jason.unref();
         print_line(vformat("Parse JSON failed. Error at line %d: %s", jason->get_error_line(), jason->get_error_message()));
         emit_signal(SNAME("loaded_save"),save_data);
         return false;

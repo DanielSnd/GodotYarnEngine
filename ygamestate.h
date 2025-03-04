@@ -193,7 +193,7 @@ public:
 
     void clear_all_game_actions() {
         if (!current_game_action.is_null() && current_game_action.is_valid()) {
-            current_game_action.unref();
+            current_game_action = Ref<YGameAction>();
         }
         last_turn_player_id = -1;
         if (current_turn_player != nullptr) {
@@ -247,11 +247,6 @@ public:
         if(singleton != nullptr && singleton == this) {
             singleton = nullptr;
         }
-        current_turn_player = nullptr;
-        if (!current_game_action.is_null() && current_game_action.is_valid()) current_game_action.unref();
-        overriding_game_actions.clear();
-        future_game_actions.clear();
-        past_game_actions.clear();
     }
 
 
