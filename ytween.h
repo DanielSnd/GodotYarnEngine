@@ -10,6 +10,8 @@
 #include "scene/gui/control.h"
 #include "scene/2d/node_2d.h"
 #include "yarntime.h"
+#include "core/os/mutex.h"
+#include "core/os/thread_safe.h"
 
 class Tween;
 class SceneTree;
@@ -55,6 +57,8 @@ public:
 class YTween : public RefCounted {
     GDCLASS(YTween, RefCounted);
 
+	_THREAD_SAFE_CLASS_
+    
 protected:
     static YTween* singleton;
     static void _bind_methods();

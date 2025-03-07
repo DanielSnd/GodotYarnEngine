@@ -12,7 +12,7 @@ void YTweenWrap::_bind_methods() {
     ClassDB::bind_method(D_METHOD("ychain"), &YTweenWrap::ychain);
     
     ClassDB::bind_method(D_METHOD("set_ytrans", "trans", "param1", "param2"), &YTweenWrap::set_ytrans, DEFVAL(INFINITY), DEFVAL(INFINITY));
-    ClassDB::bind_method(D_METHOD("set_ytrans_in_property", "property", "trans", "param1", "param2"), &YTweenWrap::set_ytrans_in_property, DEFVAL(INFINITY), DEFVAL(INFINITY));
+    ClassDB::bind_method(D_METHOD   ("set_ytrans_in_property", "property", "trans", "param1", "param2"), &YTweenWrap::set_ytrans_in_property, DEFVAL(INFINITY), DEFVAL(INFINITY));
     ClassDB::bind_method(D_METHOD("ytween_property", "object", "property", "final_val", "duration","ease", "trans", "param1", "param2"), &YTweenWrap::ytween_property, DEFVAL(Tween::EASE_IN_OUT), DEFVAL(Tween::TRANS_LINEAR), DEFVAL(INFINITY), DEFVAL(INFINITY));
     ADD_SIGNAL(MethodInfo("finished_or_killed"));
 }
@@ -32,6 +32,10 @@ void YTweenWrap::register_finished_extra_callback() {
 }
 
 void YTweenWrap::register_node_kill_when(Node* p_node_owner) {
+    if (!is_valid() || p_node_owner == nullptr || !p_node_owner->is_inside_tree()) {
+        return;
+    }
+
     p_node_owner->connect("tree_exiting", callable_mp(this,&YTweenWrap::kill_due_to_node_tree_exiting));
 }
 
@@ -55,9 +59,14 @@ Ref<PropertyTweener> YTweenWrap::set_ytrans_in_property(Ref<PropertyTweener> twe
 
 void YTweenWrap::kill_due_to_node_tree_exiting() {
     if (!emitted_finished_or_killed) {
+        YTween* ytween_singleton = YTween::get_singleton();
         kill();
         clear();
-        YTween::get_singleton()->kill_specific_tween(this);
+        if (ytween_singleton == nullptr) {
+            emitted_finished_or_killed = true;
+            return;
+        }
+        ytween_singleton->kill_specific_tween(this);
     }
 }
 void YTweenWrap::emitted_finished() {
@@ -69,6 +78,11 @@ void YTweenWrap::emitted_finished() {
 }
 
 Ref<PropertyTweener> YTweenWrap::ytween_property(const Object *p_target, const NodePath &p_property, Variant p_to, double p_duration, Tween::EaseType p_ease, Tween::TransitionType p_trans, real_t p_param1, real_t p_param2) {
+    if (!is_valid() || p_target == nullptr || p_property.is_empty() || p_duration < 0) {
+        ERR_PRINT("Invalid parameters for ytween_property");
+        return Ref<PropertyTweener>();
+    }
+    
     Ref<PropertyTweener> new_tween = tween_property(p_target, p_property, p_to, p_duration);
     if (new_tween.is_valid()) {
         new_tween->set_ease(p_ease);
@@ -112,44 +126,75 @@ void YTween::do_physics_process(double delta) {
 }
 
 void YTween::kill_specific_tween(Ref<YTweenWrap> specific_tween) {
-    if (!specific_tween.is_null() && specific_tween.is_valid()) {
-        auto _desired_list_id = specific_tween->tween_list_id;
-        if (tween_finder.has(_desired_list_id)) {
-            if (tween_finder[_desired_list_id].size() <= 1)
-                tween_finder.erase(_desired_list_id);
-            else
-                tween_finder[_desired_list_id].erase(specific_tween);
+    if (specific_tween.is_null() || !specific_tween.is_valid()) {
+        return;
+    }
+    
+    // Use local copy to avoid potential reference issues
+    uint64_t desired_list_id = specific_tween->tween_list_id;
+    // First remove from tween_finder to prevent reentrance issues
+    if (tween_finder.has(desired_list_id)) {
+        if (tween_finder[desired_list_id].size() <= 1) {
+            tween_finder.erase(desired_list_id);
+        } else {
+            // Safe erase that checks if the item exists in the vector
+            Vector<Ref<YTweenWrap>> &tween_list = tween_finder[desired_list_id];
+            int idx = tween_list.find(specific_tween);
+            if (idx >= 0) {
+                tween_list.remove_at(idx);
+            }
         }
+    }
+    
+    // Now handle the tween itself
+    if (specific_tween.is_valid()) {
         specific_tween->kill();
         specific_tween->clear();
-        if (!specific_tween->emitted_finished_or_killed) {
+        
+        if (!specific_tween->emitted_finished_or_killed && specific_tween.is_valid()) {
             specific_tween->emitted_finished();
         }
-        tweens.erase(specific_tween);
     }
+    
+    // Finally remove from the main list
+    tweens.erase(specific_tween);
 }
 
 void YTween::kill_tweens(Node *p_owner, uint64_t p_tag) {
-    uint64_t desired_key = p_tag;
+     uint64_t desired_key = p_tag;
+    
+    // If owner is valid, include its ID in the key
     if (p_owner != nullptr && p_owner->is_inside_tree()) {
         uint64_t node_id = p_owner->get_instance_id();
         desired_key += node_id;
     }
-    //print_line("Killing tweens with key ",desired_key," does tweenfinder have? ",tween_finder.has(desired_key));
-    if (tween_finder.has(desired_key)) {
-        for (const auto& tween_wrap: tween_finder[desired_key]) {
-            if (!tween_wrap.is_null() && tween_wrap.is_valid()) {
-                if (!tween_wrap->emitted_finished_or_killed) {
-                    tween_wrap->emitted_finished();
-                }
-                tween_wrap->kill();
-                tweens.erase(tween_wrap);
-                tween_wrap->clear();
-            }
-        }
-        tween_finder.erase(desired_key);
+    
+    if (!tween_finder.has(desired_key)) {
+        return;
     }
-   // print_line("Finished Killing tweens with key ",desired_key," does tweenfinder have? ",tween_finder.has(desired_key));
+    
+    // Make a copy of the list to avoid modification during iteration
+    Vector<Ref<YTweenWrap>> tweens_to_kill = tween_finder[desired_key];
+    
+    // Remove the entry from tween_finder first to prevent reentrance issues
+    tween_finder.erase(desired_key);
+    
+    // Now safely process each tween
+    for (int i = 0; i < tweens_to_kill.size(); i++) {
+        Ref<YTweenWrap> tween_wrap = tweens_to_kill[i];
+        
+        if (tween_wrap.is_null() || !tween_wrap.is_valid()) {
+            continue;
+        }
+        
+        if (!tween_wrap->emitted_finished_or_killed) {
+            tween_wrap->emitted_finished();
+        }
+        
+        tween_wrap->kill();
+        tweens.erase(tween_wrap);
+        tween_wrap->clear();
+    }
 }
 
 Ref<YTweenWrap> YTween::tween_scale_unique(Node *p_owner, float desired_size,float desired_duration,Tween::EaseType ease_type,Tween::TransitionType trans_type,float desired_delay, uint64_t p_tag) {
@@ -255,7 +300,13 @@ Ref<YTweenWrap> YTween::create_tween(Node* node_owner, uint64_t tag) {
         return new_wrap;
     }
 
+    // Create the tween
     Ref<YTweenWrap> tween = memnew(YTweenWrap(tree));
+    if (tween.is_null()) {
+        ERR_PRINT("Failed to create YTweenWrap");
+        return Ref<YTweenWrap>();
+    }
+    
     if (node_owner != nullptr && node_owner->is_inside_tree()) {
         uint64_t node_id = node_owner->get_instance_id();
         desired_key += node_id;
@@ -267,10 +318,10 @@ Ref<YTweenWrap> YTween::create_tween(Node* node_owner, uint64_t tag) {
     //print_line("Creating a new tween with desired key ",desired_key," does tweenfinder have? ",tween_finder.has(desired_key));
     if (!tween_finder.has(desired_key)) {
         Vector<Ref<YTweenWrap>> new_list;
-        new_list.append(tween);
+        new_list.push_back(tween);
         tween_finder[desired_key] = new_list;
     } else {
-        tween_finder[desired_key].append(tween);
+        tween_finder[desired_key].push_back(tween);
     }
     tweens.push_back(tween);
     //print_line("Created a new tween with desired key ",desired_key);
@@ -303,18 +354,30 @@ Ref<YTweenWrap> YTween::create_tween(Node* node_owner, uint64_t tag) {
 //         E = N;
 //     }
 // }
+
 void YTween::process_tweens(double p_delta, bool p_physics) {
-    // This methods works similarly to how SceneTreeTimers are handled.
+    _THREAD_SAFE_METHOD_
+
+    if (tweens.size() == 0) {
+        return;  // No tweens to process
+    }
+    
+    // Store the last element for loop termination check
     List<Ref<YTweenWrap>>::Element *L = tweens.back();
+    
+	const double unscaled_delta = Engine::get_singleton()->get_process_step();
+
+    // Create a list of tweens to be removed to avoid modifying while iterating
+    List<Ref<YTweenWrap>> tweens_to_remove;
+    
     bool paused = YTime::get_singleton()->is_paused;
     for (List<Ref<YTweenWrap>>::Element *E = tweens.front(); E;) {
         List<Ref<YTweenWrap>>::Element *N = E->next();
+		Ref<YTweenWrap> &tween = E->get();
 
-        // Don't process if paused or process mode doesn't match.
-        //
-
-        if ((!E->get().is_valid() || E->get().is_null()) || !E->get()->can_process(paused) ||
-            p_physics == (E->get()->get_process_mode() == Tween::TWEEN_PROCESS_IDLE)) {
+        // Skip invalid tweens
+        if (tween.is_null() || !tween.is_valid()) {
+            tweens_to_remove.push_back(tween);
             if (E == L) {
                 break;
             }
@@ -322,21 +385,49 @@ void YTween::process_tweens(double p_delta, bool p_physics) {
             continue;
         }
 
-        if (!E->get()->step(p_delta)) {
-            auto _desired_list_id = E->get()->tween_list_id;
-            if (tween_finder.has(_desired_list_id)) {
-                if (tween_finder[_desired_list_id].size() <= 1)
-                    tween_finder.erase(_desired_list_id);
-                else
-                    tween_finder[_desired_list_id].erase(E->get());
+        // Don't process if paused or process mode doesn't match.
+        //
+        if (!tween->can_process(paused) || p_physics == (tween->get_process_mode() == Tween::TWEEN_PROCESS_IDLE)) {
+            if (E == L) {
+                break;
             }
-            E->get()->clear();
-            tweens.erase(E);
+            E = N;
+            continue;
+        }
+
+        if (!tween->step(tween->is_ignoring_time_scale() ? unscaled_delta : p_delta)) {
+            if (tween.is_valid()) {
+                uint64_t _desired_list_id = tween->tween_list_id;
+                // Find and remove this specific tween
+                Vector<Ref<YTweenWrap>> &tween_list = tween_finder[_desired_list_id];
+                int idx = tween_list.find(tween);
+                if (idx >= 0) {
+                    tween_list.remove_at(idx);
+                }
+                if (tween_finder.has(_desired_list_id)) {
+                    if (tween_finder[_desired_list_id].size() <= 1)
+                        tween_finder.erase(_desired_list_id);
+                    else
+                        tween_finder[_desired_list_id].erase(E->get());
+                }
+            }
+            
+            // Mark for removal
+            tweens_to_remove.push_back(tween);
+
+            if (tween.is_valid()) {
+                tween->clear();
+            }
         }
         if (E == L) {
             break;
         }
         E = N;
+    }
+    
+    // Now safely remove the tweens that are done
+    for (List<Ref<YTweenWrap>>::Element *E = tweens_to_remove.front(); E; E = E->next()) {
+        tweens.erase(E->get());
     }
 }
 
