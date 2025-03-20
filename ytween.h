@@ -23,7 +23,6 @@ class YTweenWrap : public Tween {
 protected:
     static void _bind_methods();
 
-
 public:
     uint64_t tween_list_id;
     bool emitted_finished_or_killed = false;
@@ -52,6 +51,58 @@ public:
     explicit YTweenWrap(SceneTree *p_parent_tree) : Tween(p_parent_tree) {
         tween_list_id = 0;
     }
+};
+
+class YTweenJiggle : public YTweenWrap {
+    GDCLASS(YTweenJiggle, YTweenWrap);
+
+public:
+    Node3D* jiggle_node;
+
+    // Jiggle state tracking
+    bool started_jiggle = false;
+    bool is_jiggling = false;
+    bool is_jiggling_finished = false;
+    bool rejiggled = false;
+    float current_jiggle_power = 1.0f;
+    double jiggle_time = 0.0;
+    float target_jiggle_power = 1.2f;
+    float power_multiplier = 1.0f;
+    float eased_power_progress = 0.0f;
+    float jiggle_tilt = 6.0f;
+    float jiggle_frequency = 16.0f;
+    float jiggle_decelerate = 1.5f;
+    float additional_speed = 1.0f;
+    float additional_tilt = 0.0f;
+    float constant_jiggle = 0.0f;
+    int random_level = 1;
+    Vector3 scale_axes = Vector3(1,1,1);
+    Vector3 rotation_axes = Vector3(1,0,1);
+    Vector3 initial_rotation = Vector3(0,0,0);
+    Vector3 initial_scale = Vector3(1,1,1);
+    float rejiggle_power = 2.0f;
+    float rejiggle_value = 0.0f;
+    float rejiggle_progress = 0.0f;
+    float rejiggle_random_offset = 0.0f;
+
+    TypedArray<Vector4> trig_values;
+    Vector4 get_random_trig_value();
+
+    void calculate_jiggle(float p_delta);
+    void emitted_finished();
+    float ease_in_out_cubic(float start, float end, float t);
+
+    void randomize_trigs(float p_trans = 1.0);
+    void calculate_trig_values(float timeMultiplier = 1.0f);
+
+    YTweenJiggle() : YTweenWrap() {
+        tween_list_id = 0;
+    }
+    explicit YTweenJiggle(SceneTree *p_parent_tree) : YTweenWrap(p_parent_tree) {
+        tween_list_id = 0;
+    }
+    Callable get_jiggle_callable();
+
 };
 
 class YTween : public RefCounted {
@@ -112,11 +163,23 @@ public:
     Ref<YTweenWrap> tween_modulate(Node *p_owner, Color desired_color = Color(1.0,1.0,1.0,1.0), float desired_duration = 0.25, Tween::EaseType ease_type = Tween::EASE_IN_OUT, Tween::TransitionType trans_type = Tween::TRANS_QUAD, float
                            desired_delay = 0.0, uint64_t p_tag = 0);
 
+    Ref<YTweenWrap> find_tween(Node *p_owner, uint64_t p_tag);
+
+    // Helper function for jiggle effect
+    Ref<YTweenWrap> tween_jiggle(Node *p_owner, float jiggle_power = 1.0f, 
+                    float jiggle_tilt = 6.0f, float jiggle_frequency = 16.0f, 
+                    Vector3 scale_axes = Vector3(1,1,1), Vector3 rotation_axes = Vector3(1,0,1),
+                    float jiggle_decelerate = 1.5f, float additional_speed = 1.0f,
+                    float constant_jiggle = 0.0f, int random_level = 1,
+                    float rejiggle_power = 2.0f, uint64_t p_tag = 55);
+
     Ref<YTweenWrap> create_unique_tween(Node* p_owner, uint64_t p_tag = 0);
     Ref<YTweenWrap> create_tween(Node* p_owner, uint64_t p_tag = 0);
+    Ref<YTweenWrap> create_tween_from(Node* p_owner, SceneTree* p_tree, Ref<YTweenWrap> p_tween, uint64_t p_tag = 0);
 
     void process_tweens(double p_delta, bool p_physics);
 
+    static double last_delta_time;
 
     YTween();
     ~YTween();

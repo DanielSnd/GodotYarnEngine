@@ -109,6 +109,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<YHBoxContainer>();
 	ClassDB::register_class<YVBoxContainer>();
 	ClassDB::register_class<YTweenWrap>();
+	ClassDB::register_class<YTweenJiggle>();
 	ClassDB::register_class<YTween>();
 	ClassDB::register_class<YSpecialPoint3D>();
 	ClassDB::register_class<YVisualElement3D>();
@@ -147,7 +148,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	// Bind your singleton.
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YEngine", memnew(YEngine)));
 	YEngine::get_singleton()->add_setting("application/config/window_name", "", Variant::Type::STRING);
-	YEngine::get_singleton()->add_setting("yarnengine/next_persistent_id", 0, Variant::Type::INT);
+	YEngine::get_singleton()->add_setting("yengine/cached/next_persistent_id", 0, Variant::Type::INT);
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YSave", YSave::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YTime", YTime::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YPhysics", YPhysics::get_singleton()));

@@ -32,6 +32,7 @@ void YPersistentID::_bind_methods() {
     ClassDB::bind_static_method("YPersistentID", D_METHOD("count_deleted_ids"), &YPersistentID::count_deleted_ids);
     ClassDB::bind_static_method("YPersistentID", D_METHOD("clear_deleted_ids"), &YPersistentID::clear_deleted_ids);
     ClassDB::bind_static_method("YPersistentID", D_METHOD("respawn", "id", "parent"), &YPersistentID::respawn);
+    ClassDB::bind_static_method("YPersistentID", D_METHOD("cleanup_invalidly_spawned_nodes"), &YPersistentID::cleanup_invalidly_spawned_nodes);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "persistent_id"), "set_persistent_id", "get_persistent_id");
 }
 
@@ -316,5 +317,36 @@ Node* YPersistentID::respawn(uint64_t p_id, Node* p_parent) {
 
 
     return spawned_node;
+}
+
+void YPersistentID::cleanup_invalidly_spawned_nodes() {
+    // Create a list of nodes to delete to avoid modifying the map while iterating
+    List<Node*> nodes_to_delete;
+
+    // Iterate through all deleted IDs
+    for (const auto& pair : deleted_persistent_ids) {
+        uint64_t deleted_id = pair.key;
+        
+        // Check if this ID is currently in the persistent_id_map
+        if (persistent_id_map.has(deleted_id)) {
+            YPersistentID* persistent_node = persistent_id_map[deleted_id];
+            
+            // Check if the node is still valid and in the tree
+            if (persistent_node && persistent_node->is_inside_tree()) {
+                // Get the parent node and add it to our deletion list
+                Node* parent = persistent_node->get_parent();
+                if (parent) {
+                    nodes_to_delete.push_back(parent);
+                }
+            }
+        }
+    }
+
+    // Delete all the collected nodes
+    for (Node* node : nodes_to_delete) {
+        if (node && node->is_inside_tree()) {
+            node->queue_free();
+        }
+    }
 }
 

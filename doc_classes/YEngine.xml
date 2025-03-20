@@ -76,7 +76,7 @@
 		<method name="find_node_with_method">
 			<return type="Node" />
 			<param index="0" name="parent_node" type="Node" />
-			<param index="1" name="node_type" type="String" />
+			<param index="1" name="method_name" type="String" />
 			<description>
 				Searches through the children of [param parent_node] and returns the first node that has the specified method.
 			</description>

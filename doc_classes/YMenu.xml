@@ -211,6 +211,10 @@
 		<member name="auto_start_menu" type="bool" setter="set_auto_start_menu" getter="get_auto_start_menu" default="false">
 			If [code]true[/code], automatically calls [method _on_started_menu] when the menu enters the scene tree.
 		</member>
+		<member name="fade_in_time" type="float" setter="set_fade_in_time" getter="get_fade_in_time" default="0.4">
+		</member>
+		<member name="fade_out_time" type="float" setter="set_fade_out_time" getter="get_fade_out_time" default="0.18">
+		</member>
 		<member name="ui_cancel_presses_back_button" type="bool" setter="set_ui_cancel_presses_back_button" getter="get_ui_cancel_presses_back_button" default="false">
 			If [code]true[/code], pressing the UI cancel action (usually Esc key) will trigger the back button functionality.
 		</member>

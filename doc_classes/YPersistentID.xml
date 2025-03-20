@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YPersistentID" inherits="Node" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
+	<brief_description>
+		A node that provides persistent identification and respawn capabilities for nodes across scene changes and game sessions.
+	</brief_description>
+	<description>
+		YPersistentID is a powerful system for managing persistent node identification in Godot projects. It provides a robust way to track and reference nodes across scene changes, saves, and respawns.
+
+		The system maintains unique IDs for nodes and can store respawn information when nodes are deleted, allowing them to be restored later with their original properties.
+
+		[b]Key Features:[/b]
+		- Persistent ID management across scene changes
+		- Scene path tracking for saved scenes
+		- Respawn system for deleted nodes
+		- Deleted ID tracking with timestamps
+		- Editor integration for ID management
+
+		[b]Usage:[/b]
+		Add a YPersistentID node as a child of any node you want to track persistently. The system will automatically generate and manage unique IDs for these nodes.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="add_to_deleted_ids" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<param index="1" name="time" type="int" default="0" />
+			<description>
+				Marks a persistent ID as deleted with an optional timestamp. This prevents the node from being respawned until the deletion time is cleared.
+
+				[b]Example:[/b]
+				[codeblock]
+				# Mark a node as deleted with current time
+				YPersistentID.add_to_deleted_ids(node_id, Time.get_unix_time_from_system())
+				[/codeblock]
+			</description>
+		</method>
+		<method name="clear_deleted_ids" qualifiers="static">
+			<return type="void" />
+			<description>
+				Clears all deleted ID records, allowing previously deleted nodes to be respawned.
+
+				[b]Example:[/b]
+				[codeblock]
+				# Clear all deleted IDs (useful when loading a new game)
+				YPersistentID.clear_deleted_ids()
+				[/codeblock]
+			</description>
+		</method>
+		<method name="count_deleted_ids" qualifiers="static">
+			<return type="int" />
+			<description>
+				Returns the number of currently deleted persistent IDs.
+
+				[b]Example:[/b]
+				[codeblock]
+				var deleted_count = YPersistentID.count_deleted_ids()
+				print("There are ", deleted_count, " deleted nodes")
+				[/codeblock]
+			</description>
+		</method>
+		<method name="find_by_persistent_id" qualifiers="static">
+			<return type="Node" />
+			<param index="0" name="id" type="int" />
+			<description>
+				Finds a node in the scene tree by its persistent ID. Returns [code]null[/code] if no node with that ID is found.
+
+				[b]Example:[/b]
+				[codeblock]
+				var node = YPersistentID.find_by_persistent_id(persistent_id)
+				if node:
+				    print("Found node: ", node.name)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_all_scene_paths_and_ids" qualifiers="static">
+			<return type="Dictionary" />
+			<description>
+				Returns a dictionary mapping scene paths to their assigned IDs. Useful for debugging or saving scene references.
+
+				[b]Example:[/b]
+				[codeblock]
+				var scene_paths = YPersistentID.get_all_scene_paths_and_ids()
+				for path in scene_paths:
+				    print("Scene: ", path, " has ID: ", scene_paths[path])
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_deleted_ids_with_times" qualifiers="static">
+			<return type="Dictionary" />
+			<description>
+				Returns a dictionary of all deleted persistent IDs and their deletion times.
+
+				[b]Example:[/b]
+				[codeblock]
+				var deleted_nodes = YPersistentID.get_deleted_ids_with_times()
+				for id in deleted_nodes:
+				    print("Node ", id, " was deleted at time: ", deleted_nodes[id])
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_persistent_id_from_node" qualifiers="static">
+			<return type="int" />
+			<param index="0" name="node" type="Node" />
+			<description>
+				Retrieves the persistent ID from a node's meta data. Returns -1 if the node doesn't have a persistent ID.
+
+				[b]Example:[/b]
+				[codeblock]
+				var id = YPersistentID.get_persistent_id_from_node(some_node)
+				if id != -1:
+				    print("Node has persistent ID: ", id)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_respawn_info" qualifiers="static">
+			<return type="Array" />
+			<param index="0" name="id" type="int" />
+			<description>
+				Returns an array containing the respawn information for a deleted node. The array contains [scene_path_id, global_transform].
+
+				[b]Example:[/b]
+				[codeblock]
+				var respawn_data = YPersistentID.get_respawn_info(node_id)
+				if respawn_data.size() >= 2:
+				    var scene_id = respawn_data[0]
+				    var transform = respawn_data[1]
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_scene_path" qualifiers="const">
+			<return type="String" />
+			<description>
+				Returns the scene path of the parent node if it's part of a saved scene. Returns an empty string otherwise.
+
+				[b]Example:[/b]
+				[codeblock]
+				var scene_path = $YPersistentID.get_scene_path()
+				if scene_path:
+				    print("Node is part of scene: ", scene_path)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_scene_path_from_id" qualifiers="static">
+			<return type="String" />
+			<param index="0" name="id" type="int" />
+			<description>
+				Returns the scene path associated with a scene path ID. Returns an empty string if the ID doesn't exist.
+
+				[b]Example:[/b]
+				[codeblock]
+				var path = YPersistentID.get_scene_path_from_id(scene_id)
+				if path:
+				    print("Scene path for ID ", scene_id, ": ", path)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_scene_path_id" qualifiers="static">
+			<return type="int" />
+			<param index="0" name="path" type="String" />
+			<description>
+				Returns the ID associated with a scene path. Creates a new ID if one doesn't exist.
+
+				[b]Example:[/b]
+				[codeblock]
+				var scene_id = YPersistentID.get_scene_path_id("res://scenes/my_scene.tscn")
+				print("Scene ID: ", scene_id)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="has_respawn_info" qualifiers="static">
+			<return type="bool" />
+			<param index="0" name="id" type="int" />
+			<description>
+				Returns [code]true[/code] if respawn information exists for the given persistent ID.
+
+				[b]Example:[/b]
+				[codeblock]
+				if YPersistentID.has_respawn_info(node_id):
+				    print("Node can be respawned")
+				[/codeblock]
+			</description>
+		</method>
+		<method name="is_saved_scene" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the parent node is part of a saved scene.
+
+				[b]Example:[/b]
+				[codeblock]
+				if $YPersistentID.is_saved_scene():
+				    print("This node is part of a saved scene")
+				[/codeblock]
+			</description>
+		</method>
+		<method name="remove_from_deleted_ids" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<description>
+				Removes a persistent ID from the deleted IDs list, allowing it to be respawned.
+
+				[b]Example:[/b]
+				[codeblock]
+				YPersistentID.remove_from_deleted_ids(node_id)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="remove_respawn_info" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<description>
+				Removes the respawn information for a persistent ID.
+
+				[b]Example:[/b]
+				[codeblock]
+				YPersistentID.remove_respawn_info(node_id)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="respawn" qualifiers="static">
+			<return type="Node" />
+			<param index="0" name="id" type="int" />
+			<param index="1" name="parent" type="Node" />
+			<description>
+				Attempts to respawn a deleted node with the given persistent ID under the specified parent node. Returns the respawned node or [code]null[/code] if respawning fails.
+
+				[b]Example:[/b]
+				[codeblock]
+				var respawned_node = YPersistentID.respawn(node_id, get_parent())
+				if respawned_node:
+				    print("Node respawned successfully")
+				else:
+				    print("Failed to respawn node")
+				[/codeblock]
+			</description>
+		</method>
+		<method name="store_respawn_info">
+			<return type="void" />
+			<description>
+				Stores the respawn information for this node, including its scene path and global transform. This is automatically called when the node is deleted.
+
+				[b]Example:[/b]
+				[codeblock]
+				# Store respawn info before manually deleting a node
+				$YPersistentID.store_respawn_info()
+				queue_free()
+				[/codeblock]
+			</description>
+		</method>
+		<method name="cleanup_invalidly_spawned_nodes" qualifiers="static">
+			<return type="void" />
+			<description>
+				Checks all deleted persistent IDs and removes any nodes that are currently spawned but marked as deleted. This is useful for cleaning up nodes that were incorrectly respawned or persisted when they should have been deleted.
+
+				The method will:
+				1. Check all IDs in the deleted IDs list
+				2. For each deleted ID, check if there's a corresponding node in the scene tree
+				3. If found, queue_free the parent node of the persistent ID node
+
+				[b]Example:[/b]
+				[codeblock]
+				# Clean up any nodes that shouldn't be spawned
+				YPersistentID.cleanup_invalidly_spawned_nodes()
+				[/codeblock]
+
+				[b]Note:[/b] This is particularly useful when loading a saved game or transitioning between scenes to ensure consistency between the deleted IDs list and the actual scene tree.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="persistent_id" type="int" setter="set_persistent_id" getter="get_persistent_id" default="0">
+			The unique persistent ID assigned to this node. This ID remains constant across scene changes and game sessions.
+		</member>
+	</members>
+</class>

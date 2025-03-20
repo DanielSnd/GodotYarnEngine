@@ -9,6 +9,18 @@
 #include "scene/resources/2d/shape_2d.h"
 #include "scene/resources/3d/shape_3d.h"
 
+// class IntersectResult : public RefCounted {
+//     GDCLASS(IntersectResult, RefCounted);
+
+//     public:
+//         Vector3 position;
+//         Vector3 normal;
+//         int collider_id;
+//         RID rid;
+//         Node collider;
+//         Node node;
+// };
+
 class YPhysics : public RefCounted {
     GDCLASS(YPhysics, RefCounted);
 

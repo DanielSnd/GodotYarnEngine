@@ -85,6 +85,9 @@ public:
     // Respawn functionality
     static Node* respawn(uint64_t p_id, Node* p_parent);
 
+    // Cleanup functionality
+    static void cleanup_invalidly_spawned_nodes();
+
     YPersistentID();
     ~YPersistentID();
 };
