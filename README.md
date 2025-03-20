@@ -273,6 +273,57 @@ YThreader simplifies multithreading in Godot projects. It provides an easy-to-us
 4. **Main Thread Checking**: Provides a static method to check if the current code is running on the main thread.
 5. **Interruptible Jobs**: Includes a YThreaderInterrupter class for cancelling long-running jobs.
 
+## YPersistentID: Persistent Node Identification System
+
+YPersistentID is a powerful system for managing persistent node identification in Godot projects. It provides a robust way to track and reference nodes across scene changes, saves, and respawns.
+
+### Key Features
+
+1. **Persistent ID Management**:
+   - Automatically generates and manages unique persistent IDs for nodes
+   - IDs persist across scene changes and game sessions
+
+2. **Scene Path Tracking**:
+   - Tracks which nodes belong to saved scenes
+   - Maintains a mapping between scene paths and unique IDs
+   - Provides methods to retrieve scene paths from IDs and vice versa
+
+3. **Respawn System**:
+   - Stores respawn information for deleted nodes
+   - Maintains global transform data for accurate respawning
+   - Supports respawning nodes from their original scene paths
+
+4. **Deleted ID Tracking**:
+   - Keeps track of deleted persistent IDs
+   - Stores deletion times for time-based respawn logic
+   - Prevents respawning of recently deleted nodes
+
+### Usage
+
+```gdscript
+# Get a node's persistent ID
+var id = $YPersistentID.persistent_id
+
+# Find a node by its persistent ID
+var node = YPersistentID.find_by_persistent_id(id)
+
+# Check if a node is part of a saved scene
+if $YPersistentID.is_saved_scene():
+    var scene_path = $YPersistentID.get_scene_path()
+    print("Node is part of scene: ", scene_path)
+
+# Get all registered scene paths and their IDs
+var scene_paths = YPersistentID.get_all_scene_paths_and_ids()
+```
+
+### Integration with Save Systems
+
+YPersistentID can be used with save systems by:
+- Maintaining persistent references to nodes across saves
+- Storing respawn information for deleted nodes
+- Tracking scene paths for proper node restoration
+- Supporting time-based respawn logic
+
 ## Asset Placer: 3D Scene Placement Tool
 
 The Asset Placer is a powerful editor tool integrated into the YarnEngine module, designed to streamline the process of placing 3D assets in your Godot scenes. It provides an intuitive interface for selecting, previewing, and placing 3D objects directly in the 3D viewport.

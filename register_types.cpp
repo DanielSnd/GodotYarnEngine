@@ -30,6 +30,7 @@
 #include "yscenespawner3d.h"
 #include "ytween.h"
 #include "ythreader.h"
+#include "ypersistentid.h"
 #include "importers/resource_importer_glb_as_mesh.h"
 
 #ifdef NO_FMOD
@@ -127,6 +128,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
  	ClassDB::register_class<YSceneSpawner3D>();
  	ClassDB::register_class<YBoneAttachment3D>();
 	ClassDB::register_class<CombinedTexture2D>();
+	ClassDB::register_class<YPersistentID>();
 
 	// Initialize your singleton.
 
@@ -145,6 +147,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	// Bind your singleton.
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YEngine", memnew(YEngine)));
 	YEngine::get_singleton()->add_setting("application/config/window_name", "", Variant::Type::STRING);
+	YEngine::get_singleton()->add_setting("yarnengine/next_persistent_id", 0, Variant::Type::INT);
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YSave", YSave::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YTime", YTime::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YPhysics", YPhysics::get_singleton()));

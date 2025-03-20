@@ -38,6 +38,13 @@ public:
     bool get_auto_start_menu() { return auto_start_menu; }
     void set_auto_start_menu(bool val) { auto_start_menu = val; }
 
+    float fade_in_time = 0.4;
+    float get_fade_in_time() { return fade_in_time; }
+    void set_fade_in_time(float val) { fade_in_time = val; }
+    float fade_out_time = 0.18;
+    float get_fade_out_time() { return fade_out_time; }
+    void set_fade_out_time(float val) { fade_out_time = val; }
+
     bool is_active = false;
     bool get_is_active() {
         return not_editor && is_inside_tree() && YEngine::get_singleton() != nullptr && YEngine::get_singleton()->is_top_of_menu_stack(this);

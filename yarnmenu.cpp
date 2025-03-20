@@ -13,10 +13,17 @@ void YMenu::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_auto_start_menu", "active"), &YMenu::set_auto_start_menu);
     ClassDB::bind_method(D_METHOD("get_auto_start_menu"), &YMenu::get_auto_start_menu);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "auto_start_menu"), "set_auto_start_menu", "get_auto_start_menu");
-
     ClassDB::bind_method(D_METHOD("set_ui_cancel_presses_back_button", "active"), &YMenu::set_ui_cancel_presses_back_button);
     ClassDB::bind_method(D_METHOD("get_ui_cancel_presses_back_button"), &YMenu::get_ui_cancel_presses_back_button);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "ui_cancel_presses_back_button"), "set_ui_cancel_presses_back_button", "get_ui_cancel_presses_back_button");
+
+    ClassDB::bind_method(D_METHOD("set_fade_in_time", "time"), &YMenu::set_fade_in_time);
+    ClassDB::bind_method(D_METHOD("get_fade_in_time"), &YMenu::get_fade_in_time);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "fade_in_time"), "set_fade_in_time", "get_fade_in_time");
+
+    ClassDB::bind_method(D_METHOD("set_fade_out_time", "time"), &YMenu::set_fade_out_time);
+    ClassDB::bind_method(D_METHOD("get_fade_out_time"), &YMenu::get_fade_out_time);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "fade_out_time"), "set_fade_out_time", "get_fade_out_time");
 
     ClassDB::bind_method(D_METHOD("on_back_button_pressed"), &YMenu::_on_back_button_pressed);
     ClassDB::bind_method(D_METHOD("on_back_to_menu"), &YMenu::_on_back_to_menu);
@@ -36,7 +43,8 @@ void YMenu::_bind_methods() {
     ClassDB::bind_method(D_METHOD("instantiate_child_menu", "parent_node","child_menu_scene","auto_start"), &YMenu::instantiate_child_menu, DEFVAL(true));
     ClassDB::bind_method(D_METHOD("instantiate_replacement_menu", "parent_node","child_menu_scene","auto_start"), &YMenu::instantiate_replacement_menu, DEFVAL(true));
 
-
+    
+    
     ClassDB::bind_static_method("YMenu", D_METHOD("calculate_ideal_control_center","control_size", "control_parent"), &YMenu::calculate_ideal_control_center);
     ADD_SIGNAL(MethodInfo("go_back_to_menu"));
     ADD_SIGNAL(MethodInfo("started_menu"));
@@ -65,7 +73,7 @@ void YMenu::_notification(int p_what) {
             if(not_editor) {
                 set_modulate(Color{1.0,1.0,1.0,0.0});
                 auto tween = create_tween();
-                tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,1.0},0.4)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);
+                tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,1.0}, fade_in_time)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);
                 add_to_menu_stack();
                 if (auto_start_menu) {
                     called_start_from_process = true;
@@ -159,7 +167,7 @@ Vector2 YMenu::calculate_ideal_control_center(Vector2 size,Control *parent) {
 
 Ref<Tween> YMenu::fade_out() {
     auto tween = YTween::get_singleton()->create_unique_tween(this);
-    tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,0.0},0.18)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);
+    tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,0.0}, fade_out_time)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);
     GDVIRTUAL_CALL(_on_fade_out);
     return tween;
 }
