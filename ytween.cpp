@@ -534,7 +534,7 @@ void YTweenJiggle::randomize_trigs(float p_trans)
 {
     if (p_trans >= 1.0f)
     {
-        jiggle_time = Math::random(-M_PI * 5.0f, M_PI * 5.0f);
+        jiggle_time = Math::random(-Math_PI * 5.0f, Math_PI * 5.0f);
         trig_values.clear();
         
         for (int i = 0; i < random_level; i++)
@@ -543,7 +543,7 @@ void YTweenJiggle::randomize_trigs(float p_trans)
     }
     else
     {
-        jiggle_time = Math::lerp(jiggle_time, static_cast<double>(Math::random(-M_PI * 5.0, M_PI * 5.0)), static_cast<double>(p_trans));
+        jiggle_time = Math::lerp(jiggle_time, static_cast<double>(Math::random(-Math_PI * 5.0, Math_PI * 5.0)), static_cast<double>(p_trans));
 
         for (int i = 0; i < random_level; i++)
         {
@@ -669,7 +669,7 @@ float YTweenJiggle::ease_in_out_cubic(float start, float end, float t) {
 Vector4 YTweenJiggle::get_random_trig_value()
 {
     // x: Value, y: Multiplier, z: TimeOffset, w: RandomTimeMult
-    return Vector4(0.0f, Math::random(0.85f, 1.15f), Math::random(-M_PI, M_PI), Math::random(0.8f, 1.2f));
+    return Vector4(0.0f, Math::random(0.85f, 1.15f), Math::random(-Math_PI, Math_PI), Math::random(0.8f, 1.2f));
 }
 
 void YTweenJiggle::calculate_trig_values(float time_multiplier) {

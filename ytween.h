@@ -4,14 +4,16 @@
 
 #ifndef YTWEEN_H
 #define YTWEEN_H
+#include "yarntime.h"
+#include "scene/3d/node_3d.h"
 #include "core/object/ref_counted.h"
 #include "scene/animation/tween.h"
-#include "yarnengine.h"
 #include "scene/gui/control.h"
 #include "scene/2d/node_2d.h"
-#include "yarntime.h"
 #include "core/os/mutex.h"
 #include "core/os/thread_safe.h"
+
+#define Math_PI 3.1415926535897932384626433833
 
 class Tween;
 class SceneTree;
