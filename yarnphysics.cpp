@@ -4,16 +4,13 @@
 
 #include "yarnphysics.h"
 
-#include "scene/main/scene_tree.h"
-#include "scene/main/window.h"
-#include "scene/resources/world_2d.h"
-#include "scene/resources/2d/shape_2d.h"
-#include "scene/resources/3d/world_3d.h"
-#include "servers/physics_server_2d.h"
 
 YPhysics* YPhysics::singleton = nullptr;
 bool YPhysics::has_sphere_shape = false;
 RID YPhysics::sphere_rid;
+Vector3 YPhysics::stored_position_hit = {};
+Vector3 YPhysics::stored_hit_normal = {};
+ObjectID YPhysics::stored_collider_id = {};
 
 void YPhysics::_bind_methods() {
     ClassDB::bind_static_method("YPhysics",D_METHOD("raycast2d_to", "ray_origin", "ray_end", "collide_type", "collision_mask", "exclude"), &YPhysics::raycast2d_to,DEFVAL(COLLIDE_WITH_BODIES),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
@@ -25,6 +22,13 @@ void YPhysics::_bind_methods() {
     ClassDB::bind_static_method("YPhysics",D_METHOD("intersect_shape_3d", "world_position", "margin", "collide_type","max_results", "collision_mask", "exclude"), &YPhysics::_intersect_shape_3d,DEFVAL(0.04),DEFVAL(COLLIDE_WITH_BODIES),DEFVAL(32),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
     ClassDB::bind_static_method("YPhysics",D_METHOD("check_collision_sphere", "world_position", "radius", "collision_mask", "exclude"), &YPhysics::check_collision_sphere,DEFVAL(1.0),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
     ClassDB::bind_static_method("YPhysics",D_METHOD("free_sphere_check", "world_position", "radius", "collision_mask", "exclude"), &YPhysics::free_sphere_check,DEFVAL(1.0),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
+    ClassDB::bind_static_method("YPhysics",D_METHOD("dictionary_to_intersect_result", "dictionary"), &YPhysics::dictionary_to_intersect_result);
+    ClassDB::bind_static_method("YPhysics",D_METHOD("hit3d_position"), &YPhysics::get_stored_hit_position);
+    ClassDB::bind_static_method("YPhysics",D_METHOD("hit3d_normal"), &YPhysics::get_stored_hit_normal);
+    ClassDB::bind_static_method("YPhysics",D_METHOD("hit3d_collider"), &YPhysics::get_stored_hit_collider);
+    ClassDB::bind_static_method("YPhysics",D_METHOD("has_raycast3d_hit", "ray_origin", "ray_direction", "ray_distance", "collide_type", "collision_mask", "exclude"), &YPhysics::has_raycast3d_hit,DEFVAL(COLLIDE_WITH_BODIES),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
+
+
     ClassDB::bind_static_method("YPhysics",D_METHOD("check_rest_info_3d", "shape", "world_transform", "margin", "collide_type", "collision_mask", "exclude"),
                          &YPhysics::check_rest_info,
                          DEFVAL(0.04),
@@ -116,7 +120,44 @@ Dictionary YPhysics::raycast2d_to(Vector2 ray_origin, Vector2 ray_end, CollideTy
             }
         }
     }
+
     return return_dictionary;
+}
+
+Ref<IntersectResult> YPhysics::dictionary_to_intersect_result(const Dictionary &p_dict)
+{   
+    Ref<IntersectResult> result;
+    if (p_dict.is_empty() || !p_dict.has("position")) {
+        return result;
+    }
+    result.instantiate();
+    result->position = p_dict["position"];
+    result->normal = p_dict["normal"];
+    result->collider_id = p_dict["collider_id"];
+    result->rid = p_dict["rid"];
+    result->collider = Object::cast_to<Node>(p_dict["collider"].get_validated_object());
+    result->node = Object::cast_to<Node>(p_dict["node"].get_validated_object());
+    return result;
+}
+
+Vector3 YPhysics::get_stored_hit_position()
+{
+    return stored_position_hit;
+}
+
+Vector3 YPhysics::get_stored_hit_normal()
+{
+    return stored_hit_normal;
+}
+
+Node *YPhysics::get_stored_hit_collider()
+{
+    return Object::cast_to<Node>(ObjectDB::get_instance(stored_collider_id));
+}
+
+bool YPhysics::has_raycast3d_hit(Vector3 ray_origin, Vector3 ray_dir, float ray_dist, CollideType _collide_type, uint32_t layer_mask, const TypedArray<RID> &p_exclude)
+{
+    return free_line_check(ray_origin, ray_origin + (ray_dir * ray_dist), _collide_type, layer_mask, p_exclude);
 }
 
 bool YPhysics::free_line_check(Vector3 ray_origin, Vector3 ray_end, CollideType _collide_type, uint32_t layer_mask, const TypedArray<RID> &p_exclude) {
@@ -142,6 +183,9 @@ bool YPhysics::free_line_check(Vector3 ray_origin, Vector3 ray_end, CollideType 
             }
             ray_params.collision_mask = layer_mask;
             if (space_state->intersect_ray(ray_params, result)) {
+                stored_position_hit = result.position;
+                stored_hit_normal = result.normal;
+                stored_collider_id = result.collider_id;
                 return true;
             }
         }

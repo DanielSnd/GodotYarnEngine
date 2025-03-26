@@ -27,7 +27,7 @@ String ResourceImporterGLBasMesh::get_resource_type() const {
 }
 
 int ResourceImporterGLBasMesh::get_format_version() const {
-    return 1;
+    return 2;
 }
 
 int ResourceImporterGLBasMesh::get_preset_count() const {
@@ -43,6 +43,7 @@ void ResourceImporterGLBasMesh::get_import_options(const String &p_path, List<Im
     r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "save_to_file"), false));
     r_options->push_back(ImportOption(PropertyInfo(Variant::VECTOR3, "scale_mesh", PROPERTY_HINT_LINK), Vector3(1, 1, 1)));
     r_options->push_back(ImportOption(PropertyInfo(Variant::VECTOR3, "offset_mesh"), Vector3(0, 0, 0)));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::VECTOR3, "rotate_mesh"), Vector3(0, 0, 0)));
     r_options->push_back(ImportOption(PropertyInfo(Variant::OBJECT, "surface_material", PROPERTY_HINT_RESOURCE_TYPE, "Material"), Variant()));
 }
 
@@ -76,7 +77,9 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
     bool should_save_mesh = p_options.has("save_to_file") ? bool(p_options["save_to_file"]) : false;
     Vector3 replace_scale = p_options.has("scale_mesh") ? Vector3(p_options["scale_mesh"]) : Vector3(0.0,0.0,0.0);
     Vector3 offset = p_options.has("offset_mesh") ? Vector3(p_options["offset_mesh"]) : Vector3(0,0,0);
+	Vector3 rotate = p_options.has("rotate_mesh") ? Vector3(p_options["rotate_mesh"]) : Vector3(0,0,0);
     bool has_scale_replacement = !replace_scale.is_zero_approx();
+	bool has_rotate_replacement = !rotate.is_zero_approx();
     Ref<Material> replace_material;
     if (p_options.has(("surface_material"))) {
         replace_material = p_options["surface_material"];
@@ -111,7 +114,7 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
         	Ref<ArrayMesh> mesh = imp_mesh->get_mesh();
         	if (mesh.is_null() || !mesh.is_valid()) continue;
 			find_mesh = mesh;
-			if (has_scale_replacement || !offset.is_zero_approx()) {
+			if (has_scale_replacement || !offset.is_zero_approx() || has_rotate_replacement) {
 				Ref<ArrayMesh> new_mesh;
 				new_mesh.instantiate();
 				if (should_save_mesh) {
@@ -126,11 +129,12 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
 					}
 				}
 				if (!new_mesh.is_null() && new_mesh.is_valid()) {
+					Transform3D transform = has_rotate_replacement ? Transform3D(Basis(Quaternion::from_euler(rotate))) : Transform3D();
 					for (int surface_i = 0; surface_i < static_cast<int>(find_mesh->get_surface_count()); ++surface_i) {
 						Array surface_array = find_mesh->surface_get_arrays(surface_i);
 						Vector<Vector3> vertex_to = surface_array[Mesh::ARRAY_VERTEX];
 						for (int copy_i = 0; copy_i < static_cast<int>(vertex_to.size()); ++copy_i) {
-							const Vector3 new_vertex_pos = (Vector3(vertex_to[copy_i]) * replace_scale) + offset;
+							const Vector3 new_vertex_pos = !has_rotate_replacement ? ((Vector3(vertex_to[copy_i]) * replace_scale) + offset) : (transform.xform(((Vector3(vertex_to[copy_i]) * replace_scale) + offset)));
 							vertex_to.write[copy_i] = new_vertex_pos;
 						}
 						surface_array[Mesh::ARRAY_VERTEX] = vertex_to;

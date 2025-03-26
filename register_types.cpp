@@ -31,6 +31,7 @@
 #include "ytween.h"
 #include "ythreader.h"
 #include "ypersistentid.h"
+#include "ymeshgen.h"
 #include "importers/resource_importer_glb_as_mesh.h"
 
 #ifdef NO_FMOD
@@ -42,6 +43,7 @@ static YEngine* YEnginePtr;
 static Ref<YSave> yarn_save_ref;
 static Ref<YTime> yarn_time_ref;
 static Ref<YPhysics> yarn_physics_ref;
+static Ref<YMeshGen> yarn_meshgen_ref;
 static Ref<YGameState> yarn_gamestate_ref;
 static Ref<YGameLog> yarn_game_log_ref;
 static Ref<YTween> yarn_tween_ref;
@@ -103,6 +105,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<YTime>();
 	ClassDB::register_class<YSave>();
 	ClassDB::register_class<YPhysics>();
+	ClassDB::register_class<YMeshGen>();
  	ClassDB::register_class<YEngine>();
 	ClassDB::register_class<YMenu>();
 	ClassDB::register_class<YBoxContainer>();
@@ -130,6 +133,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
  	ClassDB::register_class<YBoneAttachment3D>();
 	ClassDB::register_class<CombinedTexture2D>();
 	ClassDB::register_class<YPersistentID>();
+	ClassDB::register_class<IntersectResult>();
 
 	// Initialize your singleton.
 
@@ -145,6 +149,8 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 
 	yarn_tween_ref.instantiate();
 
+	yarn_meshgen_ref.instantiate();
+
 	// Bind your singleton.
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YEngine", memnew(YEngine)));
 	YEngine::get_singleton()->add_setting("application/config/window_name", "", Variant::Type::STRING);
@@ -152,6 +158,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YSave", YSave::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YTime", YTime::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YPhysics", YPhysics::get_singleton()));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("YMeshGen", YMeshGen::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YGameState", YGameState::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YGameLog", YGameLog::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YTween", YTween::get_singleton()));
@@ -177,6 +184,7 @@ void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 		Engine::get_singleton()->remove_singleton("YGameState");
 		Engine::get_singleton()->remove_singleton("YGameLog");
 		Engine::get_singleton()->remove_singleton("YTween");
+		Engine::get_singleton()->remove_singleton("YMeshGen");
 	}
 
 	// Cleanup refs
@@ -186,4 +194,5 @@ void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	if (yarn_gamestate_ref.is_valid()) yarn_gamestate_ref.unref();
 	if (yarn_game_log_ref.is_valid()) yarn_game_log_ref.unref();
 	if (yarn_tween_ref.is_valid()) yarn_tween_ref.unref();
+	if (yarn_meshgen_ref.is_valid()) yarn_meshgen_ref.unref();
 }

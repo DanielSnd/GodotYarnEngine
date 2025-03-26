@@ -4,22 +4,29 @@
 
 #ifndef YARNPHYSICS_H
 #define YARNPHYSICS_H
+
+#include "scene/main/scene_tree.h"
+#include "scene/main/window.h"
+#include "scene/resources/world_2d.h"
+#include "scene/resources/2d/shape_2d.h"
+#include "scene/resources/3d/world_3d.h"
+#include "servers/physics_server_2d.h"
 #include "core/object/ref_counted.h"
 #include "core/variant/typed_array.h"
 #include "scene/resources/2d/shape_2d.h"
 #include "scene/resources/3d/shape_3d.h"
 
-// class IntersectResult : public RefCounted {
-//     GDCLASS(IntersectResult, RefCounted);
+class IntersectResult : public RefCounted {
+    GDCLASS(IntersectResult, RefCounted);
 
-//     public:
-//         Vector3 position;
-//         Vector3 normal;
-//         int collider_id;
-//         RID rid;
-//         Node collider;
-//         Node node;
-// };
+    public:
+        Vector3 position;
+        Vector3 normal;
+        int collider_id;
+        RID rid;
+        Node* collider;
+        Node* node;
+};
 
 class YPhysics : public RefCounted {
     GDCLASS(YPhysics, RefCounted);
@@ -28,7 +35,6 @@ protected:
     static YPhysics* singleton;
 
     static void _bind_methods();
-
 
 public:
     static YPhysics *get_singleton();
@@ -39,10 +45,19 @@ public:
         COLLIDE_WITH_BOTH = 2
     };
 
+    static Vector3 stored_position_hit;
+    static Vector3 stored_hit_normal;
+    static ObjectID stored_collider_id;
+
     static RID sphere_rid;
     static bool has_sphere_shape;
     static Dictionary raycast3d(Vector3 ray_origin, Vector3 ray_dir, float ray_dist, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
     static Dictionary raycast2d_to(Vector2 ray_origin, Vector2 ray_end, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
+    static bool has_raycast3d_hit(Vector3 ray_origin, Vector3 ray_dir, float ray_dist, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
+    static Ref<IntersectResult> dictionary_to_intersect_result(const Dictionary &p_dict);
+    static Vector3 get_stored_hit_position();
+    static Vector3 get_stored_hit_normal();
+    static Node* get_stored_hit_collider();
 
     static bool free_line_check(Vector3 ray_origin, Vector3 ray_end, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
 
