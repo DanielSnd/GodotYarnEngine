@@ -32,18 +32,18 @@
 		func _override_condition():
 		    # Check multiple conditions for a dodge state
 		    var parent = get_parent()
-		    
+
 		    # Don't dodge if we recently dodged
 		    if parent.time_since_last_dodge &lt; dodge_cooldown:
 		        return false
-		        
+
 		    # Check if any projectiles are heading towards us
 		    for projectile in get_tree().get_nodes_in_group("projectiles"):
 		        if is_projectile_threatening(projectile):
 		            return true
-		            
+
 		    return false
-		    
+
 		func is_projectile_threatening(projectile):
 		    # Complex logic to determine if we should dodge...
 		    return false

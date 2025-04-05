@@ -70,6 +70,57 @@
 			<description>
 			</description>
 		</method>
+		<method name="tween_jiggle">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="power" type="float" default="1.0" />
+			<param index="2" name="tilt" type="float" default="6.0" />
+			<param index="3" name="frequency" type="float" default="16.0" />
+			<param index="4" name="scale_axis" type="Vector3" default="Vector3(1, 1, 1)" />
+			<param index="5" name="rotation_axis" type="Vector3" default="Vector3(1, 0, 1)" />
+			<param index="6" name="jiggle_deceleration" type="float" default="1.5" />
+			<param index="7" name="additional_speed" type="float" default="1.0" />
+			<param index="8" name="constant_jiggle" type="float" default="0.0" />
+			<param index="9" name="random_level" type="int" default="1" />
+			<param index="10" name="rejiggle_power" type="float" default="2.0" />
+			<param index="11" name="tag" type="int" default="55" />
+			<description>
+			</description>
+		</method>
+		<method name="tween_jiggle_scale">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="power" type="float" default="1.0" />
+			<param index="2" name="tilt" type="float" default="6.0" />
+			<param index="3" name="frequency" type="float" default="16.0" />
+			<param index="4" name="scale_axis" type="Vector3" default="Vector3(1, 1, 1)" />
+			<param index="5" name="rotation_axis" type="Vector3" default="Vector3(0, 0, 0)" />
+			<param index="6" name="jiggle_deceleration" type="float" default="1.5" />
+			<param index="7" name="additional_speed" type="float" default="1.0" />
+			<param index="8" name="constant_jiggle" type="float" default="0.0" />
+			<param index="9" name="random_level" type="int" default="1" />
+			<param index="10" name="rejiggle_power" type="float" default="2.0" />
+			<param index="11" name="tag" type="int" default="55" />
+			<description>
+			</description>
+		</method>
+		<method name="tween_jiggle_tilt">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="power" type="float" default="1.0" />
+			<param index="2" name="tilt" type="float" default="6.0" />
+			<param index="3" name="frequency" type="float" default="16.0" />
+			<param index="4" name="scale_axis" type="Vector3" default="Vector3(0, 0, 0)" />
+			<param index="5" name="rotation_axis" type="Vector3" default="Vector3(1, 0, 1)" />
+			<param index="6" name="jiggle_deceleration" type="float" default="1.5" />
+			<param index="7" name="additional_speed" type="float" default="1.0" />
+			<param index="8" name="constant_jiggle" type="float" default="0.0" />
+			<param index="9" name="random_level" type="int" default="1" />
+			<param index="10" name="rejiggle_power" type="float" default="2.0" />
+			<param index="11" name="tag" type="int" default="55" />
+			<description>
+			</description>
+		</method>
 		<method name="tween_modulate">
 			<return type="YTweenWrap" />
 			<param index="0" name="owner" type="Node" />

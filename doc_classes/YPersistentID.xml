@@ -24,7 +24,7 @@
 		<method name="add_to_deleted_ids" qualifiers="static">
 			<return type="void" />
 			<param index="0" name="id" type="int" />
-			<param index="1" name="time" type="int" default="0" />
+			<param index="1" name="time" type="int" />
 			<description>
 				Marks a persistent ID as deleted with an optional timestamp. This prevents the node from being respawned until the deletion time is cleared.
 
@@ -33,6 +33,25 @@
 				# Mark a node as deleted with current time
 				YPersistentID.add_to_deleted_ids(node_id, Time.get_unix_time_from_system())
 				[/codeblock]
+			</description>
+		</method>
+		<method name="cleanup_invalidly_spawned_nodes" qualifiers="static">
+			<return type="void" />
+			<description>
+				Checks all deleted persistent IDs and removes any nodes that are currently spawned but marked as deleted. This is useful for cleaning up nodes that were incorrectly respawned or persisted when they should have been deleted.
+
+				The method will:
+				1. Check all IDs in the deleted IDs list
+				2. For each deleted ID, check if there's a corresponding node in the scene tree
+				3. If found, queue_free the parent node of the persistent ID node
+
+				[b]Example:[/b]
+				[codeblock]
+				# Clean up any nodes that shouldn't be spawned
+				YPersistentID.cleanup_invalidly_spawned_nodes()
+				[/codeblock]
+
+				[b]Note:[/b] This is particularly useful when loading a saved game or transitioning between scenes to ensure consistency between the deleted IDs list and the actual scene tree.
 			</description>
 		</method>
 		<method name="clear_deleted_ids" qualifiers="static">
@@ -122,7 +141,7 @@
 				[b]Example:[/b]
 				[codeblock]
 				var respawn_data = YPersistentID.get_respawn_info(node_id)
-				if respawn_data.size() >= 2:
+				if respawn_data.size() &gt;= 2:
 				    var scene_id = respawn_data[0]
 				    var transform = respawn_data[1]
 				[/codeblock]
@@ -245,25 +264,6 @@
 				$YPersistentID.store_respawn_info()
 				queue_free()
 				[/codeblock]
-			</description>
-		</method>
-		<method name="cleanup_invalidly_spawned_nodes" qualifiers="static">
-			<return type="void" />
-			<description>
-				Checks all deleted persistent IDs and removes any nodes that are currently spawned but marked as deleted. This is useful for cleaning up nodes that were incorrectly respawned or persisted when they should have been deleted.
-
-				The method will:
-				1. Check all IDs in the deleted IDs list
-				2. For each deleted ID, check if there's a corresponding node in the scene tree
-				3. If found, queue_free the parent node of the persistent ID node
-
-				[b]Example:[/b]
-				[codeblock]
-				# Clean up any nodes that shouldn't be spawned
-				YPersistentID.cleanup_invalidly_spawned_nodes()
-				[/codeblock]
-
-				[b]Note:[/b] This is particularly useful when loading a saved game or transitioning between scenes to ensure consistency between the deleted IDs list and the actual scene tree.
 			</description>
 		</method>
 	</methods>

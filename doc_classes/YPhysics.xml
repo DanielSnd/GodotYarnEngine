@@ -70,6 +70,12 @@
 				Returns an empty dictionary if no collision is found.
 			</description>
 		</method>
+		<method name="dictionary_to_intersect_result" qualifiers="static">
+			<return type="IntersectResult" />
+			<param index="0" name="dictionary" type="Dictionary" />
+			<description>
+			</description>
+		</method>
 		<method name="free_line_check" qualifiers="static">
 			<return type="bool" />
 			<param index="0" name="ray_origin" type="Vector3" />
@@ -91,6 +97,32 @@
 			<description>
 				Checks if a sphere at the given position would collide with anything. Returns [code]true[/code] if there is a collision.
 				Similar to [method check_collision_sphere] but returns a boolean instead of the colliding object.
+			</description>
+		</method>
+		<method name="has_raycast3d_hit" qualifiers="static">
+			<return type="bool" />
+			<param index="0" name="ray_origin" type="Vector3" />
+			<param index="1" name="ray_direction" type="Vector3" />
+			<param index="2" name="ray_distance" type="float" />
+			<param index="3" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="4" name="collision_mask" type="int" default="4294967295" />
+			<param index="5" name="exclude" type="RID[]" default="[]" />
+			<description>
+			</description>
+		</method>
+		<method name="hit3d_collider" qualifiers="static">
+			<return type="Node" />
+			<description>
+			</description>
+		</method>
+		<method name="hit3d_normal" qualifiers="static">
+			<return type="Vector3" />
+			<description>
+			</description>
+		</method>
+		<method name="hit3d_position" qualifiers="static">
+			<return type="Vector3" />
+			<description>
 			</description>
 		</method>
 		<method name="intersect_point_3d" qualifiers="static">
