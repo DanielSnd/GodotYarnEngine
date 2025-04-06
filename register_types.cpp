@@ -32,6 +32,7 @@
 #include "ythreader.h"
 #include "ypersistentid.h"
 #include "ymeshgen.h"
+#include "ynavhelper3d.h"
 #include "importers/resource_importer_glb_as_mesh.h"
 
 #ifdef NO_FMOD
@@ -125,6 +126,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<YState>();
 	ClassDB::register_class<YStateMachine>();
 	ClassDB::register_class<YStateOverride>();
+	ClassDB::register_class<YNavHelper3D>();
 	ClassDB::register_class<CircleWithConeTexture2D>();
  	ClassDB::register_class<AOBakeableMeshInstance>();
  	ClassDB::register_class<YThreader>();
