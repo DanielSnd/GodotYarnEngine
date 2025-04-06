@@ -15,6 +15,7 @@
 		- Optional line-of-sight checks for target following
 		- Debug visualization for easier development
 		- Automatic steering or manual integration with your movement system
+		- Horizontal preference option for more natural flying movement
 
 		The node attaches to a parent Node3D (typically a CharacterBody3D or RigidBody3D) and provides steering information that can be used to control the parent's movement.
 	</description>
@@ -64,7 +65,7 @@
 			velocity = desired_direction * speed
 			
 			# Rotate to face movement direction
-			if velocity.length() > 0.1:
+			if velocity.length() &gt; 0.1:
 				look_at(global_position + velocity, Vector3.UP)
 				
 			move_and_slide()
@@ -88,12 +89,12 @@
 		func _process(delta):
 			match state:
 				"patrol":
-					if current_patrol_index < patrol_points.size():
+					if current_patrol_index &lt; patrol_points.size():
 						nav_helper.navigation_mode = YNavHelper3D.TOWARDS_POSITION
 						nav_helper.set_relevant_position(patrol_points[current_patrol_index])
 						
 						# Check if we reached the point
-						if global_position.distance_to(patrol_points[current_patrol_index]) < 2.0:
+						if global_position.distance_to(patrol_points[current_patrol_index]) &lt; 2.0:
 							current_patrol_index = (current_patrol_index + 1) % patrol_points.size()
 					
 				"chase":
@@ -110,12 +111,31 @@
 					
 			# State transitions
 			var distance_to_player = global_position.distance_to(player.global_position)
-			if state == "patrol" and distance_to_player < 15.0:
+			if state == "patrol" and distance_to_player &lt; 15.0:
 				state = "chase"
-			elif state == "chase" and distance_to_player < 5.0:
+			elif state == "chase" and distance_to_player &lt; 5.0:
 				state = "encircle"
-			elif state == "encircle" and health < 0.3:
+			elif state == "encircle" and health &lt; 0.3:
 				state = "flee"
+		[/codeblock]
+		
+		[codeblock]
+		# Example: Flying enemy with horizontal preference
+		extends CharacterBody3D
+
+		@onready var nav_helper = $YNavHelper3D
+		var wander_state = true
+
+		func _ready():
+			# Configure the nav helper for wandering with horizontal preference
+			nav_helper.navigation_mode = YNavHelper3D.WANDERING
+			nav_helper.auto_steer = true
+			nav_helper.wander_prefer_horizontal = true
+			nav_helper.horizontal_preference_strength = 2.0 # Stronger preference for horizontal movement
+			
+		func _physics_process(delta):
+			# The entity will wander primarily in horizontal directions
+			move_and_slide()
 		[/codeblock]
 		</link>
 	</tutorials>
@@ -232,6 +252,12 @@
 		</member>
 		<member name="way_too_close_multiplier" type="float" setter="set_way_too_close_multiplier" getter="get_way_too_close_multiplier" default="0.4">
 			Defines how close is "way too close" as a fraction of [member stop_close_enough]. When the distance is less than [member stop_close_enough] * [member way_too_close_multiplier], the entity will flee at an increased speed.
+		</member>
+		<member name="horizontal_preference_strength" type="float" setter="set_horizontal_preference_strength" getter="get_horizontal_preference_strength" default="1.5">
+			Controls how strongly the wandering behavior will prefer horizontal movement when [member wander_prefer_horizontal] is enabled. Higher values result in even stronger preference for horizontal paths and stronger avoidance of steep up/down movement.
+		</member>
+		<member name="wander_prefer_horizontal" type="bool" setter="set_wander_prefer_horizontal" getter="get_wander_prefer_horizontal" default="false">
+			If [code]true[/code], the entity will prefer to wander in horizontal directions rather than moving steeply up or down when in [constant WANDERING] mode. This creates more natural flying behavior for flying creatures or hovering vehicles.
 		</member>
 	</members>
 	<constants>

@@ -10,6 +10,7 @@
 #include "scene/resources/material.h"
 #include "yarntime.h"
 #include "yarnphysics.h"
+#include "modules/noise/fastnoise_lite.h"
 
 class YNavHelper3D : public Node3D {
     GDCLASS(YNavHelper3D, Node3D);
@@ -39,19 +40,19 @@ private:
     Vector<float> context_map;
     
     bool auto_steer = true;
-    float auto_steering_speed = 45.0f;
+    float auto_steering_speed = 25.0f;
     Node3D* follow_target = nullptr;
     bool draw_debug = false;
     bool verbose_debug = false;
     bool requires_line_of_sight = true;
     bool navigation_enabled = true;
     bool keep_looking_at_position = true;
-    float max_wander = 140.0f;
+    float max_wander = 15.0f;
     uint32_t navigation_collide_mask = 1;
     int direction_amount = 12;
-    float extend_length = 45.0f;
-    float stop_close_enough = 40.0f;
-    float stop_away_enough = 80.0f;
+    float extend_length = 2.0f;
+    float stop_close_enough = 3.0f;
+    float stop_away_enough = 6.0f;
     bool encircle_when_close_enough = false;
     bool away_when_close_enough = false;
     float way_too_close_multiplier = 0.4f;
@@ -88,12 +89,16 @@ private:
     
     // Debug visualization
     MeshInstance3D* debug_mesh_instance = nullptr;
-    ImmediateMesh* debug_immediate_mesh = nullptr;
-    StandardMaterial3D* debug_material = nullptr;
+    Ref<ImmediateMesh> debug_immediate_mesh;
+    Ref<StandardMaterial3D> debug_material;
     
-    RandomNumberGenerator* rng = nullptr;
+    Ref<RandomNumberGenerator> rng;
     float random_unique_number = 0.0f;
     float speed_multiplier = 1.0f;
+    static Ref<FastNoiseLite> noise;
+    float wander_speed_multiplier = 1.0f;
+    bool wander_prefer_horizontal = false;
+    float horizontal_preference_strength = 1.5f;
 
     
 public:
@@ -196,6 +201,14 @@ public:
     void set_relevant_direction(const Vector3& p_direction);
     Vector3 get_relevant_direction() const;
 
+    void set_wander_prefer_horizontal(bool p_prefer_horizontal);
+    bool get_wander_prefer_horizontal() const;
+    
+    void set_horizontal_preference_strength(float p_strength);
+    float get_horizontal_preference_strength() const;
+
+    void set_wander_speed_multiplier(float p_multiplier);
+    float get_wander_speed_multiplier() const;  
 };
 
 VARIANT_ENUM_CAST(YNavHelper3D::NavigationMode);

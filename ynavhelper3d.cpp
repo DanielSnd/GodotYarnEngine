@@ -1,5 +1,7 @@
-// nav_helper_3d.cpp
+
 #include "ynavhelper3d.h"
+
+Ref<FastNoiseLite> YNavHelper3D::noise = nullptr;
 
 YNavHelper3D::YNavHelper3D() {
     rng = memnew(RandomNumberGenerator);
@@ -8,34 +10,47 @@ YNavHelper3D::YNavHelper3D() {
 }
 
 YNavHelper3D::~YNavHelper3D() {
-    memdelete(rng);
+    rng = nullptr;
     
     // Clean up debug visualization objects
     if (debug_mesh_instance) {
         debug_mesh_instance->queue_free();
+        debug_mesh_instance = nullptr;
     }
     
-    if (debug_immediate_mesh) {
-        memdelete(debug_immediate_mesh);
+    if (debug_immediate_mesh.is_valid()) {
+        debug_immediate_mesh = {};
     }
     
-    if (debug_material) {
-        memdelete(debug_material);
+    if (debug_material.is_valid()) {
+        debug_material = {};
     }
 }
 
 void YNavHelper3D::_notification(int p_what) {
-    if (p_what == NOTIFICATION_READY) {
-        // Distribute raycast directions around a sphere
-        initialize_raycasts();
-        
-        // Set initial position
-        center_location = get_parent_node_3d()->get_global_position();
-        
-        initialized = true;
-    } else if (p_what == NOTIFICATION_PROCESS) {
+    if (p_what == Node::NOTIFICATION_READY) {
+        if (OS::get_singleton() != nullptr) {
+            if (!Engine::get_singleton()->is_editor_hint()) {
+                // Distribute raycast directions around a sphere
+                initialize_raycasts();
+                if (noise == nullptr) {
+                    noise.instantiate();
+                    noise->set_noise_type(FastNoiseLite::NoiseType::TYPE_SIMPLEX);
+                    noise->set_fractal_type(FastNoiseLite::FractalType::FRACTAL_NONE);
+                    noise->set_frequency(0.05f);
+                    noise->set_seed(123456);
+                }
+                // Set initial position
+                center_location = get_global_position();
+                
+                initialized = true;
+                set_process(true);
+                set_physics_process(true);
+            }
+        }
+    } else if (p_what == Node::NOTIFICATION_PROCESS) {
         do_process(get_process_delta_time());
-    } else if (p_what == NOTIFICATION_PHYSICS_PROCESS) {
+    } else if (p_what == Node::NOTIFICATION_PHYSICS_PROCESS) {
         do_physics_process(get_physics_process_delta_time());
     }
 }
@@ -118,6 +133,15 @@ void YNavHelper3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_relevant_direction", "direction"), &YNavHelper3D::set_relevant_direction);
     ClassDB::bind_method(D_METHOD("get_relevant_direction"), &YNavHelper3D::get_relevant_direction);
 
+    ClassDB::bind_method(D_METHOD("set_wander_prefer_horizontal", "prefer"), &YNavHelper3D::set_wander_prefer_horizontal);
+    ClassDB::bind_method(D_METHOD("get_wander_prefer_horizontal"), &YNavHelper3D::get_wander_prefer_horizontal);
+    
+    ClassDB::bind_method(D_METHOD("set_horizontal_preference_strength", "strength"), &YNavHelper3D::set_horizontal_preference_strength);
+    ClassDB::bind_method(D_METHOD("get_horizontal_preference_strength"), &YNavHelper3D::get_horizontal_preference_strength);
+
+    ClassDB::bind_method(D_METHOD("set_wander_speed_multiplier", "multiplier"), &YNavHelper3D::set_wander_speed_multiplier);
+    ClassDB::bind_method(D_METHOD("get_wander_speed_multiplier"), &YNavHelper3D::get_wander_speed_multiplier);
+
     // Register properties
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "auto_steer"), "set_auto_steer", "get_auto_steer");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "auto_steering_speed", PROPERTY_HINT_RANGE, "0,200,0.1"), "set_auto_steering_speed", "get_auto_steering_speed");
@@ -130,25 +154,28 @@ void YNavHelper3D::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "navigation_enabled"), "set_navigation_enabled", "get_navigation_enabled");
     ADD_PROPERTY(PropertyInfo(Variant::INT, "navigation_mode", PROPERTY_HINT_ENUM, "TowardsTarget,AwayFromTarget,EncircleTarget,TowardsPosition,TowardsDirection,AwayFromPosition,EncirclePosition,AwayFromDirection,Wandering"), "set_navigation_mode", "get_navigation_mode");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "keep_looking_at_position"), "set_keep_looking_at_position", "get_keep_looking_at_position");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_wander", PROPERTY_HINT_RANGE, "30,250,1"), "set_max_wander", "get_max_wander");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_wander", PROPERTY_HINT_RANGE, "3,25,0.1"), "set_max_wander", "get_max_wander");
     ADD_PROPERTY(PropertyInfo(Variant::INT, "navigation_collide_mask", PROPERTY_HINT_LAYERS_3D_PHYSICS), "set_navigation_collide_mask", "get_navigation_collide_mask");
-    
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "wander_prefer_horizontal"), "set_wander_prefer_horizontal", "get_wander_prefer_horizontal");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "horizontal_preference_strength", PROPERTY_HINT_RANGE, "0.1,5.0,0.1"), "set_horizontal_preference_strength", "get_horizontal_preference_strength");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "wander_speed_multiplier", PROPERTY_HINT_RANGE, "0.1,5.0,0.1"), "set_wander_speed_multiplier", "get_wander_speed_multiplier");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "speed_multiplier", PROPERTY_HINT_RANGE, "0.1,5.0,0.1"), "set_speed_multiplier", "get_speed_multiplier");
     ADD_GROUP("Raycasts", "");
     ADD_PROPERTY(PropertyInfo(Variant::INT, "direction_amount", PROPERTY_HINT_RANGE, "4,32,1"), "set_direction_amount", "get_direction_amount");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "extend_length", PROPERTY_HINT_RANGE, "5,100,0.1"), "set_extend_length", "get_extend_length");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "extend_length", PROPERTY_HINT_RANGE, "0.15,10,0.01"), "set_extend_length", "get_extend_length");
     
     ADD_GROUP("Distance", "");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "stop_close_enough", PROPERTY_HINT_RANGE, "0,200,0.1"), "set_stop_close_enough", "get_stop_close_enough");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "stop_away_enough", PROPERTY_HINT_RANGE, "0,300,0.1"), "set_stop_away_enough", "get_stop_away_enough");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "stop_close_enough", PROPERTY_HINT_RANGE, "0,10,0.1"), "set_stop_close_enough", "get_stop_close_enough");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "stop_away_enough", PROPERTY_HINT_RANGE, "0,40,0.1"), "set_stop_away_enough", "get_stop_away_enough");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "encircle_when_close_enough"), "set_encircle_when_close_enough", "get_encircle_when_close_enough");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "away_when_close_enough"), "set_away_when_close_enough", "get_away_when_close_enough");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "way_too_close_multiplier", PROPERTY_HINT_RANGE, "0,0.9,0.01"), "set_way_too_close_multiplier", "get_way_too_close_multiplier");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "way_too_close_flee_speed", PROPERTY_HINT_RANGE, "1,3,0.1"), "set_way_too_close_flee_speed", "get_way_too_close_flee_speed");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "way_too_close_flee_speed", PROPERTY_HINT_RANGE, "1,3,0.01"), "set_way_too_close_flee_speed", "get_way_too_close_flee_speed");
     
     ADD_GROUP("Lerping Speeds", "");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "direction_lerp_speed_closer", PROPERTY_HINT_RANGE, "0,16,0.1"), "set_direction_lerp_speed_closer", "get_direction_lerp_speed_closer");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "direction_lerp_speed_far", PROPERTY_HINT_RANGE, "0,16,0.1"), "set_direction_lerp_speed_far", "get_direction_lerp_speed_far");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "steering_lerp_speed", PROPERTY_HINT_RANGE, "0,16,0.1"), "set_steering_lerp_speed", "get_steering_lerp_speed");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "direction_lerp_speed_closer", PROPERTY_HINT_RANGE, "0,16,0.01"), "set_direction_lerp_speed_closer", "get_direction_lerp_speed_closer");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "direction_lerp_speed_far", PROPERTY_HINT_RANGE, "0,16,0.01"), "set_direction_lerp_speed_far", "get_direction_lerp_speed_far");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "steering_lerp_speed", PROPERTY_HINT_RANGE, "0,16,0.01"), "set_steering_lerp_speed", "get_steering_lerp_speed");
 
     // Register enum
     BIND_ENUM_CONSTANT(TOWARDS_TARGET);
@@ -206,10 +233,16 @@ void YNavHelper3D::do_process(double delta) {
             if (!debug_mesh_instance) {
                 debug_mesh_instance = memnew(MeshInstance3D);
                 add_child(debug_mesh_instance);
-                debug_immediate_mesh = memnew(ImmediateMesh);
-                debug_material = memnew(StandardMaterial3D);
+                debug_immediate_mesh.instantiate();
+                debug_material.instantiate();
                 debug_material->set_shading_mode(StandardMaterial3D::SHADING_MODE_UNSHADED);
-                debug_material->set_transparency(StandardMaterial3D::TRANSPARENCY_ALPHA);
+                
+                debug_material->set_transparency(StandardMaterial3D::TRANSPARENCY_ALPHA_DEPTH_PRE_PASS);
+                debug_material->set_cull_mode(StandardMaterial3D::CULL_DISABLED);
+                debug_material->set_flag(StandardMaterial3D::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+                debug_material->set_depth_draw_mode(StandardMaterial3D::DEPTH_DRAW_ALWAYS);
+                debug_material->set_render_priority(2);
+                debug_material->set_flag(StandardMaterial3D::FLAG_SRGB_VERTEX_COLOR, true);
                 debug_mesh_instance->set_mesh(debug_immediate_mesh);
                 debug_mesh_instance->set_material_override(debug_material);
             }
@@ -218,16 +251,14 @@ void YNavHelper3D::do_process(double delta) {
             if (debug_mesh_instance) {
                 debug_mesh_instance->queue_free();
                 debug_mesh_instance = nullptr;
-                memdelete(debug_immediate_mesh);
-                debug_immediate_mesh = nullptr;
-                memdelete(debug_material);
-                debug_material = nullptr;
+                debug_immediate_mesh = {};
+                debug_material = {};
             }
         }
     }
     
     // Update debug visualization if enabled
-    if (draw_debug && debug_immediate_mesh) {
+    if (draw_debug && debug_immediate_mesh.is_valid()) {
         update_debug_visualization();
     }
 
@@ -272,14 +303,14 @@ void YNavHelper3D::do_process(double delta) {
     }
 
     if (using_position) {
-        distance_to_relevant = get_parent_node_3d()->get_global_position().distance_to(relevant_position);
+        distance_to_relevant = get_global_position().distance_to(relevant_position);
         is_close_enough = distance_to_relevant < stop_close_enough;
         way_too_close = distance_to_relevant < stop_close_enough * way_too_close_multiplier;
         encircling = (navigation_mode == ENCIRCLE_TARGET || navigation_mode == ENCIRCLE_POSITION);
 
         if (away_from || !is_close_enough || encircle_when_close_enough || 
             (away_when_close_enough && is_close_enough) || way_too_close || encircling) {
-            calculate_context_map(delta, (relevant_position - get_parent_node_3d()->get_global_position()).normalized());
+            calculate_context_map(delta, (relevant_position - get_global_position()).normalized());
         } else {
         }
     } else {
@@ -312,6 +343,10 @@ void YNavHelper3D::do_physics_process(double delta) {
         // Apply wandering behavior
         Vector3 new_velocity = desired_direction.normalized() * wander_speed;
         parent->set("velocity", new_velocity);
+        Vector3 look_dir = new_velocity.normalized();
+        if (look_dir.length() > 0.001f) {
+            parent->call("look_at", parent->get_global_position() + look_dir, Vector3(0, 1, 0), true);
+        }
         return;
     }
 
@@ -348,12 +383,12 @@ void YNavHelper3D::do_physics_process(double delta) {
     if (using_position && keep_looking_at_position) {
         Vector3 look_dir = parent->get_global_position().direction_to(relevant_position);
         if (look_dir.length() > 0.001f) {
-            parent->call("look_at", parent->get_global_position() + look_dir, Vector3(0, 1, 0));
+            parent->call("look_at", parent->get_global_position() + look_dir, Vector3(0, 1, 0), true);
         }
     } else {
         Vector3 look_dir = current_velocity;
         if (look_dir.length() > 0.001f) {
-            parent->call("look_at", parent->get_global_position() + look_dir, Vector3(0, 1, 0));
+            parent->call("look_at", parent->get_global_position() + look_dir, Vector3(0, 1, 0), true);
         }
     }
 }
@@ -365,12 +400,13 @@ void YNavHelper3D::reset_danger_values() {
 }
 
 void YNavHelper3D::calculate_danger_and_interest_values(const Vector3& use_direction) {
+    Vector3 start_position = get_global_position();
     for (int i = 0; i < directions.size(); i++) {
         Vector3 dir = directions[i];
         
         if (encircling || ((encircle_when_close_enough && is_close_enough) && !way_too_close)) {
             // For encircling, use a cross product to find perpendicular direction
-            Vector3 up_vector = Vector3(0, 1, 0); // Usually up in 3D, might need to adjust
+            Vector3 up_vector = get_global_transform().basis.get_column(1).normalized();
             Vector3 perpendicular = use_direction.cross(up_vector).normalized();
             
             if (get_preferred_break_direction() < 0) {
@@ -387,10 +423,22 @@ void YNavHelper3D::calculate_danger_and_interest_values(const Vector3& use_direc
                                way_too_close) ? -1.0f : 1.0f;
                                
             interest_values.write[i] = dot_product * multiplier;
+            
+            // Apply horizontal preference for wandering
+            if (wander_prefer_horizontal && navigation_mode == WANDERING) {
+                // Penalize directions that point too much up or down
+                // Get the Y component of the direction (assuming Y is up)
+                float y_component = fabsf(dir.y);
+                
+                // Apply a penalty based on how vertical the direction is
+                // The more vertical, the higher the penalty
+                float horizontal_bonus = (1.0f - y_component) * horizontal_preference_strength;
+                interest_values.write[i] += horizontal_bonus;
+            }
         }
         
         // Check for collisions
-        if (YPhysics::has_raycast3d_hit(directions[i], directions[i], extend_length, YPhysics::COLLIDE_WITH_BODIES, navigation_collide_mask)) {
+        if (YPhysics::has_raycast3d_hit(start_position, directions[i], extend_length, YPhysics::COLLIDE_WITH_BODIES, navigation_collide_mask)) {
             danger_values.write[i] += 5.0f;
             
             // Add danger to neighboring directions
@@ -409,7 +457,7 @@ void YNavHelper3D::calculate_danger_and_interest_values(const Vector3& use_direc
 }
 
 void YNavHelper3D::calculate_best_direction() {
-    int prev_best_direction_index = best_direction_index;
+    // int prev_best_direction_index = best_direction_index;
     best_direction_index = -1;
     best_value = -99.0f;
     worst_value = 99.0f;
@@ -472,19 +520,19 @@ void YNavHelper3D::calculate_context_map(double delta, const Vector3& use_direct
 
 void YNavHelper3D::update_wander_direction(double delta) {
     // Use noise for organic wandering
-    float time = YTime::get_singleton()->get_time();
-    float noise_value = sin(time + random_unique_number) * 0.1f; // Simplified noise
+    float time = YTime::get_singleton()->get_time() * wander_speed_multiplier;
+    float noise_value = noise->get_noise_2d(time + random_unique_number, time + random_unique_number) * 0.1f; // Simplified noise
     
     // Create a basis to rotate around the UP vector
     Basis rotation = Basis(Vector3(0, 1, 0), noise_value);
     wander_direction = rotation.xform(wander_direction).normalized();
     
     // Bias direction to stay within max wander distance
-    float distance_from_initial = get_parent_node_3d()->get_global_position().distance_to(center_location);
+    float distance_from_initial = get_global_position().distance_to(center_location);
     
     if (distance_from_initial > max_wander * 0.5f) {
         float bias_amount = Math::inverse_lerp(max_wander * 0.6f, max_wander, distance_from_initial);
-        Vector3 direction_to_center = get_parent_node_3d()->get_global_position().direction_to(center_location);
+        Vector3 direction_to_center = get_global_position().direction_to(center_location);
         
         wander_direction = wander_direction.lerp(
             direction_to_center, 
@@ -494,14 +542,14 @@ void YNavHelper3D::update_wander_direction(double delta) {
 }
 
 void YNavHelper3D::update_wander_speed(double delta) {
-    float time = YTime::get_singleton()->get_time();
-    float noise_found = sin(time * 2.0f + random_unique_number) * 0.5f + 0.5f; // Range [0, 1]
+    float time = YTime::get_singleton()->get_time() * wander_speed_multiplier;
+    float noise_found = noise->get_noise_2d(time * 2.0f + random_unique_number, time * 2.0f + random_unique_number) * 0.5f + 0.5f; // Range [0, 1]
     
     float desired_wander_speed = noise_found * (auto_steering_speed * speed_multiplier);
-    float lerping_wander_speed = 16.5f;
+    float lerping_wander_speed = 9.5f;
     
     if (desired_wander_speed < std::min(8.5f, (auto_steering_speed * speed_multiplier) * 0.4f)) {
-        lerping_wander_speed = 8.0f;
+        lerping_wander_speed = 3.0f;
         desired_wander_speed = 0.0f;
     }
     
@@ -516,8 +564,8 @@ void YNavHelper3D::update_line_of_sight() {
         return;
     }
     
-    Vector3 target_pos = follow_target->get_global_position();
-    Vector3 my_pos = get_parent_node_3d()->get_global_position();
+    Vector3 target_pos = follow_target->get_global_position() + Vector3(0, 0.12, 0);
+    Vector3 my_pos = get_global_position();
     
     // Check if target is reachable via raycast
     if (my_pos.distance_to(target_pos) < 800.0f && !YPhysics::free_line_check(my_pos, target_pos, YPhysics::COLLIDE_WITH_BODIES, navigation_collide_mask)) {
@@ -750,8 +798,32 @@ Vector3 YNavHelper3D::get_relevant_direction() const {
     return relevant_direction;
 }
 
+void YNavHelper3D::set_wander_prefer_horizontal(bool p_prefer_horizontal) {
+    wander_prefer_horizontal = p_prefer_horizontal;
+}
+
+bool YNavHelper3D::get_wander_prefer_horizontal() const {
+    return wander_prefer_horizontal;
+}
+
+void YNavHelper3D::set_horizontal_preference_strength(float p_strength) {
+    horizontal_preference_strength = p_strength;
+}
+
+float YNavHelper3D::get_horizontal_preference_strength() const {
+    return horizontal_preference_strength;
+}
+
+void YNavHelper3D::set_wander_speed_multiplier(float p_multiplier) {
+    wander_speed_multiplier = p_multiplier;
+}
+
+float YNavHelper3D::get_wander_speed_multiplier() const {
+    return wander_speed_multiplier;
+}
+
 void YNavHelper3D::update_debug_visualization() {
-    if (!debug_immediate_mesh) {
+    if (!debug_immediate_mesh.is_valid()) {
         return;
     }
     
