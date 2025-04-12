@@ -8,6 +8,8 @@
 YPhysics* YPhysics::singleton = nullptr;
 bool YPhysics::has_sphere_shape = false;
 RID YPhysics::sphere_rid;
+bool YPhysics::has_capsule_shape = false;
+RID YPhysics::capsule_rid;
 Vector3 YPhysics::stored_position_hit = {};
 Vector3 YPhysics::stored_hit_normal = {};
 ObjectID YPhysics::stored_collider_id = {};
@@ -22,6 +24,7 @@ void YPhysics::_bind_methods() {
     ClassDB::bind_static_method("YPhysics",D_METHOD("intersect_shape_3d", "world_position", "margin", "collide_type","max_results", "collision_mask", "exclude"), &YPhysics::_intersect_shape_3d,DEFVAL(0.04),DEFVAL(COLLIDE_WITH_BODIES),DEFVAL(32),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
     ClassDB::bind_static_method("YPhysics",D_METHOD("check_collision_sphere", "world_position", "radius", "collision_mask", "exclude"), &YPhysics::check_collision_sphere,DEFVAL(1.0),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
     ClassDB::bind_static_method("YPhysics",D_METHOD("free_sphere_check", "world_position", "radius", "collision_mask", "exclude"), &YPhysics::free_sphere_check,DEFVAL(1.0),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
+    ClassDB::bind_static_method("YPhysics",D_METHOD("free_capsule_check", "ray_origin", "ray_end", "radius", "collide_type", "collision_mask", "exclude"), &YPhysics::free_capsule_check,DEFVAL(COLLIDE_WITH_BODIES),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
     ClassDB::bind_static_method("YPhysics",D_METHOD("dictionary_to_intersect_result", "dictionary"), &YPhysics::dictionary_to_intersect_result);
     ClassDB::bind_static_method("YPhysics",D_METHOD("hit3d_position"), &YPhysics::get_stored_hit_position);
     ClassDB::bind_static_method("YPhysics",D_METHOD("hit3d_normal"), &YPhysics::get_stored_hit_normal);
@@ -192,6 +195,76 @@ bool YPhysics::free_line_check(Vector3 ray_origin, Vector3 ray_end, CollideType 
     }
     return false;
 }
+
+
+bool YPhysics::free_capsule_check(Vector3 ray_origin, Vector3 ray_end, float radius, CollideType _collide_type, uint32_t layer_mask, const TypedArray<RID> &p_exclude) {
+    auto world_3d = SceneTree::get_singleton()->get_root()->get_world_3d();
+    if (!has_capsule_shape) {
+        capsule_rid = PhysicsServer3D::get_singleton()->capsule_shape_create();
+        has_capsule_shape = true;
+    }
+    if (world_3d.is_valid()) {
+        auto space_state = world_3d->get_direct_space_state();
+        if (space_state != nullptr) {
+            Vector<PhysicsDirectSpaceState3D::ShapeResult> sr;
+            sr.resize(1);
+            PhysicsDirectSpaceState3D::ShapeParameters shape_params;
+            
+            // Calculate the capsule's transform
+            Vector3 direction = ray_end - ray_origin;
+            float height = direction.length();
+            direction = direction.normalized();
+            
+            // Create a basis that aligns with the capsule's direction
+            Basis basis;
+            if (direction.dot(Vector3(0, 1, 0)) > 0.99) {
+                basis = Basis::looking_at(direction, Vector3(1, 0, 0));
+            } else {
+                basis = Basis::looking_at(direction, Vector3(0, 1, 0));
+            }
+            
+            // Position the capsule at the midpoint between origin and end
+            Vector3 position = ray_origin + direction * (height * 0.5);
+            Transform3D transform(basis, position);
+            
+            // Set up the shape parameters
+            shape_params.shape_rid = capsule_rid;
+            shape_params.transform = transform;
+            shape_params.collision_mask = layer_mask;
+            
+            // Set the capsule's dimensions
+            PhysicsServer3D::get_singleton()->shape_set_data(capsule_rid, Vector2(radius, height));
+            
+            if (_collide_type == COLLIDE_WITH_BOTH) {
+                shape_params.collide_with_areas = true;
+                shape_params.collide_with_bodies = true;
+            } else {
+                shape_params.collide_with_areas = _collide_type == COLLIDE_WITH_AREAS;
+                shape_params.collide_with_bodies = _collide_type == COLLIDE_WITH_BODIES;
+            }
+            
+            if (!p_exclude.is_empty()) {
+                for (int i = 0; i < p_exclude.size(); i++) {
+                    shape_params.exclude.insert(p_exclude[i]);
+                }
+            }
+            
+            int rc = space_state->intersect_shape(shape_params, sr.ptrw(), 1);
+            if (rc > 0) {
+                // Get the rest info to get the collision point and normal
+                PhysicsDirectSpaceState3D::ShapeRestInfo rest_info;
+                if (space_state->rest_info(shape_params, &rest_info)) {
+                    stored_position_hit = rest_info.point;
+                    stored_hit_normal = rest_info.normal;
+                    stored_collider_id = rest_info.collider_id;
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 Dictionary YPhysics::raycast3d_to(Vector3 ray_origin, Vector3 ray_end, CollideType _collide_type, uint32_t layer_mask, const TypedArray<RID> &p_exclude) {
     Dictionary return_dictionary;
     auto world_3d = SceneTree::get_singleton()->get_root()->get_world_3d();
@@ -234,6 +307,7 @@ TypedArray<Dictionary> YPhysics::_intersect_sphere(Vector3 p_world_position, rea
     auto world_3d = SceneTree::get_singleton()->get_root()->get_world_3d();
     if (!has_sphere_shape) {
         sphere_rid = PhysicsServer3D::get_singleton()->sphere_shape_create();
+        has_sphere_shape = true;
     }
     Vector<PhysicsDirectSpaceState3D::ShapeResult> sr;
     sr.resize(p_max_results);
@@ -397,6 +471,7 @@ Object* YPhysics::check_collision_sphere(const Vector3 p_world_position, real_t 
     auto world_3d = SceneTree::get_singleton()->get_root()->get_world_3d();
     if (!has_sphere_shape) {
         sphere_rid = PhysicsServer3D::get_singleton()->sphere_shape_create();
+        has_sphere_shape = true;
     }
     Vector<PhysicsDirectSpaceState3D::ShapeResult> sr;
     sr.resize(1);
@@ -425,6 +500,7 @@ TypedArray<Dictionary> YPhysics::spherecast(const Vector3 p_world_position, real
     auto world_3d = SceneTree::get_singleton()->get_root()->get_world_3d();
     if (!has_sphere_shape) {
         sphere_rid = PhysicsServer3D::get_singleton()->sphere_shape_create();
+        has_sphere_shape = true;
     }
     Vector<PhysicsDirectSpaceState3D::ShapeResult> sr;
     sr.resize(p_max_results);
@@ -521,6 +597,7 @@ bool YPhysics::free_sphere_check(Vector3 p_world_position, real_t radius, uint32
     auto world_3d = SceneTree::get_singleton()->get_root()->get_world_3d();
     if (!has_sphere_shape) {
         sphere_rid = PhysicsServer3D::get_singleton()->sphere_shape_create();
+        has_sphere_shape = true;
     }
     Vector<PhysicsDirectSpaceState3D::ShapeResult> sr;
     sr.resize(1);
@@ -641,3 +718,4 @@ YPhysics::~YPhysics() {
         singleton = nullptr;
     }
 }
+

@@ -33,11 +33,11 @@ void YNavHelper3D::_notification(int p_what) {
             if (!Engine::get_singleton()->is_editor_hint()) {
                 // Distribute raycast directions around a sphere
                 initialize_raycasts();
-                if (noise == nullptr) {
+                if (!noise.is_valid()) {
                     noise.instantiate();
                     noise->set_noise_type(FastNoiseLite::NoiseType::TYPE_SIMPLEX);
                     noise->set_fractal_type(FastNoiseLite::FractalType::FRACTAL_NONE);
-                    noise->set_frequency(0.05f);
+                    noise->set_frequency(0.005f);
                     noise->set_seed(123456);
                 }
                 // Set initial position
@@ -345,7 +345,11 @@ void YNavHelper3D::do_physics_process(double delta) {
         parent->set("velocity", new_velocity);
         Vector3 look_dir = new_velocity.normalized();
         if (look_dir.length() > 0.001f) {
-            parent->call("look_at", parent->get_global_position() + look_dir, Vector3(0, 1, 0), true);
+            Vector3 look_at_position = parent->get_global_position() + look_dir;
+            Vector3 up_vector = Vector3(0, 1, 0);
+            if (abs(look_at_position.dot(up_vector)) < 0.97f) {
+                parent->call("look_at", look_at_position, up_vector, true);
+            }
         }
         return;
     }
@@ -383,12 +387,20 @@ void YNavHelper3D::do_physics_process(double delta) {
     if (using_position && keep_looking_at_position) {
         Vector3 look_dir = parent->get_global_position().direction_to(relevant_position);
         if (look_dir.length() > 0.001f) {
-            parent->call("look_at", parent->get_global_position() + look_dir, Vector3(0, 1, 0), true);
+            Vector3 look_at_position = parent->get_global_position() + look_dir;
+            Vector3 up_vector = Vector3(0, 1, 0);
+            if (abs(look_at_position.dot(up_vector)) < 0.97f) {
+                parent->call("look_at", look_at_position, up_vector, true);
+            }
         }
     } else {
         Vector3 look_dir = current_velocity;
         if (look_dir.length() > 0.001f) {
-            parent->call("look_at", parent->get_global_position() + look_dir, Vector3(0, 1, 0), true);
+            Vector3 look_at_position = parent->get_global_position() + look_dir;
+            Vector3 up_vector = Vector3(0, 1, 0);
+            if (abs(look_at_position.dot(up_vector)) < 0.97f) {
+                parent->call("look_at", look_at_position, up_vector, true);
+            }
         }
     }
 }
@@ -520,7 +532,7 @@ void YNavHelper3D::calculate_context_map(double delta, const Vector3& use_direct
 
 void YNavHelper3D::update_wander_direction(double delta) {
     // Use noise for organic wandering
-    float time = YTime::get_singleton()->get_time() * wander_speed_multiplier;
+    float time = YTime::get_singleton()->get_time() * 0.05f;
     float noise_value = noise->get_noise_2d(time + random_unique_number, time + random_unique_number) * 0.1f; // Simplified noise
     
     // Create a basis to rotate around the UP vector
@@ -542,14 +554,14 @@ void YNavHelper3D::update_wander_direction(double delta) {
 }
 
 void YNavHelper3D::update_wander_speed(double delta) {
-    float time = YTime::get_singleton()->get_time() * wander_speed_multiplier;
+    float time = YTime::get_singleton()->get_time() * 0.032f;
     float noise_found = noise->get_noise_2d(time * 2.0f + random_unique_number, time * 2.0f + random_unique_number) * 0.5f + 0.5f; // Range [0, 1]
     
-    float desired_wander_speed = noise_found * (auto_steering_speed * speed_multiplier);
-    float lerping_wander_speed = 9.5f;
+    float desired_wander_speed = noise_found * (auto_steering_speed * wander_speed_multiplier);
+    float lerping_wander_speed = 4.5f;
     
-    if (desired_wander_speed < std::min(8.5f, (auto_steering_speed * speed_multiplier) * 0.4f)) {
-        lerping_wander_speed = 3.0f;
+    if (desired_wander_speed < std::min(8.5f, (auto_steering_speed * wander_speed_multiplier) * 0.4f)) {
+        lerping_wander_speed = 1.0f;
         desired_wander_speed = 0.0f;
     }
     

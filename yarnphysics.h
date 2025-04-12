@@ -51,6 +51,8 @@ public:
 
     static RID sphere_rid;
     static bool has_sphere_shape;
+    static RID capsule_rid;
+    static bool has_capsule_shape;
     static Dictionary raycast3d(Vector3 ray_origin, Vector3 ray_dir, float ray_dist, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
     static Dictionary raycast2d_to(Vector2 ray_origin, Vector2 ray_end, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
     static bool has_raycast3d_hit(Vector3 ray_origin, Vector3 ray_dir, float ray_dist, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
@@ -60,6 +62,7 @@ public:
     static Node* get_stored_hit_collider();
 
     static bool free_line_check(Vector3 ray_origin, Vector3 ray_end, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
+    static bool free_capsule_check(Vector3 ray_origin, Vector3 ray_end, float radius,   CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
 
     static Dictionary raycast3d_to(Vector3 ray_origin, Vector3 ray_end, CollideType _collide_type = COLLIDE_WITH_BODIES, uint32_t layer_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
 
