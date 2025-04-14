@@ -8,8 +8,6 @@
 YPhysics* YPhysics::singleton = nullptr;
 bool YPhysics::has_sphere_shape = false;
 RID YPhysics::sphere_rid;
-bool YPhysics::has_capsule_shape = false;
-RID YPhysics::capsule_rid;
 Vector3 YPhysics::stored_position_hit = {};
 Vector3 YPhysics::stored_hit_normal = {};
 ObjectID YPhysics::stored_collider_id = {};
@@ -24,12 +22,12 @@ void YPhysics::_bind_methods() {
     ClassDB::bind_static_method("YPhysics",D_METHOD("intersect_shape_3d", "world_position", "margin", "collide_type","max_results", "collision_mask", "exclude"), &YPhysics::_intersect_shape_3d,DEFVAL(0.04),DEFVAL(COLLIDE_WITH_BODIES),DEFVAL(32),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
     ClassDB::bind_static_method("YPhysics",D_METHOD("check_collision_sphere", "world_position", "radius", "collision_mask", "exclude"), &YPhysics::check_collision_sphere,DEFVAL(1.0),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
     ClassDB::bind_static_method("YPhysics",D_METHOD("free_sphere_check", "world_position", "radius", "collision_mask", "exclude"), &YPhysics::free_sphere_check,DEFVAL(1.0),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
-    ClassDB::bind_static_method("YPhysics",D_METHOD("free_capsule_check", "ray_origin", "ray_end", "radius", "collide_type", "collision_mask", "exclude"), &YPhysics::free_capsule_check,DEFVAL(COLLIDE_WITH_BODIES),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
     ClassDB::bind_static_method("YPhysics",D_METHOD("dictionary_to_intersect_result", "dictionary"), &YPhysics::dictionary_to_intersect_result);
     ClassDB::bind_static_method("YPhysics",D_METHOD("hit3d_position"), &YPhysics::get_stored_hit_position);
     ClassDB::bind_static_method("YPhysics",D_METHOD("hit3d_normal"), &YPhysics::get_stored_hit_normal);
     ClassDB::bind_static_method("YPhysics",D_METHOD("hit3d_collider"), &YPhysics::get_stored_hit_collider);
     ClassDB::bind_static_method("YPhysics",D_METHOD("has_raycast3d_hit", "ray_origin", "ray_direction", "ray_distance", "collide_type", "collision_mask", "exclude"), &YPhysics::has_raycast3d_hit,DEFVAL(COLLIDE_WITH_BODIES),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
+    ClassDB::bind_static_method("YPhysics",D_METHOD("has_spherecast3d_hit", "ray_origin", "radius", "ray_direction", "ray_distance", "collide_type", "collision_mask", "exclude"), &YPhysics::has_spherecast3d_hit,DEFVAL(COLLIDE_WITH_BODIES),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
 
 
     ClassDB::bind_static_method("YPhysics",D_METHOD("check_rest_info_3d", "shape", "world_transform", "margin", "collide_type", "collision_mask", "exclude"),
@@ -158,6 +156,65 @@ Node *YPhysics::get_stored_hit_collider()
     return Object::cast_to<Node>(ObjectDB::get_instance(stored_collider_id));
 }
 
+bool YPhysics::has_spherecast3d_hit(Vector3 ray_origin, real_t radius, Vector3 ray_dir, float ray_dist, CollideType _collide_type, uint32_t layer_mask, const TypedArray<RID> &p_exclude) {
+    auto world_3d = SceneTree::get_singleton()->get_root()->get_world_3d();
+    if (!has_sphere_shape) {
+        sphere_rid = PhysicsServer3D::get_singleton()->sphere_shape_create();
+        has_sphere_shape = true;
+    }
+
+    PhysicsServer3D::get_singleton()->shape_set_data(sphere_rid, radius);
+
+    PhysicsDirectSpaceState3D::ShapeParameters shape_params;
+    shape_params.transform = Transform3D{Basis{}, ray_origin};
+    shape_params.collision_mask = layer_mask;
+    shape_params.shape_rid = sphere_rid;
+    shape_params.motion = ray_dir * ray_dist;
+
+    // Determine what we are colliding with
+    if (_collide_type == COLLIDE_WITH_BOTH) {
+        shape_params.collide_with_areas = true;
+        shape_params.collide_with_bodies = true;
+    } else {
+        shape_params.collide_with_areas = _collide_type == COLLIDE_WITH_AREAS;
+        shape_params.collide_with_bodies = _collide_type == COLLIDE_WITH_BODIES;
+    }
+    if (!p_exclude.is_empty()) {
+        for (int i = 0; i < p_exclude.size(); i++) {
+            shape_params.exclude.insert(p_exclude[i]);
+        }
+    }
+
+	real_t collision_safe_fraction = 0.0;
+	real_t collision_unsafe_fraction = 0.0;
+    Vector3 position_for_impact = ray_origin;
+	if (ray_dir != Vector3()) {
+		world_3d->get_direct_space_state()->cast_motion(shape_params, collision_safe_fraction, collision_unsafe_fraction);
+		if (collision_unsafe_fraction < 1.0) {
+			// Move shape transform to the point of impact,
+			// so we can collect contact info at that point.
+			position_for_impact += shape_params.motion * (collision_unsafe_fraction + CMP_EPSILON);
+            shape_params.transform = Transform3D{Basis{},position_for_impact};
+		} else {
+            return false;
+        }
+	}
+
+	// Regardless of whether the shape is stuck or it's moved along
+	// the motion vector, we'll only consider static collisions from now on.
+	shape_params.motion = Vector3();
+
+    PhysicsDirectSpaceState3D::ShapeRestInfo info;
+	bool intersected = world_3d->get_direct_space_state()->rest_info(shape_params, &info);
+    if (intersected) {
+        stored_position_hit = info.point;
+        stored_hit_normal = info.normal;
+        stored_collider_id = info.collider_id;
+        return true;
+    }
+    return false;
+}
+
 bool YPhysics::has_raycast3d_hit(Vector3 ray_origin, Vector3 ray_dir, float ray_dist, CollideType _collide_type, uint32_t layer_mask, const TypedArray<RID> &p_exclude)
 {
     return free_line_check(ray_origin, ray_origin + (ray_dir * ray_dist), _collide_type, layer_mask, p_exclude);
@@ -190,75 +247,6 @@ bool YPhysics::free_line_check(Vector3 ray_origin, Vector3 ray_end, CollideType 
                 stored_hit_normal = result.normal;
                 stored_collider_id = result.collider_id;
                 return true;
-            }
-        }
-    }
-    return false;
-}
-
-
-bool YPhysics::free_capsule_check(Vector3 ray_origin, Vector3 ray_end, float radius, CollideType _collide_type, uint32_t layer_mask, const TypedArray<RID> &p_exclude) {
-    auto world_3d = SceneTree::get_singleton()->get_root()->get_world_3d();
-    if (!has_capsule_shape) {
-        capsule_rid = PhysicsServer3D::get_singleton()->capsule_shape_create();
-        has_capsule_shape = true;
-    }
-    if (world_3d.is_valid()) {
-        auto space_state = world_3d->get_direct_space_state();
-        if (space_state != nullptr) {
-            Vector<PhysicsDirectSpaceState3D::ShapeResult> sr;
-            sr.resize(1);
-            PhysicsDirectSpaceState3D::ShapeParameters shape_params;
-            
-            // Calculate the capsule's transform
-            Vector3 direction = ray_end - ray_origin;
-            float height = direction.length();
-            direction = direction.normalized();
-            
-            // Create a basis that aligns with the capsule's direction
-            Basis basis;
-            if (direction.dot(Vector3(0, 1, 0)) > 0.99) {
-                basis = Basis::looking_at(direction, Vector3(1, 0, 0));
-            } else {
-                basis = Basis::looking_at(direction, Vector3(0, 1, 0));
-            }
-            
-            // Position the capsule at the midpoint between origin and end
-            Vector3 position = ray_origin + direction * (height * 0.5);
-            Transform3D transform(basis, position);
-            
-            // Set up the shape parameters
-            shape_params.shape_rid = capsule_rid;
-            shape_params.transform = transform;
-            shape_params.collision_mask = layer_mask;
-            
-            // Set the capsule's dimensions
-            PhysicsServer3D::get_singleton()->shape_set_data(capsule_rid, Vector2(radius, height));
-            
-            if (_collide_type == COLLIDE_WITH_BOTH) {
-                shape_params.collide_with_areas = true;
-                shape_params.collide_with_bodies = true;
-            } else {
-                shape_params.collide_with_areas = _collide_type == COLLIDE_WITH_AREAS;
-                shape_params.collide_with_bodies = _collide_type == COLLIDE_WITH_BODIES;
-            }
-            
-            if (!p_exclude.is_empty()) {
-                for (int i = 0; i < p_exclude.size(); i++) {
-                    shape_params.exclude.insert(p_exclude[i]);
-                }
-            }
-            
-            int rc = space_state->intersect_shape(shape_params, sr.ptrw(), 1);
-            if (rc > 0) {
-                // Get the rest info to get the collision point and normal
-                PhysicsDirectSpaceState3D::ShapeRestInfo rest_info;
-                if (space_state->rest_info(shape_params, &rest_info)) {
-                    stored_position_hit = rest_info.point;
-                    stored_hit_normal = rest_info.normal;
-                    stored_collider_id = rest_info.collider_id;
-                    return true;
-                }
             }
         }
     }
@@ -502,9 +490,11 @@ TypedArray<Dictionary> YPhysics::spherecast(const Vector3 p_world_position, real
         sphere_rid = PhysicsServer3D::get_singleton()->sphere_shape_create();
         has_sphere_shape = true;
     }
-    Vector<PhysicsDirectSpaceState3D::ShapeResult> sr;
-    sr.resize(p_max_results);
+
+    PhysicsServer3D::get_singleton()->shape_set_data(sphere_rid, radius);
+
     PhysicsDirectSpaceState3D::ShapeParameters shape_params;
+    shape_params.transform = Transform3D{Basis{},p_world_position};
     shape_params.collision_mask = collision_mask;
     shape_params.shape_rid = sphere_rid;
     shape_params.motion = p_motion;
@@ -522,23 +512,53 @@ TypedArray<Dictionary> YPhysics::spherecast(const Vector3 p_world_position, real
             shape_params.exclude.insert(p_exclude[i]);
         }
     }
-    PhysicsServer3D::get_singleton()->shape_set_data(sphere_rid, radius);
-    shape_params.transform = Transform3D{Basis{},p_world_position};
 
-    int rc = world_3d->get_direct_space_state()->intersect_shape(shape_params, sr.ptrw(), p_max_results);
+	real_t collision_safe_fraction = 0.0;
+	real_t collision_unsafe_fraction = 0.0;
+    Vector3 position_for_impact = p_world_position;
+	if (p_motion != Vector3()) {
+		world_3d->get_direct_space_state()->cast_motion(shape_params, collision_safe_fraction, collision_unsafe_fraction);
+		if (collision_unsafe_fraction < 1.0) {
+			// Move shape transform to the point of impact,
+			// so we can collect contact info at that point.
+			position_for_impact += shape_params.motion * (collision_unsafe_fraction + CMP_EPSILON);
+            shape_params.transform = Transform3D{Basis{},position_for_impact};
+		}
+	}
 
-    if (rc == 0) {
+	// Regardless of whether the shape is stuck or it's moved along
+	// the motion vector, we'll only consider static collisions from now on.
+	shape_params.motion = Vector3();
+
+    Vector<PhysicsDirectSpaceState3D::ShapeRestInfo> result;
+	bool intersected = true;
+	while (intersected && result.size() < p_max_results) {
+		PhysicsDirectSpaceState3D::ShapeRestInfo info;
+		intersected = world_3d->get_direct_space_state()->rest_info(shape_params, &info);
+		if (intersected) {
+			result.push_back(info);
+			shape_params.exclude.insert(info.rid);
+		}
+	}
+
+    if (result.size() == 0) {
         return TypedArray<Dictionary>();
     }
 
     TypedArray<Dictionary> r;
-    r.resize(rc);
-    for (int i = 0; i < rc; i++) {
+    r.resize(p_max_results);
+    for (int i = 0; i < result.size(); i++) {
         Dictionary d;
-        d["rid"] = sr[i].rid;
-        d["collider_id"] = sr[i].collider_id;
-        d["collider"] = sr[i].collider;
-        d["shape"] = sr[i].shape;
+        d["rid"] = result[i].rid;
+        d["collider_id"] = result[i].collider_id;
+        Node* collider = Object::cast_to<Node>(ObjectDB::get_instance(result[i].collider_id));
+        if (collider != nullptr) {
+            d["collider"] = collider;
+        }
+        d["shape"] = result[i].shape;
+        d["point"] = result[i].point;
+        d["normal"] = result[i].normal;
+        d["linear_velocity"] = result[i].linear_velocity;
         r[i] = d;
     }
     return r;
@@ -547,14 +567,12 @@ TypedArray<Dictionary> YPhysics::spherecast(const Vector3 p_world_position, real
 TypedArray<Dictionary> YPhysics::shapecast(const Ref<Shape3D> &p_shape, const Transform3D &p_world_transform,
     real_t p_margin, const Vector3 &p_motion, int p_max_results, CollideType p_collide_type,
     uint32_t collision_mask, const TypedArray<RID> &p_exclude) {
-
     ERR_FAIL_COND_V(!p_shape.is_valid(), TypedArray<Dictionary>());
 
     auto world_3d = SceneTree::get_singleton()->get_root()->get_world_3d();
 
-    Vector<PhysicsDirectSpaceState3D::ShapeResult> sr;
-    sr.resize(p_max_results);
     PhysicsDirectSpaceState3D::ShapeParameters shape_params;
+    shape_params.transform = p_world_transform;
     shape_params.collision_mask = collision_mask;
     shape_params.shape_rid = p_shape->get_rid();
     shape_params.motion = p_motion;
@@ -572,22 +590,53 @@ TypedArray<Dictionary> YPhysics::shapecast(const Ref<Shape3D> &p_shape, const Tr
             shape_params.exclude.insert(p_exclude[i]);
         }
     }
-    shape_params.transform = p_world_transform;
 
-    int rc = world_3d->get_direct_space_state()->intersect_shape(shape_params, sr.ptrw(), p_max_results);
+	real_t collision_safe_fraction = 0.0;
+	real_t collision_unsafe_fraction = 0.0;
+    Vector3 position_for_impact = p_world_transform.get_origin();
+	if (p_motion != Vector3()) {
+		world_3d->get_direct_space_state()->cast_motion(shape_params, collision_safe_fraction, collision_unsafe_fraction);
+		if (collision_unsafe_fraction < 1.0) {
+			// Move shape transform to the point of impact,
+			// so we can collect contact info at that point.
+			position_for_impact += shape_params.motion * (collision_unsafe_fraction + CMP_EPSILON);
+            shape_params.transform = Transform3D{Basis{},position_for_impact};
+		}
+	}
 
-    if (rc == 0) {
+	// Regardless of whether the shape is stuck or it's moved along
+	// the motion vector, we'll only consider static collisions from now on.
+	shape_params.motion = Vector3();
+
+    Vector<PhysicsDirectSpaceState3D::ShapeRestInfo> result;
+	bool intersected = true;
+	while (intersected && result.size() < p_max_results) {
+		PhysicsDirectSpaceState3D::ShapeRestInfo info;
+		intersected = world_3d->get_direct_space_state()->rest_info(shape_params, &info);
+		if (intersected) {
+			result.push_back(info);
+			shape_params.exclude.insert(info.rid);
+		}
+	}
+
+    if (result.size() == 0) {
         return TypedArray<Dictionary>();
     }
 
     TypedArray<Dictionary> r;
-    r.resize(rc);
-    for (int i = 0; i < rc; i++) {
+    r.resize(p_max_results);
+    for (int i = 0; i < result.size(); i++) {
         Dictionary d;
-        d["rid"] = sr[i].rid;
-        d["collider_id"] = sr[i].collider_id;
-        d["collider"] = sr[i].collider;
-        d["shape"] = sr[i].shape;
+        d["rid"] = result[i].rid;
+        d["collider_id"] = result[i].collider_id;
+        Node* collider = Object::cast_to<Node>(ObjectDB::get_instance(result[i].collider_id));
+        if (collider != nullptr) {
+            d["collider"] = collider;
+        }
+        d["shape"] = result[i].shape;
+        d["point"] = result[i].point;
+        d["normal"] = result[i].normal;
+        d["linear_velocity"] = result[i].linear_velocity;
         r[i] = d;
     }
     return r;
