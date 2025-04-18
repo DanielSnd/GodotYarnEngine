@@ -4,6 +4,7 @@
 #include "yarnsave.h"
 #include "yarntime.h"
 #include "ytween.h"
+#include "ydir.h"
 #include "ygamestate.h"
 #include "core/math/random_number_generator.h"
 #include "scene/3d/mesh_instance_3d.h"
@@ -112,6 +113,7 @@ public:
 
     YSave* ysave;
     YTime* ytime;
+    Ref<YDir> ydir;
     YTween* ytween;
     void add_setting(const String& name, const Variant& default_value, Variant::Type type,
             PropertyHint hint = PROPERTY_HINT_NONE, const String& hint_string = "",
@@ -174,6 +176,8 @@ public:
         }
         return returndict;
     }
+
+    Dictionary get_script_base_properties(Node* p_node);
 };
 
 #endif

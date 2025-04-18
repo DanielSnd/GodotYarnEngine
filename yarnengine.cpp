@@ -48,17 +48,47 @@ bool YEngine::has_game_resource(int resource_type, int resource_id) {
     if (game_resource_paths.has(resource_type)) {
         auto respaths = game_resource_paths[resource_type];
         if (respaths.has(resource_id)) {
-            auto res_loaded = ResourceLoader::load(respaths[resource_id]);
-            if (res_loaded.is_valid()) {
-                if (!game_resources.has(resource_type)) game_resources[resource_type] = {};
-                game_resources[resource_type][resource_id] = res_loaded;
-                return true;
-            } else {
-                respaths.erase(resource_id);
-            }
+            return true;
         }
     }
     return false;
+}
+
+Dictionary YEngine::get_script_base_properties(Node* p_node) {
+    Dictionary base_values;
+    if (!p_node) {
+        return base_values;
+    }
+
+    Ref<Script> script = p_node->get_script();
+    if (!script.is_valid()) {
+        return base_values;
+    }
+
+    // Get script property list
+    List<PropertyInfo> script_property_list;
+    script->get_script_property_list(&script_property_list);
+
+    // Get allowed property names
+    HashSet<StringName> allowed_properties;
+    for (const PropertyInfo &pi : script_property_list) {
+        allowed_properties.insert(pi.name);
+    }
+
+    // Get all properties and filter them
+    List<PropertyInfo> property_list;
+    p_node->get_property_list(&property_list);
+
+    for (const PropertyInfo &pi : property_list) {
+        if (allowed_properties.has(pi.name) && 
+            !pi.name.begins_with("_") && 
+            (pi.usage & PROPERTY_USAGE_EDITOR) != 0 && 
+            pi.name != "script") {
+            base_values[pi.name] = p_node->get(pi.name);
+        }
+    }
+
+    return base_values;
 }
 
 Vector3 YEngine::get_random_point_on_top_of_mesh(MeshInstance3D *p_meshInstance, Ref<RandomNumberGenerator> p_rng) {
@@ -126,6 +156,8 @@ void YEngine::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("are_resources_virtually_the_same","resource_a","resource_b"), &YEngine::are_resources_virtually_the_same);
     ClassDB::bind_method(D_METHOD("get_diverging_variables_in_resources","resource_a","resource_b"), &YEngine::get_diverging_variables_in_resources);
+
+    ClassDB::bind_method(D_METHOD("get_script_base_properties","node"), &YEngine::get_script_base_properties);
 
     ClassDB::bind_method(D_METHOD("get_random_point_on_top_of_mesh","mesh_instance_3d","random_number_generator"), &YEngine::get_random_point_on_top_of_mesh);
 
@@ -206,6 +238,7 @@ void YEngine::setup_node() {
     if(!already_setup_in_tree && SceneTree::get_singleton() != nullptr) {
         ysave = YSave::get_singleton();
         ytime = YTime::get_singleton();
+        ydir.instantiate();
         ytween = YTween::get_singleton();
         ytime->is_paused = false;
         last_button_click_time = 0.0;
@@ -223,8 +256,6 @@ void YEngine::setup_node() {
     }
 }
 
-
-
 void YEngine::_notification(int p_what) {
     if (p_what == NOTIFICATION_POSTINITIALIZE && !Engine::get_singleton()->is_editor_hint()) {
         callable_mp(this,&YEngine::setup_node).call_deferred();
@@ -235,7 +266,7 @@ void YEngine::_notification(int p_what) {
         // case NOTIFICATION_ENTER_WORLD: {
         // } break;
         case NOTIFICATION_EXIT_TREE: {
-            
+            ydir = Ref<YDir>();
             break;
         }
         case NOTIFICATION_PARENTED: {
@@ -253,6 +284,7 @@ void YEngine::_notification(int p_what) {
         }
         case NOTIFICATION_READY: {
             emit_signal("initialized");
+            set_process_mode(PROCESS_MODE_ALWAYS);
             set_process(true);
             set_physics_process(true);
             TypedArray<Dictionary> global_class_list = ProjectSettings::get_singleton()->get_global_class_list();

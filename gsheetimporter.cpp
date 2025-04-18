@@ -21,9 +21,12 @@ void GSheetImporter::_bind_methods() {
     ClassDB::bind_method(D_METHOD("step_import_progress_bar","step","step_description"), &GSheetImporter::step_import_progress_bar);
     ClassDB::bind_method(D_METHOD("end_import_progress_bar"), &GSheetImporter::end_import_progress_bar);
     ClassDB::bind_method(D_METHOD("save_resource_if_different","resource_path","resource"), &GSheetImporter::save_resource_if_different);
+    ClassDB::bind_method(D_METHOD("save_new_or_update_resource","resource_path","resource_saving"), &GSheetImporter::save_new_or_update_resource);
+    ClassDB::bind_method(D_METHOD("sanitize_filename","filename"), &GSheetImporter::sanitize_filename);
 
     GDVIRTUAL_BIND(get_sheet_id)
     GDVIRTUAL_BIND(get_sheet_name)
+    GDVIRTUAL_BIND(get_resource_file_prefix)
     GDVIRTUAL_BIND(on_imported_data,"import_type","data")
 }
 
@@ -42,6 +45,8 @@ void GSheetImporter::request_import() {
     }
     String sheet_name = "";
     GDVIRTUAL_CALL(get_sheet_name,sheet_name);
+    String resource_file_prefix = "";
+    GDVIRTUAL_CALL(get_resource_file_prefix,resource_file_prefix);
     // print_line(vformat("Requested Import %s" ,sheet_name));
 
     Vector<String> p_headers;
@@ -287,6 +292,53 @@ void GSheetImporter::delayed_initialize() const {
         GSheetImporterEditorPlugin::get_singleton()->add_child(http_request);
     }
 #endif
+}
+
+bool GSheetImporter::save_new_or_update_resource(const String &resource_path, const Ref<Resource> &resource_saving) {
+    if (resource_saving.is_null() || !resource_saving.is_valid())
+        return false;
+
+    if (ResourceLoader::exists(resource_path)) {
+        Ref<Resource> existing_resource = ResourceLoader::load(resource_path);
+        if (YEngine::get_singleton()->are_resources_virtually_the_same(existing_resource, resource_saving)) {
+            return false;
+        }
+        
+        Vector<String> diverging_variables = YEngine::get_singleton()->get_diverging_variables_in_resources(existing_resource, resource_saving);
+        bool changed_any = false;
+        
+        for (const String &var_key : diverging_variables) {
+            bool valid;
+            const Variant &existing_val = existing_resource->get(var_key, &valid);
+            if (valid) {
+                const Variant &new_val = resource_saving->get(var_key, &valid);
+                if (valid) {
+                    existing_resource->set(var_key, new_val);
+                    changed_any = true;
+                }
+            }
+        }
+        
+        if (changed_any) {
+            ResourceSaver::save(existing_resource, resource_path);
+        }
+        return changed_any;
+    }
+
+    resource_saving->set_path(resource_path, true);
+    Error err = ResourceSaver::save(resource_saving, resource_path);
+    if (err != OK) {
+        return false;
+    }
+    return true;
+}
+
+String GSheetImporter::sanitize_filename(const String &p_filename) {
+    String sanitized = p_filename.strip_edges();
+    sanitized = sanitized.replace(" ", "_");
+    sanitized = sanitized.replace("\"", "");
+    sanitized = sanitized.to_lower();
+    return sanitized.validate_filename();
 }
 
 GSheetImporter::GSheetImporter() {

@@ -7,10 +7,15 @@
 
 YPhysics* YPhysics::singleton = nullptr;
 bool YPhysics::has_sphere_shape = false;
+bool YPhysics::has_circle_shape = false;
 RID YPhysics::sphere_rid;
+RID YPhysics::circle_rid;
 Vector3 YPhysics::stored_position_hit = {};
 Vector3 YPhysics::stored_hit_normal = {};
 ObjectID YPhysics::stored_collider_id = {};
+Vector2 YPhysics::stored_position_hit_2d = {};
+Vector2 YPhysics::stored_hit_normal_2d = {};
+ObjectID YPhysics::stored_collider_id_2d = {};
 
 void YPhysics::_bind_methods() {
     ClassDB::bind_static_method("YPhysics",D_METHOD("raycast2d_to", "ray_origin", "ray_end", "collide_type", "collision_mask", "exclude"), &YPhysics::raycast2d_to,DEFVAL(COLLIDE_WITH_BODIES),DEFVAL(UINT32_MAX), DEFVAL(TypedArray<RID>()));
@@ -112,6 +117,7 @@ Dictionary YPhysics::raycast2d_to(Vector2 ray_origin, Vector2 ray_end, CollideTy
             }
             ray_params.collision_mask = layer_mask;
             if (space_state->intersect_ray(ray_params, result)) {
+                
                 return_dictionary["position"] = result.position;
                 return_dictionary["normal"] = result.normal;
                 return_dictionary["collider_id"] = result.collider_id;
@@ -766,5 +772,69 @@ YPhysics::~YPhysics() {
     if(singleton !=nullptr && singleton == this) {
         singleton = nullptr;
     }
+}
+
+bool YPhysics::has_raycast2d_hit(Vector2 ray_origin, Vector2 ray_dir, float ray_dist, CollideType _collide_type, uint32_t layer_mask, const TypedArray<RID> &p_exclude) {
+    return free_line_check_2d(ray_origin, ray_origin + (ray_dir * ray_dist), _collide_type, layer_mask, p_exclude);
+}
+
+bool YPhysics::free_line_check_2d(Vector2 ray_origin, Vector2 ray_end, CollideType _collide_type, uint32_t layer_mask, const TypedArray<RID> &p_exclude) {
+    auto world_2d = SceneTree::get_singleton()->get_root()->get_world_2d();
+    if (world_2d.is_valid()) {
+        auto space_state = world_2d->get_direct_space_state();
+        if (space_state != nullptr) {
+            PhysicsDirectSpaceState2D::RayResult result;
+            PhysicsDirectSpaceState2D::RayParameters ray_params;
+            ray_params.from = ray_origin;
+            ray_params.to = ray_end;
+            if (!p_exclude.is_empty()) {
+                for (int i = 0; i < p_exclude.size(); i++) {
+                    ray_params.exclude.insert(p_exclude[i]);
+                }
+            }
+            if (_collide_type == COLLIDE_WITH_BOTH) {
+                ray_params.collide_with_areas = true;
+                ray_params.collide_with_bodies = true;
+            } else {
+                ray_params.collide_with_areas = _collide_type == COLLIDE_WITH_AREAS;
+                ray_params.collide_with_bodies = _collide_type == COLLIDE_WITH_BODIES;
+            }
+            ray_params.collision_mask = layer_mask;
+            if (space_state->intersect_ray(ray_params, result)) {
+                stored_position_hit_2d = result.position;
+                stored_hit_normal_2d = result.normal;
+                stored_collider_id_2d = result.collider_id;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool YPhysics::free_circle_check_2d(Vector2 p_world_position, real_t radius, uint32_t collision_mask, const TypedArray<RID> &p_exclude) {
+    auto world_2d = SceneTree::get_singleton()->get_root()->get_world_2d();
+    if (!has_circle_shape) {
+        circle_rid = PhysicsServer2D::get_singleton()->circle_shape_create();
+        has_circle_shape = true;
+    }
+    Vector<PhysicsDirectSpaceState2D::ShapeResult> sr;
+    sr.resize(1);
+    PhysicsDirectSpaceState2D::ShapeParameters shape_params;
+    shape_params.collide_with_areas = false;
+    shape_params.collide_with_bodies = true;
+    shape_params.collision_mask = collision_mask;
+    shape_params.shape_rid = circle_rid;
+    if (!p_exclude.is_empty()) {
+        for (int i = 0; i < p_exclude.size(); i++) {
+            shape_params.exclude.insert(p_exclude[i]);
+        }
+    }
+    PhysicsServer2D::get_singleton()->shape_set_data(circle_rid, radius);
+    shape_params.transform = Transform2D(0, p_world_position);
+    int rc = world_2d->get_direct_space_state()->intersect_shape(shape_params, sr.ptrw(), 1);
+    if (rc > 0) {
+        return true;
+    }
+    return false;
 }
 

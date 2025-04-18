@@ -1,16 +1,11 @@
-
 #include "ynavhelper3d.h"
 
 Ref<FastNoiseLite> YNavHelper3D::noise = nullptr;
 
 YNavHelper3D::YNavHelper3D() {
-    rng = memnew(RandomNumberGenerator);
-    rng->randomize();
-    random_unique_number = rng->randf_range(0, 9999);
 }
 
 YNavHelper3D::~YNavHelper3D() {
-    rng = nullptr;
     
     // Clean up debug visualization objects
     if (debug_mesh_instance) {
@@ -30,6 +25,10 @@ YNavHelper3D::~YNavHelper3D() {
 void YNavHelper3D::_notification(int p_what) {
     if (p_what == Node::NOTIFICATION_READY) {
         if (OS::get_singleton() != nullptr) {
+            Ref<RandomNumberGenerator> rng;
+            rng.instantiate();
+            rng->randomize();
+            random_unique_number = rng->randf_range(0, 99999);
             if (!Engine::get_singleton()->is_editor_hint()) {
                 // Distribute raycast directions around a sphere
                 initialize_raycasts();
@@ -142,6 +141,9 @@ void YNavHelper3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_wander_speed_multiplier", "multiplier"), &YNavHelper3D::set_wander_speed_multiplier);
     ClassDB::bind_method(D_METHOD("get_wander_speed_multiplier"), &YNavHelper3D::get_wander_speed_multiplier);
 
+    ClassDB::bind_method(D_METHOD("set_use_flat_raycasts", "use_flat"), &YNavHelper3D::set_use_flat_raycasts);
+    ClassDB::bind_method(D_METHOD("get_use_flat_raycasts"), &YNavHelper3D::get_use_flat_raycasts);
+
     // Register properties
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "auto_steer"), "set_auto_steer", "get_auto_steer");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "auto_steering_speed", PROPERTY_HINT_RANGE, "0,200,0.1"), "set_auto_steering_speed", "get_auto_steering_speed");
@@ -191,25 +193,39 @@ void YNavHelper3D::_bind_methods() {
 
 
 void YNavHelper3D::initialize_raycasts() {
-    // Using the golden spiral method for distributing points evenly on a sphere
+    directions.clear();
+    interest_values.clear();
+    danger_values.clear();
+    context_map.clear();
 
-    for (int i = 0; i < direction_amount; i++) {
-        // Golden spiral points on a sphere
-        float y = 1.0f - (2.0f * i) / (direction_amount - 1.0f);
-        float radius = sqrt(1.0f - y * y);
-        
-        float theta = Math_PI * (3.0f - sqrt(5.0f)); // Golden angle
-        float phi = theta * i;
-        
-        float x = cos(phi) * radius;
-        float z = sin(phi) * radius;
-        
-        Vector3 direction = Vector3(x, y, z).normalized();
-        directions.push_back(direction);
-        // Initialize arrays
-        interest_values.push_back(0.0f);
-        danger_values.push_back(0.0f);
-        context_map.push_back(0.0f);
+    if (use_flat_raycasts) {
+        // Create a flat circle of raycasts
+        for (int i = 0; i < direction_amount; i++) {
+            float angle = (i * Math_TAU) / direction_amount;
+            Vector3 direction = Vector3(cos(angle), 0, sin(angle)).normalized();
+            directions.push_back(direction);
+            interest_values.push_back(0.0f);
+            danger_values.push_back(0.0f);
+            context_map.push_back(0.0f);
+        }
+    } else {
+        // Original sphere distribution using golden spiral method
+        for (int i = 0; i < direction_amount; i++) {
+            float y = 1.0f - (2.0f * i) / (direction_amount - 1.0f);
+            float radius = sqrt(1.0f - y * y);
+            
+            float theta = Math_PI * (3.0f - sqrt(5.0f)); // Golden angle
+            float phi = theta * i;
+            
+            float x = cos(phi) * radius;
+            float z = sin(phi) * radius;
+            
+            Vector3 direction = Vector3(x, y, z).normalized();
+            directions.push_back(direction);
+            interest_values.push_back(0.0f);
+            danger_values.push_back(0.0f);
+            context_map.push_back(0.0f);
+        }
     }
 }
 
@@ -832,6 +848,19 @@ void YNavHelper3D::set_wander_speed_multiplier(float p_multiplier) {
 
 float YNavHelper3D::get_wander_speed_multiplier() const {
     return wander_speed_multiplier;
+}
+
+void YNavHelper3D::set_use_flat_raycasts(bool p_use_flat) {
+    if (use_flat_raycasts != p_use_flat) {
+        use_flat_raycasts = p_use_flat;
+        if (initialized) {
+            initialize_raycasts();
+        }
+    }
+}
+
+bool YNavHelper3D::get_use_flat_raycasts() const {
+    return use_flat_raycasts;
 }
 
 void YNavHelper3D::update_debug_visualization() {

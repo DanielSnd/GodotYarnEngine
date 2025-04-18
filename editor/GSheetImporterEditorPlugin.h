@@ -10,6 +10,7 @@
 #include "../gsheetimporter.h"
 #include "editor/plugins/editor_plugin.h"
 #include "editor/editor_node.h"
+#include "editor/editor_paths.h"
 
 struct EditorProgress;
 class GSheetImporterEditorPlugin : public EditorPlugin {
@@ -36,6 +37,7 @@ public:
 
     void clicked_menu_item(const String &import_name, const Ref<GSheetImporter> &script_desired, const String &script_path);
 
+    void create_importer_script_template();
 
     Dictionary menu_scripts;
     Vector<String> added_menu_texts;

@@ -15,6 +15,7 @@
 #include "gsheetimporter.h"
 #include "yarnmenu.h"
 #include "yarnphysics.h"
+#include "ydir.h"
 #include "yarnsave.h"
 #include "yarntime.h"
 #include "ybone_attachment_3d.h"
@@ -33,6 +34,7 @@
 #include "ypersistentid.h"
 #include "ymeshgen.h"
 #include "ynavhelper3d.h"
+#include "ynavhelper2d.h"
 #include "importers/resource_importer_glb_as_mesh.h"
 
 #ifdef NO_FMOD
@@ -106,6 +108,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<YTime>();
 	ClassDB::register_class<YSave>();
 	ClassDB::register_class<YPhysics>();
+	ClassDB::register_class<YDir>();
 	ClassDB::register_class<YMeshGen>();
  	ClassDB::register_class<YEngine>();
 	ClassDB::register_class<YMenu>();
@@ -126,6 +129,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<YState>();
 	ClassDB::register_class<YStateMachine>();
 	ClassDB::register_class<YStateOverride>();
+	ClassDB::register_class<YNavHelper2D>();
 	ClassDB::register_class<YNavHelper3D>();
 	ClassDB::register_class<CircleWithConeTexture2D>();
  	ClassDB::register_class<AOBakeableMeshInstance>();

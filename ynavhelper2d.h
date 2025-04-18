@@ -1,19 +1,18 @@
-// nav_helper_3d.h
-#ifndef YNAV_HELPER_3D_H
-#define YNAV_HELPER_3D_H
+#ifndef YNAV_HELPER_2D_H
+#define YNAV_HELPER_2D_H
 
 #include "core/math/random_number_generator.h"
-#include "scene/3d/node_3d.h"
+#include "scene/2d/node_2d.h"
 #include "core/variant/typed_array.h"
-#include "scene/3d/mesh_instance_3d.h"
+#include "scene/2d/mesh_instance_2d.h"
 #include "scene/resources/immediate_mesh.h"
 #include "scene/resources/material.h"
 #include "yarntime.h"
 #include "yarnphysics.h"
 #include "modules/noise/fastnoise_lite.h"
 
-class YNavHelper3D : public Node3D {
-    GDCLASS(YNavHelper3D, Node3D);
+class YNavHelper2D : public Node2D {
+    GDCLASS(YNavHelper2D, Node2D);
 
 protected:
     static void _bind_methods();
@@ -21,9 +20,9 @@ protected:
 private:
     void initialize_raycasts();
     void reset_danger_values();
-    void calculate_danger_and_interest_values(const Vector3& use_direction);
+    void calculate_danger_and_interest_values(const Vector2& use_direction);
     void calculate_best_direction();
-    void calculate_context_map(double delta, const Vector3& use_direction);
+    void calculate_context_map(double delta, const Vector2& use_direction);
     void update_wander_direction(double delta);
     void update_wander_speed(double delta);
     void update_line_of_sight();
@@ -34,25 +33,25 @@ private:
     int get_prev_index(int curr_index) const;
     
     // Core navigation properties
-    Vector<Vector3> directions;
+    Vector<Vector2> directions;
     Vector<float> interest_values;
     Vector<float> danger_values;
     Vector<float> context_map;
     
     bool auto_steer = true;
-    float auto_steering_speed = 25.0f;
-    Node3D* follow_target = nullptr;
+    float auto_steering_speed = 45.0f;
+    Node2D* follow_target = nullptr;
     bool draw_debug = false;
     bool verbose_debug = false;
     bool requires_line_of_sight = true;
     bool navigation_enabled = true;
     bool keep_looking_at_position = true;
-    float max_wander = 15.0f;
+    float max_wander = 140.0f;
     uint32_t navigation_collide_mask = 1;
     int direction_amount = 12;
-    float extend_length = 2.0f;
-    float stop_close_enough = 3.0f;
-    float stop_away_enough = 6.0f;
+    float extend_length = 45.0f;
+    float stop_close_enough = 40.0f;
+    float stop_away_enough = 80.0f;
     bool encircle_when_close_enough = false;
     bool away_when_close_enough = false;
     float way_too_close_multiplier = 0.4f;
@@ -65,13 +64,13 @@ private:
     int best_direction_index = 0;
     float best_value = 0.0f;
     float worst_value = 0.0f;
-    Vector3 desired_direction = Vector3(0, 0, -1);
-    Vector3 center_location = Vector3(0, 0, 0);
+    Vector2 desired_direction = Vector2(0, -1);
+    Vector2 center_location = Vector2(0, 0);
     float wander_speed = 0.0f;
-    Vector3 wander_direction = Vector3(0, 0, -1);
+    Vector2 wander_direction = Vector2(0, -1);
     
-    Vector3 relevant_position = Vector3(0, 0, 0);
-    Vector3 relevant_direction = Vector3(0, 0, -1);
+    Vector2 relevant_position = Vector2(0, 0);
+    Vector2 relevant_direction = Vector2(0, -1);
     
     float distance_to_relevant = 0.0f;
     bool away_from = false;
@@ -79,7 +78,6 @@ private:
     bool encircling = false;
     bool is_close_enough = false;
     bool way_too_close = false;
-    bool last_draw_debug = false;
     bool initialized = false;
     
     bool has_line_of_sight = false;
@@ -88,19 +86,13 @@ private:
     double last_time_verbose_debug = 0.0;
     
     // Debug visualization
-    MeshInstance3D* debug_mesh_instance = nullptr;
-    Ref<ImmediateMesh> debug_immediate_mesh;
-    Ref<StandardMaterial3D> debug_material;
+    bool last_draw_debug = false;
     
     float random_unique_number = 0.0f;
     float speed_multiplier = 1.0f;
     static Ref<FastNoiseLite> noise;
     float wander_speed_multiplier = 1.0f;
-    bool wander_prefer_horizontal = false;
-    float horizontal_preference_strength = 1.5f;
-    bool use_flat_raycasts = false;
 
-    
 public:
     enum NavigationMode {
         TOWARDS_TARGET = 0,
@@ -116,8 +108,8 @@ public:
 
     NavigationMode navigation_mode = WANDERING;
 
-    YNavHelper3D();
-    ~YNavHelper3D();
+    YNavHelper2D();
+    ~YNavHelper2D();
 
     void do_process(double delta);
     void do_physics_process(double delta);
@@ -130,8 +122,8 @@ public:
     void set_auto_steering_speed(float p_speed);
     float get_auto_steering_speed() const;
 
-    void set_follow_target(Node3D* p_target);
-    Node3D* get_follow_target() const;
+    void set_follow_target(Node2D* p_target);
+    Node2D* get_follow_target() const;
 
     void set_draw_debug(bool p_draw_debug);
     bool get_draw_debug() const;
@@ -193,26 +185,17 @@ public:
     void set_speed_multiplier(float p_multiplier);
     float get_speed_multiplier() const;
 
-    Vector3 get_desired_direction() const;
+    Vector2 get_desired_direction() const;
     
-    void set_relevant_position(const Vector3& p_position);
-    Vector3 get_relevant_position() const;
+    void set_relevant_position(const Vector2& p_position);
+    Vector2 get_relevant_position() const;
     
-    void set_relevant_direction(const Vector3& p_direction);
-    Vector3 get_relevant_direction() const;
-
-    void set_wander_prefer_horizontal(bool p_prefer_horizontal);
-    bool get_wander_prefer_horizontal() const;
-    
-    void set_horizontal_preference_strength(float p_strength);
-    float get_horizontal_preference_strength() const;
+    void set_relevant_direction(const Vector2& p_direction);
+    Vector2 get_relevant_direction() const;
 
     void set_wander_speed_multiplier(float p_multiplier);
     float get_wander_speed_multiplier() const;
-
-    void set_use_flat_raycasts(bool p_use_flat);
-    bool get_use_flat_raycasts() const;
 };
 
-VARIANT_ENUM_CAST(YNavHelper3D::NavigationMode);
-#endif // NAV_HELPER_3D_H
+VARIANT_ENUM_CAST(YNavHelper2D::NavigationMode);
+#endif // YNAV_HELPER_2D_H 

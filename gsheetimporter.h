@@ -45,11 +45,16 @@ public:
     GDVIRTUAL2(on_imported_data, String, Array)
     GDVIRTUAL0RC(String,get_sheet_id)
     GDVIRTUAL0RC(String,get_sheet_name)
+    GDVIRTUAL0RC(String,get_resource_file_prefix)
     void start_import_progress_bar(int p_steps, const String &p_task_name, const String &p_task_description);
     void step_import_progress_bar(int p_step, const String &p_step_description);
     void end_import_progress_bar();
 
     void delayed_initialize() const;
+
+    bool save_new_or_update_resource(const String &resource_path, const Ref<Resource> &resource_saving);
+
+    String sanitize_filename(const String &p_filename);
 
     GSheetImporter();
     ~GSheetImporter();
