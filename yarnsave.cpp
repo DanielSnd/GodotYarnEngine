@@ -47,6 +47,9 @@ void YSave::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_save_detail", "save_detail","detail_value"), &YSave::set_save_detail);
 
     ClassDB::bind_method(D_METHOD("set_to_save", "save_key","save"), &YSave::set_to_save);
+    ClassDB::bind_method(D_METHOD("set_to_save_if_higher", "save_key","save_value"), &YSave::set_to_save_if_higher);
+    ClassDB::bind_method(D_METHOD("set_to_save_if_lower", "save_key","save_value"), &YSave::set_to_save_if_lower);
+    ClassDB::bind_method(D_METHOD("increment_to_save", "save_key","increment"), &YSave::increment_to_save);
 
     ClassDB::bind_method(D_METHOD("get_from_save", "save_key","default"), &YSave::get_from_save);
 
@@ -184,6 +187,78 @@ Variant YSave::get_from_save(const String &p_save_key,const Variant &p_save_defa
 
 YSave *YSave::set_to_save(const String &p_save_key, const Variant &p_save_value) {
     return set_to_save_dictionary(save_data,p_save_key,p_save_value);
+}
+
+YSave *YSave::set_to_save_if_higher(const String &p_save_key, const Variant &p_save_value) {
+    Variant amount = get_from_save_dictionary(save_data, p_save_key, INT16_MIN);
+    if (p_save_value.get_type() == Variant::FLOAT && amount.get_type() == Variant::FLOAT) {
+        float amount_float = amount;
+        float increment_float = p_save_value;
+        if (amount_float < increment_float) {
+            set_to_save(p_save_key, increment_float);
+        }
+    }
+    else if (p_save_value.get_type() == Variant::INT && amount.get_type() == Variant::INT) {
+        int amount_int = amount;
+        int increment_int = p_save_value;
+        if (amount_int < increment_int) {
+            set_to_save(p_save_key, increment_int);
+        }
+    }
+    else {
+        float amount_float = amount;
+        float increment_float = p_save_value;
+        if (amount_float < increment_float) {
+            set_to_save(p_save_key, increment_float);
+        }
+    }
+    return this;
+}
+
+YSave *YSave::set_to_save_if_lower(const String &p_save_key, const Variant &p_save_value) {
+    Variant amount = get_from_save_dictionary(save_data, p_save_key, INT16_MAX);
+    if (p_save_value.get_type() == Variant::FLOAT && amount.get_type() == Variant::FLOAT) {
+        float amount_float = amount;
+        float increment_float = p_save_value;
+        if (amount_float > increment_float) {
+            set_to_save(p_save_key, increment_float);
+        }
+    }
+    else if (p_save_value.get_type() == Variant::INT && amount.get_type() == Variant::INT) {
+        int amount_int = amount;
+        int increment_int = p_save_value;
+        if (amount_int > increment_int) {
+            set_to_save(p_save_key, increment_int);
+        }
+    }
+    else {
+        float amount_float = amount;
+        float increment_float = p_save_value;
+        if (amount_float > increment_float) {
+            set_to_save(p_save_key, increment_float);
+        }
+    }
+    return this;
+}
+
+YSave *YSave::increment_to_save(const String &p_save_key, const Variant &p_increment) {
+    Variant amount = get_from_save_dictionary(save_data, p_save_key, 0);
+    if (p_increment.get_type() == Variant::FLOAT && amount.get_type() == Variant::FLOAT) {
+        float amount_float = amount;
+        float increment_float = p_increment;
+        set_to_save(p_save_key, amount_float + increment_float);
+    }
+    else if (p_increment.get_type() == Variant::INT && amount.get_type() == Variant::INT) {
+        int amount_int = amount;
+        int increment_int = p_increment;
+        set_to_save(p_save_key, amount_int + increment_int);
+    }
+    else {
+        float amount_float = amount;
+        float increment_float = p_increment;
+        set_to_save(p_save_key, amount_float + increment_float);
+    }
+    return this;
 }
 
 Variant YSave::get_from_save_dictionary(const Dictionary &save_dictionary, const String &p_save_key,const Variant &p_save_default) {

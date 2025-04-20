@@ -46,6 +46,9 @@ protected:
     void save_settings();
     Variant get_from_save(const String &p_save_key, const Variant &p_save_default);
     YSave *set_to_save(const String &p_save_key, const Variant &p_save_value);
+    YSave *set_to_save_if_higher(const String &p_save_key, const Variant &p_save_value);
+    YSave *set_to_save_if_lower(const String &p_save_key, const Variant &p_save_value);
+    YSave *increment_to_save(const String &p_save_key, const Variant &p_increment);
 
     Variant get_from_save_dictionary(const Dictionary &save_dictionary, const String &p_save_key,
                                             const Variant &p_save_default);
