@@ -7,6 +7,15 @@
 		YEngine is a core singleton class that provides essential functionality and utilities for the Yarn Engine module. It includes methods for resource management, scene spawning, button handling, menu management, and various utility functions for game development.
 
 		The class manages important subsystems like [YSave], [YTime], [YTween], and [YGameState], providing centralized access to their functionality.
+
+		It provides several key features:
+		- Resource management and discovery
+		- Scene spawning and positioning
+		- Screen fading transitions
+		- Button click handling with cooldown
+		- Bit flag manipulation
+		- String hashing
+		- Node searching utilities
 	</description>
 	<tutorials>
 	</tutorials>
@@ -34,35 +43,26 @@
 			<param index="0" name="resource_a" type="Resource" />
 			<param index="1" name="resource_b" type="Resource" />
 			<description>
-				Compares two resources and returns [code]true[/code] if they are functionally equivalent, even if they are different instances. This method compares all properties except internal ones like "script", "scripts", "resource_path", and "resource_local_to_scene".
-			</description>
-		</method>
-		<method name="button_click_callable">
-			<return type="Callable" />
-			<param index="0" name="callable" type="Callable" />
-			<description>
-				Creates a button click handler that prevents rapid repeated clicks by enforcing a 0.15 second cooldown between clicks. Use this to prevent button spamming.
+				Compares two resources and returns [code]true[/code] if they are functionally equivalent, even if they are different instances.
+				This method compares all properties except internal ones like "script", "scripts", "resource_path", and "resource_local_to_scene".
 
 				Example:
 				[codeblock]
-				button.pressed.connect(YEngine.button_click_callable(Callable(self, "on_button_pressed")))
+				var item1 = preload("res://items/sword1.tres")
+				var item2 = preload("res://items/sword2.tres")
+				
+				if YEngine.are_resources_virtually_the_same(item1, item2):
+				    print("Items have the same properties!")
 				[/codeblock]
 			</description>
 		</method>
-		<method name="button_click_callable_if_modulate">
-			<return type="Callable" />
-			<param index="0" name="callable" type="Callable" />
-			<param index="1" name="control" type="Control" />
-			<description>
-				Similar to [method button_click_callable], but only executes if the provided control's modulate alpha value is greater than 0.94. This is useful for buttons that should only be clickable when fully visible.
-			</description>
-		</method>
-		<method name="check_flag_value" qualifiers="const">
+		<method name="check_flag_value">
 			<return type="bool" />
 			<param index="0" name="flags" type="int" />
 			<param index="1" name="check_flag" type="int" />
 			<description>
 				Checks if a specific bit flag is set in the given flags integer. The flag number must be between 1 and 32 inclusive.
+				Useful for checking collision layers, visibility layers, or other bit flag based settings.
 
 				Example:
 				[codeblock]
@@ -73,12 +73,76 @@
 				[/codeblock]
 			</description>
 		</method>
+		<method name="fade_to_black">
+			<return type="YTweenWrap" />
+			<param index="0" name="duration" type="float" default="0.5" />
+			<param index="1" name="text" type="String" default="&quot;&quot;" />
+			<description>
+				Creates a fade to black transition effect. Returns a [YTweenWrap] that can be used to chain additional animations.
+
+				[param duration] controls how long the fade takes in seconds.
+				[param text] optional text to display during the fade.
+
+				Example:
+				[codeblock]
+				# Simple fade to black over 1 second
+				YEngine.fade_to_black(1.0)
+
+				# Fade to black with loading text
+				YEngine.fade_to_black(0.5, "Loading...")
+				[/codeblock]
+			</description>
+		</method>
+		<method name="fade_to_black_then_transparent">
+			<return type="YTweenWrap" />
+			<param index="0" name="duration" type="float" default="0.5" />
+			<param index="1" name="text" type="String" default="&quot;&quot;" />
+			<param index="2" name="callable_in_middle" type="Callable" default="Callable()" />
+			<description>
+				Creates a fade to black transition followed by a fade back to transparent. Returns a [YTweenWrap].
+				Useful for scene transitions where you want to execute code in between the fades.
+
+				[param duration] total duration of both fades in seconds.
+				[param text] optional text to display during the fade.
+				[param callable_in_middle] function to call when fully faded to black, before fading back.
+
+				Example:
+				[codeblock]
+				# Fade to black, change scene, then fade back
+				YEngine.fade_to_black_then_transparent(1.0, "Loading...", func(): get_tree().change_scene_to_file("res://new_scene.tscn"))
+				[/codeblock]
+			</description>
+		</method>
+		<method name="fade_to_transparent">
+			<return type="YTweenWrap" />
+			<param index="0" name="duration" type="float" default="0.5" />
+			<description>
+				Creates a fade from black to transparent transition. Returns a [YTweenWrap].
+
+				[param duration] controls how long the fade takes in seconds.
+
+				Example:
+				[codeblock]
+				# Fade from black to transparent over 1 second
+				YEngine.fade_to_transparent(1.0)
+				[/codeblock]
+			</description>
+		</method>
 		<method name="find_node_with_method">
 			<return type="Node" />
 			<param index="0" name="parent_node" type="Node" />
 			<param index="1" name="method_name" type="String" />
 			<description>
-				Searches through the children of [param parent_node] and returns the first node that has the specified method.
+				Searches through the immediate children of [param parent_node] and returns the first node that has the specified method.
+				Returns [code]null[/code] if no matching node is found.
+
+				Example:
+				[codeblock]
+				# Find a child node that has a "interact" method
+				var interactable = YEngine.find_node_with_method(get_parent(), "interact")
+				if interactable:
+				    interactable.interact()
+				[/codeblock]
 			</description>
 		</method>
 		<method name="find_node_with_type">
@@ -86,7 +150,16 @@
 			<param index="0" name="parent_node" type="Node" />
 			<param index="1" name="node_type" type="String" />
 			<description>
-				Searches through the children of [param parent_node] and returns the first node that matches the specified type name.
+				Searches through all descendants of [param parent_node] and returns the first node that matches the specified type name.
+				Returns [code]null[/code] if no matching node is found.
+
+				Example:
+				[codeblock]
+				# Find a Camera3D node in the scene
+				var camera = YEngine.find_node_with_type(get_tree().root, "Camera3D")
+				if camera:
+				    print("Found camera at: ", camera.get_path())
+				[/codeblock]
 			</description>
 		</method>
 		<method name="find_packedscenes_in">
@@ -94,7 +167,8 @@
 			<param index="0" name="path" type="Variant" />
 			<param index="1" name="name_contains" type="String" default="&quot;&quot;" />
 			<description>
-				Searches for [PackedScene] resources in the specified path(s). The [param path] can be a single path string or an array of paths. If [param name_contains] is provided, only scenes whose filenames contain this string will be returned.
+				Searches for [PackedScene] resources (.tscn files) in the specified path(s). The [param path] can be a single path string or an array of paths.
+				If [param name_contains] is provided, only scenes whose filenames contain this string will be returned.
 
 				Example:
 				[codeblock]
@@ -103,6 +177,9 @@
 
 				# Find scenes containing "enemy" in their filename
 				var enemy_scenes = YEngine.find_packedscenes_in("res://scenes", "enemy")
+
+				# Search in multiple directories
+				var all_scenes = YEngine.find_packedscenes_in(["res://scenes", "res://prefabs"])
 				[/codeblock]
 			</description>
 		</method>
@@ -111,7 +188,17 @@
 			<param index="0" name="path" type="Variant" />
 			<param index="1" name="name_contains" type="String" default="&quot;&quot;" />
 			<description>
-				Searches for resources in the specified path(s). The [param path] can be a single path string or an array of paths. If [param name_contains] is provided, only resources whose filenames contain this string will be returned.
+				Searches for resources (.tres files) in the specified path(s). The [param path] can be a single path string or an array of paths.
+				If [param name_contains] is provided, only resources whose filenames contain this string will be returned.
+
+				Example:
+				[codeblock]
+				# Find all .tres files in res://resources
+				var resources = YEngine.find_resources_in("res://resources")
+
+				# Find resources containing "item" in their filename
+				var items = YEngine.find_resources_in("res://resources", "item")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="find_resources_paths_in">
@@ -120,6 +207,16 @@
 			<param index="1" name="name_contains" type="String" default="&quot;&quot;" />
 			<description>
 				Similar to [method find_resources_in], but returns an array of resource file paths instead of loaded resources.
+				This is useful when you want to get the paths without loading the resources immediately.
+
+				Example:
+				[codeblock]
+				# Get paths of all .tres files in res://resources
+				var resource_paths = YEngine.find_resources_paths_in("res://resources")
+
+				# Get paths of resources containing "item"
+				var item_paths = YEngine.find_resources_paths_in("res://resources", "item")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_all_game_resources_of_type">
@@ -127,18 +224,61 @@
 			<param index="0" name="resource_type" type="int" />
 			<description>
 				Returns a dictionary of all registered game resources of the specified type. The dictionary keys are resource IDs and values are the corresponding resources.
+				This is useful for iterating over all resources of a particular type.
+
+				Example:
+				[codeblock]
+				# Get all items of type 1
+				var items = YEngine.get_all_game_resources_of_type(1)
+				for id in items:
+				    print("Item ", id, ": ", items[id].resource_name)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_all_game_resources_types">
 			<return type="Array" />
 			<description>
 				Returns an array of all registered game resource types.
+				Use this to enumerate all resource types that have been registered in the system.
+
+				Example:
+				[codeblock]
+				var types = YEngine.get_all_game_resources_types()
+				for type in types:
+				    var resources = YEngine.get_all_game_resources_of_type(type)
+				    print("Type ", type, " has ", resources.size(), " resources")
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_canvas_layer">
+			<return type="CanvasLayer" />
+			<param index="0" name="layer_index" type="int" default="0" />
+			<description>
+				Returns a [CanvasLayer] at the specified layer index. If the layer doesn't exist, it will be created.
+				This is useful for managing UI elements at different depths.
+
+				Example:
+				[codeblock]
+				# Get or create a canvas layer at index 10
+				var layer = YEngine.get_canvas_layer(10)
+				
+				# Add a UI element to this layer
+				var label = Label.new()
+				layer.add_child(label)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_current_scene">
 			<return type="Node" />
 			<description>
 				Returns the current scene root node from the SceneTree.
+				This is a convenience method to access the active scene.
+
+				Example:
+				[codeblock]
+				var current_scene = YEngine.get_current_scene()
+				print("Current scene: ", current_scene.get_name())
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_diverging_variables_in_resources">
@@ -146,7 +286,22 @@
 			<param index="0" name="resource_a" type="Resource" />
 			<param index="1" name="resource_b" type="Resource" />
 			<description>
-				Returns an array of property names that have different values between two resources. This is useful for debugging or comparing resource differences.
+				Returns an array of property names that have different values between two resources.
+				This is useful for debugging or comparing resource differences.
+
+				Example:
+				[codeblock]
+				var item1 = preload("res://items/sword1.tres")
+				var item2 = preload("res://items/sword2.tres")
+				var differences = YEngine.get_diverging_variables_in_resources(item1, item2)
+				for property in differences:
+				    print("Property ", property, " differs between resources")
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_fader_label">
+			<return type="RichTextLabel" />
+			<description>
 			</description>
 		</method>
 		<method name="get_game_resource">
@@ -154,27 +309,23 @@
 			<param index="0" name="resource_type" type="int" />
 			<param index="1" name="resource_id" type="int" />
 			<description>
-				Retrieves a registered game resource of the specified type and ID. If the resource isn't loaded but a path is registered, it will load the resource first.
+				Retrieves a registered game resource of the specified type and ID.
+				If the resource isn't loaded but a path is registered, it will load the resource first.
+				Returns [code]null[/code] if the resource doesn't exist.
+
+				Example:
+				[codeblock]
+				# Get item with ID 42 from resource type 1
+				var item = YEngine.get_game_resource(1, 42)
+				if item:
+				    print("Found item: ", item.resource_name)
+				[/codeblock]
 			</description>
 		</method>
-		<method name="get_menu_stack">
-			<return type="Node[]" />
+		<method name="get_script_base_properties">
+			<return type="Dictionary" />
+			<param index="0" name="node" type="Node" />
 			<description>
-				Returns the current menu stack as an array of nodes. The last element is the topmost menu.
-			</description>
-		</method>
-		<method name="get_menu_stack_size" qualifiers="const">
-			<return type="int" />
-			<description>
-				Returns the number of menus currently in the menu stack.
-			</description>
-		</method>
-		<method name="get_random_point_on_top_of_mesh">
-			<return type="Vector3" />
-			<param index="0" name="mesh_instance_3d" type="MeshInstance3D" />
-			<param index="1" name="random_number_generator" type="RandomNumberGenerator" />
-			<description>
-				Returns a random point on top of the specified mesh in global coordinates. Useful for spawning objects on surfaces.
 			</description>
 		</method>
 		<method name="has_game_resource">
@@ -183,13 +334,44 @@
 			<param index="1" name="resource_id" type="int" />
 			<description>
 				Returns [code]true[/code] if a game resource of the specified type and ID exists (either loaded or as a registered path).
+				Use this to check for resource existence without loading it.
+
+				Example:
+				[codeblock]
+				if YEngine.has_game_resource(1, 42):
+				    var item = YEngine.get_game_resource(1, 42)
+				    # Process item...
+				[/codeblock]
 			</description>
 		</method>
-		<method name="is_top_of_menu_stack" qualifiers="const">
-			<return type="bool" />
-			<param index="0" name="menu_to_check" type="Node" />
+		<method name="instant_fade_to_alpha">
+			<return type="void" />
+			<param index="0" name="alpha" type="float" />
 			<description>
-				Returns [code]true[/code] if the specified menu node is at the top of the menu stack.
+				Instantly sets the fade overlay to a specific alpha value without animation.
+				Useful for setting up initial fade states or immediate transitions.
+
+				Example:
+				[codeblock]
+				# Instantly make screen black
+				YEngine.instant_fade_to_alpha(1.0)
+				
+				# Instantly make screen transparent
+				YEngine.instant_fade_to_alpha(0.0)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="is_fading">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if a fade transition is currently in progress.
+				Use this to check if the screen is currently transitioning between fade states.
+
+				Example:
+				[codeblock]
+				if not YEngine.is_fading():
+				    YEngine.fade_to_black(1.0, "Loading next level...")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="remove_game_resource">
@@ -198,6 +380,13 @@
 			<param index="1" name="resource_id" type="int" />
 			<description>
 				Removes a registered game resource of the specified type and ID from the resource registry.
+				This unloads the resource and removes its registration.
+
+				Example:
+				[codeblock]
+				# Remove item with ID 42 from resource type 1
+				YEngine.remove_game_resource(1, 42)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="seeded_shuffle">
@@ -205,7 +394,34 @@
 			<param index="0" name="array" type="Array" />
 			<param index="1" name="seed" type="int" />
 			<description>
-				Returns a new array with the elements of the input array randomly shuffled using the specified seed. This ensures consistent shuffling results for the same seed value.
+				Returns a new array with the elements of the input array randomly shuffled using the specified seed.
+				Using the same seed will always produce the same shuffle result, which is useful for reproducible randomization.
+
+				Example:
+				[codeblock]
+				var items = ["sword", "shield", "potion"]
+				
+				# Shuffle with seed 42
+				var shuffled1 = YEngine.seeded_shuffle(items, 42)
+				
+				# Same seed will produce the same shuffle
+				var shuffled2 = YEngine.seeded_shuffle(items, 42)
+				# shuffled1 and shuffled2 will have identical ordering
+				[/codeblock]
+			</description>
+		</method>
+		<method name="set_fader_text">
+			<return type="void" />
+			<param index="0" name="text" type="String" />
+			<description>
+				Sets the text displayed during fade transitions.
+				The text will be centered on the screen and can include BBCode formatting.
+
+				Example:
+				[codeblock]
+				YEngine.set_fader_text("[center]Loading...[/center]")
+				YEngine.fade_to_black(1.0)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_flag_value">
@@ -214,7 +430,23 @@
 			<param index="1" name="flag" type="int" />
 			<param index="2" name="set_value" type="bool" />
 			<description>
-				Sets or clears a specific bit flag in the given flags integer and returns the new flags value. The flag number must be between 1 and 32 inclusive.
+				Sets or clears a specific bit flag in the given flags integer and returns the new flags value.
+				The flag number must be between 1 and 32 inclusive.
+				Useful for modifying collision layers, visibility layers, or other bit flag based settings.
+
+				Example:
+				[codeblock]
+				var flags = 0 # Binary: 0
+				
+				# Set flag 1 (returns 1, binary: 1)
+				flags = YEngine.set_flag_value(flags, 1, true)
+				
+				# Set flag 3 (returns 5, binary: 101)
+				flags = YEngine.set_flag_value(flags, 3, true)
+				
+				# Clear flag 1 (returns 4, binary: 100)
+				flags = YEngine.set_flag_value(flags, 1, false)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_game_resource">
@@ -224,6 +456,13 @@
 			<param index="2" name="resource" type="Resource" />
 			<description>
 				Registers a game resource with the specified type and ID in the resource registry.
+				This makes the resource available for retrieval using [method get_game_resource].
+
+				Example:
+				[codeblock]
+				var item = preload("res://items/sword.tres")
+				YEngine.set_game_resource(1, 42, item)  # Register sword as item type 1, ID 42
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_game_resource_path">
@@ -232,7 +471,18 @@
 			<param index="1" name="resource_id" type="int" />
 			<param index="2" name="resource_path" type="String" />
 			<description>
-				Registers a path to a game resource with the specified type and ID. The resource will be loaded when first accessed.
+				Registers a path to a game resource with the specified type and ID.
+				The resource will be loaded when first accessed using [method get_game_resource].
+				This is useful for lazy loading of resources.
+
+				Example:
+				[codeblock]
+				# Register path for lazy loading
+				YEngine.set_game_resource_path(1, 42, "res://items/sword.tres")
+				
+				# Resource will be loaded when accessed
+				var item = YEngine.get_game_resource(1, 42)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="spawn">
@@ -242,13 +492,34 @@
 			<param index="2" name="global_pos" type="Variant" />
 			<param index="3" name="force_readable_name" type="bool" default="false" />
 			<description>
-				Instantiates a [PackedScene] as a child of [param parent] at the specified global position. If [param force_readable_name] is true, the instance will keep its scene filename as its node name.
+				Instantiates a [PackedScene] as a child of [param parent] at the specified global position.
+				If [param force_readable_name] is true, the instance will keep its scene filename as its node name.
 
 				Example:
 				[codeblock]
-				var scene = preload("res://enemy.tscn")
-				var pos = Vector3(0, 1, 0)
-				var enemy = YEngine.spawn(scene, get_parent(), pos)
+				var enemy_scene = preload("res://enemy.tscn")
+				var spawn_pos = Vector3(0, 1, 0)
+				var enemy = YEngine.spawn(enemy_scene, get_parent(), spawn_pos)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="spawn_with_rot">
+			<return type="Node" />
+			<param index="0" name="packed_scene" type="PackedScene" />
+			<param index="1" name="parent" type="Node" />
+			<param index="2" name="global_pos" type="Variant" />
+			<param index="3" name="global_rot" type="Variant" />
+			<param index="4" name="force_readable_name" type="bool" default="false" />
+			<description>
+				Similar to [method spawn], but also sets the rotation of the spawned instance.
+				Useful when you need to spawn an object with a specific orientation.
+
+				Example:
+				[codeblock]
+				var enemy_scene = preload("res://enemy.tscn")
+				var spawn_pos = Vector3(0, 1, 0)
+				var spawn_rot = Vector3(0, PI, 0) # Rotate 180 degrees around Y axis
+				var enemy = YEngine.spawn_with_rot(enemy_scene, get_parent(), spawn_pos, spawn_rot)
 				[/codeblock]
 			</description>
 		</method>
@@ -257,15 +528,32 @@
 			<param index="0" name="input_string" type="String" />
 			<description>
 				Converts a string to a 32-bit hash value using CRC32. Useful for generating consistent numeric IDs from strings.
+				The same input string will always produce the same hash value.
+
+				Example:
+				[codeblock]
+				var id = YEngine.string_to_hash("player_save")
+				print(id) # Will always print the same number for "player_save"
+				[/codeblock]
 			</description>
 		</method>
 	</methods>
 	<members>
 		<member name="can_button_click" type="bool" setter="set_can_button_click" getter="get_can_button_click" default="true">
-			Controls whether button clicks are currently allowed. Used to prevent rapid clicking.
+			Controls whether button clicks are currently allowed. Used to prevent rapid clicking or disable UI interaction.
+			When set to [code]false[/code], button click events will be ignored.
+
+			Example:
+			[codeblock]
+			# Disable button clicks during loading
+			YEngine.can_button_click = false
+			await get_tree().create_timer(1.0).timeout
+			YEngine.can_button_click = true
+			[/codeblock]
 		</member>
 		<member name="last_button_click_time" type="float" setter="set_last_button_click_time" getter="get_last_button_click_time" default="0.0">
-			Stores the time of the last button click. Used for click throttling.
+			Stores the time of the last button click. Used internally for click throttling to prevent rapid clicking.
+			This value is automatically updated when using the button click handling methods.
 		</member>
 	</members>
 	<signals>
@@ -273,11 +561,35 @@
 			<param index="0" name="pause_value" type="bool" />
 			<description>
 				Emitted when the pause state changes. [param pause_value] indicates the new pause state.
+				Connect to this signal if you need to respond to pause state changes in your game.
+
+				Example:
+				[codeblock]
+				func _ready():
+				    YEngine.changed_pause.connect(_on_pause_changed)
+
+				func _on_pause_changed(is_paused: bool):
+				    if is_paused:
+					    show_pause_menu()
+				    else:
+					    hide_pause_menu()
+				[/codeblock]
 			</description>
 		</signal>
 		<signal name="initialized">
 			<description>
 				Emitted when the YEngine instance has completed initialization and is ready to use.
+				Connect to this signal if you need to perform setup that requires YEngine to be fully initialized.
+
+				Example:
+				[codeblock]
+				func _ready():
+				    YEngine.initialized.connect(_on_yengine_ready)
+
+				func _on_yengine_ready():
+				    print("YEngine is ready!")
+				    start_game()
+				[/codeblock]
 			</description>
 		</signal>
 	</signals>

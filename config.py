@@ -13,12 +13,18 @@ def get_doc_classes():
         "YTime",
         "YSave",
         "YMenu",
+        "YDir",
+        "YMeshGen",
+        "YNavHelper3D",
+        "YNavHelper2D",
         "YPhysics",
+        "YPersistentID",
         "GSheetImporter",
         "YBoxContainer",
         "YHBoxContainer",
         "YVBoxContainer",
         "YTweenWrap",
+        "YTweenJiggle",
         "YTween",
         "YSpecialPoint3D",
         "YVisualElement3D",
@@ -37,6 +43,5 @@ def get_doc_classes():
         "YThreaderInterrupter",
         "YSceneSpawner3D",
         "YBoneAttachment3D",
-        "CombinedTexture2D",
-        "YNavHelper3D"
+        "CombinedTexture2D"
     ]

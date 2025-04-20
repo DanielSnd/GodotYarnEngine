@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="GSheetImporter" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
-		A utility class for importing and parsing data from Google Sheets.
+		A utility class for importing and parsing data from Google Sheets into Godot resources.
 	</brief_description>
 	<description>
 		GSheetImporter provides functionality to fetch and parse data from Google Sheets documents. It handles HTTP requests to the Google Sheets API, parses the JSON response, and emits the data in a structured format.
 
-		The importer supports progress tracking through progress bar methods and automatically handles resource saving with conflict detection.
+		The importer supports progress tracking through progress bar methods and automatically handles resource saving with conflict detection. It's particularly useful for managing game data like items, characters, dialogues, or any other structured content that you want to maintain in spreadsheets.
+
+		[b]Key Features:[/b]
+		- Automatic HTTP request handling to Google Sheets
+		- JSON parsing and data structuring
+		- Progress tracking with editor integration
+		- Smart resource saving with change detection
+		- Automatic sanitization of filenames
+		- Editor menu integration
 
 		There are two ways to use this class through GDScript files placed in the [code]res://importers/[/code] folder:
 
@@ -21,10 +29,21 @@
 
 		func get_sheet_name() -&gt; String:
 		    return "Sheet1" # Your sheet name
-
+			
 		func on_imported_data(import_type: String, data: Array) -&gt; void:
-		    for entry in data:
-		        print("Imported row: ", entry)
+		    # Example: Creating resources from sheet data
+		    start_import_progress_bar(data.size(), "Importing Items", "Creating item resources...")
+		    for idx in range(data.size()):
+		        var entry = data[idx]
+		        var item = ItemResource.new()
+		        item.name = entry["Name"]
+		        item.value = entry["Value"]
+		        
+		        var path = "res://resources/items/%s.tres" % sanitize_filename(item.name)
+		        save_new_or_update_resource(path, item)
+		        
+		        step_import_progress_bar(idx + 1, "Imported %s" % item.name)
+		    end_import_progress_bar()
 		[/codeblock]
 
 		[b]2. As a Custom Menu Item:[/b]
@@ -50,6 +69,8 @@
 		- Manages cleanup and reloading of menu items
 
 		[b]Note:[/b] The [code]res://importers/[/code] directory must exist for the automatic script detection to work.
+		
+		[b]Security Note:[/b] Make sure your Google Sheet's sharing settings are properly configured. The sheet needs to be accessible via the link for the importer to work.
 	</description>
 	<tutorials>
 	</tutorials>
@@ -58,6 +79,8 @@
 			<return type="void" />
 			<description>
 				Signals the end of an import operation's progress tracking. This method is called automatically when the import process completes, but can also be called manually if needed.
+				
+				Typically used in conjunction with [method start_import_progress_bar] and [method step_import_progress_bar] to provide visual feedback during long operations.
 			</description>
 		</method>
 		<method name="get_sheet_id" qualifiers="virtual const">
@@ -68,6 +91,8 @@
 
 				Example URL: https://docs.google.com/spreadsheets/d/[b]1234567890abcdef[/b]/edit
 				The sheet ID would be "1234567890abcdef"
+				
+				[b]Note:[/b] Make sure the sheet has appropriate sharing settings (at least "Anyone with the link can view").
 			</description>
 		</method>
 		<method name="get_sheet_name" qualifiers="virtual const">
@@ -76,7 +101,7 @@
 				Virtual method that must be implemented by inheriting classes to provide the sheet name to import.
 				This is the name of the specific sheet tab in the Google Sheets document.
 
-				Note: If the sheet name contains spaces, they will be automatically encoded in the URL.
+				[b]Note:[/b] The name is case-sensitive and must match exactly. If the sheet name contains spaces, they will be automatically encoded in the URL.
 			</description>
 		</method>
 		<method name="on_imported_data" qualifiers="virtual">
@@ -88,13 +113,25 @@
 				[param import_type] is the sheet name that was imported.
 				[param data] is an Array of Dictionary objects, where each Dictionary represents a row from the sheet with column headers as keys.
 
-				Example implementation:
+				Example implementation for creating character resources:
 				[codeblock]
 				func on_imported_data(import_type: String, data: Array) -&gt; void:
-				    for row in data:
-				        var name = row["Name"]
-				        var value = row["Value"]
-				        print("Imported: ", name, " = ", value)
+				    start_import_progress_bar(data.size(), "Importing Characters", "Processing character data...")
+				    
+				    for idx in range(data.size()):
+				        var row = data[idx]
+				        var character = CharacterResource.new()
+				        character.name = row["Name"]
+				        character.health = int(row["Health"])
+				        character.speed = float(row["Speed"])
+				        
+				        var path = "res://resources/characters/%s.tres" % sanitize_filename(character.name)
+				        if save_new_or_update_resource(path, character):
+				            print("Updated character: ", character.name)
+				            
+				        step_import_progress_bar(idx + 1, "Processed %s" % character.name)
+				    
+				    end_import_progress_bar()
 				[/codeblock]
 			</description>
 		</method>
@@ -105,23 +142,48 @@
 				The method automatically handles the creation of the HTTP request and connection setup.
 
 				The imported data will be delivered through the [signal imported_data] signal and the [method on_imported_data] virtual method.
+				
+				[b]Note:[/b] This method is typically called automatically by the editor plugin when using the menu item, but can also be called manually if needed.
 			</description>
 		</method>
-		<method name="save_resource_if_different">
-			<return type="void" />
-			<param index="0" name="resource_path" type="String" />
-			<param index="1" name="resource" type="Resource" />
+		<method name="sanitize_filename">
+			<return type="String" />
+			<param index="0" name="filename" type="String" />
 			<description>
-				Saves a resource to disk only if it differs from an existing resource at the same path.
-				This method includes smart diffing to only update changed properties.
-
-				[param resource_path] is the path where the resource should be saved.
-				[param resource] is the Resource instance to save.
-
-				If a resource already exists at the specified path, it will:
-				1. Compare the new resource with the existing one
-				2. Update only the changed properties in the existing resource
-				3. Save only if changes were detected
+				Sanitizes a string to be used as a filename by:
+				- Removing leading/trailing whitespace
+				- Replacing spaces with underscores
+				- Removing quotes
+				- Converting to lowercase
+				- Ensuring the result is a valid filename
+				
+				Example usage:
+				[codeblock]
+				var safe_name = sanitize_filename("My Cool Item!") # Returns "my_cool_item"
+				var resource_path = "res://resources/%s.tres" % safe_name
+				[/codeblock]
+			</description>
+		</method>
+		<method name="save_new_or_update_resource">
+			<return type="bool" />
+			<param index="0" name="resource_path" type="String" />
+			<param index="1" name="resource_saving" type="Resource" />
+			<description>
+				Saves a resource to disk, updating an existing resource if it exists or creating a new one if it doesn't.
+				Returns [code]true[/code] if the resource was created or updated, [code]false[/code] if no changes were needed.
+				
+				Example usage:
+				[codeblock]
+				var item = ItemResource.new()
+				item.name = "Sword"
+				item.damage = 10
+				
+				var path = "res://resources/items/sword.tres"
+				if save_new_or_update_resource(path, item):
+				    print("Item was created or updated")
+				else:
+				    print("No changes were needed")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="start_import_progress_bar">
@@ -135,6 +197,15 @@
 				[param steps] is the total number of steps in the operation.
 				[param task_name] is a short name for the import task.
 				[param task_description] is a longer description of what's being imported.
+				
+				Example usage:
+				[codeblock]
+				start_import_progress_bar(100, "Importing Items", "Processing item database...")
+				for i in range(100):
+				    # Process item
+				    step_import_progress_bar(i + 1, "Processing item %d" % i)
+				end_import_progress_bar()
+				[/codeblock]
 			</description>
 		</method>
 		<method name="step_import_progress_bar">
@@ -146,6 +217,8 @@
 
 				[param step] is the current step number (should be between 0 and the total steps specified in [method start_import_progress_bar]).
 				[param step_description] is a description of the current step being executed.
+				
+				See [method start_import_progress_bar] for usage example.
 			</description>
 		</method>
 	</methods>
@@ -159,6 +232,15 @@
 				[param data] contains an Array of Dictionary objects representing the imported rows.
 
 				Each dictionary in the data array uses the sheet's column headers as keys and the cell values as values.
+				
+				Example connection:
+				[codeblock]
+				func _ready():
+				    connect("imported_data", _on_data_imported)
+				
+				func _on_data_imported(import_type: String, data: Array) -&gt; void:
+				    print("Received %d rows from sheet: %s" % [data.size(), import_type])
+				[/codeblock]
 			</description>
 		</signal>
 	</signals>

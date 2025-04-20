@@ -11,6 +11,10 @@
 #include "scene/main/node.h"
 #include "scene/main/window.h"
 #include "scene/resources/packed_scene.h"
+#include "scene/main/canvas_layer.h"
+#include "scene/gui/rich_text_label.h"
+#include "scene/gui/control.h"
+#include "scene/gui/color_rect.h"
 #include <core/string/translation_server.h>
 
 class YGameState;
@@ -44,10 +48,14 @@ protected:
     HashMap<StringName, Node *> othersingletons;
     YGameState* ygamestate = nullptr;
 public:
+    Control* fader_control = nullptr;
+    RichTextLabel* fader_label = nullptr;
+
     bool using_game_state=false;
     bool already_setup_in_tree = false;
     static bool is_exiting;
     HashMap<StringName,String> class_name_to_script_path;
+    HashMap<int, CanvasLayer*> canvas_layers;
 
     void game_state_starting(const Ref<YGameState> &ygs);
     Callable button_click_callable(const Callable &p_callable);
@@ -105,9 +113,13 @@ public:
     int string_to_hash(const String& str);
 
     void setting_position_in_parent(Node *node_entered_tree, const Variant &p_spawn_pos);
+    void setting_position_and_rotation_in_parent(Node *node_entered_tree, const Variant &p_spawn_pos, const Variant &p_spawn_rot);
+
+    void create_fader();
+    CanvasLayer* get_canvas_layer(int layer_index);
 
     Node *spawn(const Ref<PackedScene> &p_spawnable_scene, Node* p_desired_parent, const Variant &p_spawn_pos, bool p_force_readable_name);
-
+    Node *spawn_with_rot(const Ref<PackedScene> &p_spawnable_scene, Node* p_desired_parent, const Variant &p_spawn_pos, const Variant &p_spawn_rot, bool p_force_readable_name);
     YEngine();
     ~YEngine();
 
@@ -178,6 +190,14 @@ public:
     }
 
     Dictionary get_script_base_properties(Node* p_node);
+    void instant_fade_to_alpha(float alpha);
+    RichTextLabel* get_fader_label();
+    Ref<YTweenWrap> fade_to_black(float duration = 0.5, const String& text = "");
+    Ref<YTweenWrap> fade_to_transparent(float duration = 0.5);
+    Ref<YTweenWrap> fade_to_black_then_transparent(float duration = 0.5, const String& text = "", const Callable &p_callable_in_middle = Callable());
+    void set_fader_text(const String& text);
+    void hide_fader();
+    bool is_fading() const;
 };
 
 #endif

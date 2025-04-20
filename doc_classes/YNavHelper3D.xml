@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="YNavHelper3D" inherits="Node3D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
+<class name="YNavHelper3D" inherits="Node3D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
 		A context-based navigation helper for 3D flying entities.
 	</brief_description>
@@ -20,8 +20,7 @@
 		The node attaches to a parent Node3D (typically a CharacterBody3D or RigidBody3D) and provides steering information that can be used to control the parent's movement.
 	</description>
 	<tutorials>
-		<link title="Example Usage">
-		[codeblock]
+		<link title="Example Usage">[codeblock]
 		# Example: Basic flying enemy that follows the player
 		extends CharacterBody3D
 
@@ -136,8 +135,7 @@
 		func _physics_process(delta):
 			# The entity will wander primarily in horizontal directions
 			move_and_slide()
-		[/codeblock]
-		</link>
+		[/codeblock]</link>
 	</tutorials>
 	<methods>
 		<method name="get_desired_direction" qualifiers="const">
@@ -158,10 +156,9 @@
 				Returns the current position that navigation is relative to. This is used when [member navigation_mode] is set to modes that rely on a position, such as [constant TOWARDS_POSITION], [constant AWAY_FROM_POSITION], or [constant ENCIRCLE_POSITION].
 			</description>
 		</method>
-		<method name="get_speed_multiplier" qualifiers="const">
-			<return type="float" />
+		<method name="get_use_flat_raycasts" qualifiers="const">
+			<return type="bool" />
 			<description>
-				Returns the current speed multiplier value, which affects the movement speed when [member auto_steer] is enabled.
 			</description>
 		</method>
 		<method name="set_relevant_direction">
@@ -178,11 +175,10 @@
 				Sets the position to navigate towards, away from, or around when using [constant TOWARDS_POSITION], [constant AWAY_FROM_POSITION], or [constant ENCIRCLE_POSITION] modes.
 			</description>
 		</method>
-		<method name="set_speed_multiplier">
+		<method name="set_use_flat_raycasts">
 			<return type="void" />
-			<param index="0" name="multiplier" type="float" />
+			<param index="0" name="use_flat" type="bool" />
 			<description>
-				Sets a multiplier that affects the movement speed when [member auto_steer] is enabled. Useful for dynamically adjusting speed (e.g., slowing an enemy when damaged or speeding up during special attacks).
 			</description>
 		</method>
 	</methods>
@@ -190,7 +186,7 @@
 		<member name="auto_steer" type="bool" setter="set_auto_steer" getter="get_auto_steer" default="true">
 			If [code]true[/code], the node will automatically adjust the parent's velocity during [code]_physics_process[/code]. If [code]false[/code], you need to manually use [method get_desired_direction] to control the entity's movement.
 		</member>
-		<member name="auto_steering_speed" type="float" setter="set_auto_steering_speed" getter="get_auto_steering_speed" default="45.0">
+		<member name="auto_steering_speed" type="float" setter="set_auto_steering_speed" getter="get_auto_steering_speed" default="25.0">
 			The base movement speed used when [member auto_steer] is enabled. This value is multiplied by [method get_speed_multiplier] to get the final speed.
 		</member>
 		<member name="away_when_close_enough" type="bool" setter="set_away_when_close_enough" getter="get_away_when_close_enough" default="false">
@@ -211,16 +207,19 @@
 		<member name="encircle_when_close_enough" type="bool" setter="set_encircle_when_close_enough" getter="get_encircle_when_close_enough" default="false">
 			If [code]true[/code], the entity will switch to circle around the target when it gets close enough (within [member stop_close_enough] distance). Useful for creating behavior where entities orbit around a target.
 		</member>
-		<member name="extend_length" type="float" setter="set_extend_length" getter="get_extend_length" default="45.0">
+		<member name="extend_length" type="float" setter="set_extend_length" getter="get_extend_length" default="2.0">
 			The length of the raycasts used for detecting obstacles. Longer raycasts allow the entity to detect and react to obstacles from further away.
 		</member>
 		<member name="follow_target" type="Node3D" setter="set_follow_target" getter="get_follow_target">
 			The target Node3D to navigate towards, away from, or around when using [constant TOWARDS_TARGET], [constant AWAY_FROM_TARGET], or [constant ENCIRCLE_TARGET] modes.
 		</member>
+		<member name="horizontal_preference_strength" type="float" setter="set_horizontal_preference_strength" getter="get_horizontal_preference_strength" default="1.5">
+			Controls how strongly the wandering behavior will prefer horizontal movement when [member wander_prefer_horizontal] is enabled. Higher values result in even stronger preference for horizontal paths and stronger avoidance of steep up/down movement.
+		</member>
 		<member name="keep_looking_at_position" type="bool" setter="set_keep_looking_at_position" getter="get_keep_looking_at_position" default="true">
 			If [code]true[/code], the entity will rotate to face the target position or follow target when [member auto_steer] is enabled. If [code]false[/code], it will face in the direction of movement.
 		</member>
-		<member name="max_wander" type="float" setter="set_max_wander" getter="get_max_wander" default="140.0">
+		<member name="max_wander" type="float" setter="set_max_wander" getter="get_max_wander" default="15.0">
 			The maximum distance the entity can wander from its starting position when using [constant WANDERING] mode. Acts as a leash to prevent the entity from wandering too far.
 		</member>
 		<member name="navigation_collide_mask" type="int" setter="set_navigation_collide_mask" getter="get_navigation_collide_mask" default="1">
@@ -235,29 +234,30 @@
 		<member name="requires_line_of_sight" type="bool" setter="set_requires_line_of_sight" getter="get_requires_line_of_sight" default="true">
 			If [code]true[/code], the entity will only navigate towards the follow target if it has line of sight to it. This is useful for creating more realistic AI that can't see through walls.
 		</member>
+		<member name="speed_multiplier" type="float" setter="set_speed_multiplier" getter="get_speed_multiplier" default="1.0">
+		</member>
 		<member name="steering_lerp_speed" type="float" setter="set_steering_lerp_speed" getter="get_steering_lerp_speed" default="3.0">
 			The interpolation speed used when adjusting velocity based on the desired direction. Higher values make the entity more responsive but potentially less smooth when [member auto_steer] is enabled.
 		</member>
-		<member name="stop_away_enough" type="float" setter="set_stop_away_enough" getter="get_stop_away_enough" default="80.0">
+		<member name="stop_away_enough" type="float" setter="set_stop_away_enough" getter="get_stop_away_enough" default="6.0">
 			The distance at which the entity will stop when moving away from a target. This prevents the entity from fleeing indefinitely in [constant AWAY_FROM_TARGET] or [constant AWAY_FROM_POSITION] modes.
 		</member>
-		<member name="stop_close_enough" type="float" setter="set_stop_close_enough" getter="get_stop_close_enough" default="40.0">
+		<member name="stop_close_enough" type="float" setter="set_stop_close_enough" getter="get_stop_close_enough" default="3.0">
 			The distance at which the entity will consider itself "close enough" to the target and may stop, start encircling, or start moving away based on other settings.
 		</member>
 		<member name="verbose_debug" type="bool" setter="set_verbose_debug" getter="get_verbose_debug" default="false">
 			If [code]true[/code], detailed debug information about the navigation state will be printed to the console periodically. Useful for debugging but should be disabled in production.
+		</member>
+		<member name="wander_prefer_horizontal" type="bool" setter="set_wander_prefer_horizontal" getter="get_wander_prefer_horizontal" default="false">
+			If [code]true[/code], the entity will prefer to wander in horizontal directions rather than moving steeply up or down when in [constant WANDERING] mode. This creates more natural flying behavior for flying creatures or hovering vehicles.
+		</member>
+		<member name="wander_speed_multiplier" type="float" setter="set_wander_speed_multiplier" getter="get_wander_speed_multiplier" default="1.0">
 		</member>
 		<member name="way_too_close_flee_speed" type="float" setter="set_way_too_close_flee_speed" getter="get_way_too_close_flee_speed" default="2.0">
 			A multiplier applied to movement speed when an entity is way too close to its target (within [member stop_close_enough] * [member way_too_close_multiplier]). This creates urgent fleeing behavior.
 		</member>
 		<member name="way_too_close_multiplier" type="float" setter="set_way_too_close_multiplier" getter="get_way_too_close_multiplier" default="0.4">
 			Defines how close is "way too close" as a fraction of [member stop_close_enough]. When the distance is less than [member stop_close_enough] * [member way_too_close_multiplier], the entity will flee at an increased speed.
-		</member>
-		<member name="horizontal_preference_strength" type="float" setter="set_horizontal_preference_strength" getter="get_horizontal_preference_strength" default="1.5">
-			Controls how strongly the wandering behavior will prefer horizontal movement when [member wander_prefer_horizontal] is enabled. Higher values result in even stronger preference for horizontal paths and stronger avoidance of steep up/down movement.
-		</member>
-		<member name="wander_prefer_horizontal" type="bool" setter="set_wander_prefer_horizontal" getter="get_wander_prefer_horizontal" default="false">
-			If [code]true[/code], the entity will prefer to wander in horizontal directions rather than moving steeply up or down when in [constant WANDERING] mode. This creates more natural flying behavior for flying creatures or hovering vehicles.
 		</member>
 	</members>
 	<constants>

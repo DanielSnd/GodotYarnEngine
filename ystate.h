@@ -71,7 +71,7 @@ public:
     Node *get_last_transitioned_from_or_null() const;
 
 #if YGODOT
-    PackedStringArray get_configuration_warnings() const;
+	PackedStringArray get_configuration_warnings() const override;
 #endif
 
     bool has_valid_auto_override();

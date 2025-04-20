@@ -6,7 +6,16 @@
 	<description>
 		YPhysics provides a collection of static methods for performing physics queries and checks in both 2D and 3D space. This includes raycasts, shape casts, collision checks, and motion casting.
 
+		The class offers efficient methods for:
+		- Raycasting in 2D and 3D
+		- Shape intersection tests
+		- Motion casting for predicting collisions
+		- Point and sphere intersection queries
+		- Collision shape movement testing
+
 		All methods are static and can be called directly without instantiating the class.
+
+		[b]Note:[/b] Most methods accept a [code]collision_mask[/code] parameter to filter collisions and an [code]exclude[/code] array of RIDs to ignore specific physics bodies.
 	</description>
 	<tutorials>
 	</tutorials>
@@ -25,6 +34,21 @@
 				- Index 0: The closest safe distance (between 0 and 1) that the shape can move without collision
 				- Index 1: The closest unsafe distance where a collision would occur
 				Returns an empty array if no collision is detected.
+
+				[codeblock]
+				# Example: Check if a character can move to a target position
+				var shape = CircleShape2D.new()
+				shape.radius = 16.0
+				var transform = Transform2D(0, position)
+				var motion = target_position - position
+				var result = YPhysics.cast_motion_2d(shape, transform, 0.04, motion)
+				
+				if !result.is_empty():
+				    var safe_fraction = result[0]
+				    var unsafe_fraction = result[1]
+				    # Move to the safe position
+				    position += motion * safe_fraction
+				[/codeblock]
 			</description>
 		</method>
 		<method name="cast_motion_3d" qualifiers="static">
@@ -38,6 +62,21 @@
 			<param index="6" name="exclude" type="RID[]" default="[]" />
 			<description>
 				Similar to [method cast_motion_2d] but for 3D shapes. Returns a [PackedFloat32Array] containing safe and unsafe distances.
+
+				[codeblock]
+				# Example: Move a character while checking for collisions
+				var capsule = CapsuleShape3D.new()
+				capsule.radius = 0.5
+				capsule.height = 2.0
+				
+				var transform = Transform3D(Basis(), position)
+				var motion = velocity * delta
+				
+				var result = YPhysics.cast_motion_3d(capsule, transform, 0.04, motion)
+				if !result.is_empty():
+				    var safe_fraction = result[0]
+				    position += motion * safe_fraction
+				[/codeblock]
 			</description>
 		</method>
 		<method name="check_collision_sphere" qualifiers="static">
@@ -49,6 +88,14 @@
 			<description>
 				Checks for collision with a sphere at the given position. Returns the first colliding object, or [code]null[/code] if no collision is found.
 				Only checks for collisions with physics bodies (not areas).
+
+				[codeblock]
+				# Example: Check if there's an object within range
+				var detection_radius = 5.0
+				var collider = YPhysics.check_collision_sphere(position, detection_radius)
+				if collider:
+				    print("Found object: ", collider.name)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="check_rest_info_3d" qualifiers="static">
@@ -68,12 +115,36 @@
 				- "shape": The shape index of the collider
 				- "linear_velocity": [Vector3] The linear velocity of the collider
 				Returns an empty dictionary if no collision is found.
+
+				[codeblock]
+				# Example: Check ground contact information
+				var box = BoxShape3D.new()
+				box.size = Vector3(1, 1, 1)
+				var transform = Transform3D(Basis(), position)
+				
+				var info = YPhysics.check_rest_info_3d(box, transform)
+				if !info.is_empty():
+				    var contact_point = info["point"]
+				    var surface_normal = info["normal"]
+				    var ground_velocity = info["linear_velocity"]
+				[/codeblock]
 			</description>
 		</method>
 		<method name="dictionary_to_intersect_result" qualifiers="static">
 			<return type="IntersectResult" />
 			<param index="0" name="dictionary" type="Dictionary" />
 			<description>
+				Converts a collision dictionary to an [IntersectResult] object for easier access to collision data. The dictionary should contain the standard collision information (position, normal, collider, etc.).
+				Returns [code]null[/code] if the dictionary is empty or doesn't contain the required fields.
+
+				[codeblock]
+				# Example: Convert raycast result to IntersectResult
+				var hit = YPhysics.raycast3d(position, direction, 100.0)
+				var result = YPhysics.dictionary_to_intersect_result(hit)
+				if result:
+				    print("Hit position: ", result.position)
+				    print("Hit normal: ", result.normal)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="free_line_check" qualifiers="static">
@@ -86,6 +157,15 @@
 			<description>
 				Performs a simple line check between two points. Returns [code]true[/code] if there is a collision, [code]false[/code] otherwise.
 				This is more efficient than [method raycast3d_to] when you only need to know if there is a collision.
+
+				[codeblock]
+				# Example: Check if there's a clear line of sight
+				var target_visible = !YPhysics.free_line_check(\
+				    player_position,\
+				    target_position,\
+				    YPhysics.COLLIDE_WITH_BODIES\
+				)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="free_sphere_check" qualifiers="static">
@@ -95,8 +175,15 @@
 			<param index="2" name="collision_mask" type="int" default="4294967295" />
 			<param index="3" name="exclude" type="RID[]" default="[]" />
 			<description>
-				Checks if a sphere at the given position would collide with anything. Returns [code]true[/code] if there is a collision.
+				Performs a quick sphere collision check at the given position. Returns [code]true[/code] if there is any collision with physics bodies.
 				Similar to [method check_collision_sphere] but returns a boolean instead of the colliding object.
+
+				[codeblock]
+				# Example: Check if a position is occupied
+				var sphere_radius = 1.0
+				if YPhysics.free_sphere_check(spawn_position, sphere_radius):
+				    print("Position is occupied!")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="has_raycast3d_hit" qualifiers="static">
@@ -108,21 +195,64 @@
 			<param index="4" name="collision_mask" type="int" default="4294967295" />
 			<param index="5" name="exclude" type="RID[]" default="[]" />
 			<description>
+				Performs a quick raycast check in 3D space. Returns [code]true[/code] if the ray hits anything within the specified distance.
+				The hit information can be retrieved using [method hit3d_position], [method hit3d_normal], and [method hit3d_collider].
+
+				[codeblock]
+				# Example: Check for obstacles and get hit information
+				if YPhysics.has_raycast3d_hit(position, forward, 10.0):
+				    var hit_pos = YPhysics.hit3d_position()
+				    var hit_normal = YPhysics.hit3d_normal()
+				    var hit_object = YPhysics.hit3d_collider()
+				[/codeblock]
+			</description>
+		</method>
+		<method name="has_spherecast3d_hit" qualifiers="static">
+			<return type="bool" />
+			<param index="0" name="ray_origin" type="Vector3" />
+			<param index="1" name="radius" type="float" />
+			<param index="2" name="ray_direction" type="Vector3" />
+			<param index="3" name="ray_distance" type="float" />
+			<param index="4" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="5" name="collision_mask" type="int" default="4294967295" />
+			<param index="6" name="exclude" type="RID[]" default="[]" />
+			<description>
+				Performs a spherecast (thick raycast) in 3D space. Returns [code]true[/code] if the sphere hits anything while moving along the ray.
+				The hit information can be retrieved using [method hit3d_position], [method hit3d_normal], and [method hit3d_collider].
+
+				[codeblock]
+				# Example: Check for collisions with a thick ray
+				var sphere_radius = 0.5
+				if YPhysics.has_spherecast3d_hit(\
+				    position,\
+				    sphere_radius,\
+				    direction,\
+				    10.0\
+				):
+				    var hit_pos = YPhysics.hit3d_position()
+				    var hit_normal = YPhysics.hit3d_normal()
+				[/codeblock]
 			</description>
 		</method>
 		<method name="hit3d_collider" qualifiers="static">
 			<return type="Node" />
 			<description>
+				Returns the collider Node from the last successful raycast or spherecast hit.
+				Should be called after [method has_raycast3d_hit] or [method has_spherecast3d_hit] returns [code]true[/code].
 			</description>
 		</method>
 		<method name="hit3d_normal" qualifiers="static">
 			<return type="Vector3" />
 			<description>
+				Returns the surface normal from the last successful raycast or spherecast hit.
+				Should be called after [method has_raycast3d_hit] or [method has_spherecast3d_hit] returns [code]true[/code].
 			</description>
 		</method>
 		<method name="hit3d_position" qualifiers="static">
 			<return type="Vector3" />
 			<description>
+				Returns the hit position from the last successful raycast or spherecast hit.
+				Should be called after [method has_raycast3d_hit] or [method has_spherecast3d_hit] returns [code]true[/code].
 			</description>
 		</method>
 		<method name="intersect_point_3d" qualifiers="static">
@@ -133,6 +263,23 @@
 			<param index="3" name="collision_mask" type="int" default="4294967295" />
 			<param index="4" name="exclude" type="RID[]" default="[]" />
 			<description>
+				Tests for intersections at a specific point in 3D space. Returns an array of dictionaries containing information about all intersecting objects.
+				Each dictionary contains:
+				- "rid": [RID] The RID of the intersecting object
+				- "collider_id": The object ID of the collider
+				- "collider": The actual object that was hit
+				- "shape": The shape index of the collider
+
+				[codeblock]
+				# Example: Check what objects are at a point
+				var results = YPhysics.intersect_point_3d(\
+				    position,\
+				    YPhysics.COLLIDE_WITH_BOTH,\
+				    5  # Max 5 results\
+				)
+				for result in results:
+				    print("Found object: ", result["collider"].name)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="intersect_shape_3d" qualifiers="static">
@@ -145,6 +292,28 @@
 			<param index="5" name="exclude" type="int" default="4294967295" />
 			<param index="6" name="_unnamed_arg6" type="RID[]" default="[]" />
 			<description>
+				Tests for intersections with a 3D shape at a specific position. Returns an array of dictionaries containing information about all intersecting objects.
+				Each dictionary contains:
+				- "rid": [RID] The RID of the intersecting object
+				- "collider_id": The object ID of the collider
+				- "collider": The actual object that was hit
+				- "shape": The shape index of the collider
+
+				[codeblock]
+				# Example: Check for overlapping objects with a box
+				var box = BoxShape3D.new()
+				box.size = Vector3(2, 2, 2)
+				var transform = Transform3D(Basis(), position)
+				
+				var results = YPhysics.intersect_shape_3d(\
+				    box,\
+				    transform,\
+				    0.04,  # Margin\
+				    YPhysics.COLLIDE_WITH_BODIES\
+				)
+				for result in results:
+				    print("Overlapping with: ", result["collider"].name)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="intersect_sphere" qualifiers="static">
@@ -156,6 +325,24 @@
 			<param index="4" name="collision_mask" type="int" default="4294967295" />
 			<param index="5" name="exclude" type="RID[]" default="[]" />
 			<description>
+				Tests for intersections with a sphere at a specific position. Returns an array of dictionaries containing information about all intersecting objects.
+				Each dictionary contains:
+				- "rid": [RID] The RID of the intersecting object
+				- "collider_id": The object ID of the collider
+				- "collider": The actual object that was hit
+				- "shape": The shape index of the collider
+
+				[codeblock]
+				# Example: Find all objects within a radius
+				var radius = 10.0
+				var results = YPhysics.intersect_sphere(\
+				    position,\
+				    radius,\
+				    YPhysics.COLLIDE_WITH_BODIES\
+				)
+				for result in results:
+				    print("Found in radius: ", result["collider"].name)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="raycast2d" qualifiers="static">
@@ -177,8 +364,12 @@
 				Returns an empty dictionary if no collision occurred.
 
 				[codeblock]
-				# Example: Check if there's ground below
-				var result = YPhysics.raycast2d(position, Vector2.DOWN, 100.0)
+				# Example: Check for ground below
+				var result = YPhysics.raycast2d(\
+				    position,\
+				    Vector2.DOWN,\
+				    100.0\
+				)
 				if !result.is_empty():
 				    var hit_pos = result["position"]
 				    var normal = result["normal"]
@@ -194,6 +385,24 @@
 			<param index="3" name="collision_mask" type="int" default="4294967295" />
 			<param index="4" name="exclude" type="RID[]" default="[]" />
 			<description>
+				Casts a ray in 2D space between two points. Returns a dictionary containing collision information:
+				- "position": [Vector2] The point where the ray collided
+				- "normal": [Vector2] The normal of the surface at the collision point
+				- "collider_id": The object ID of the collider
+				- "collider": The actual object that was hit
+				- "shape": The shape index of the collider
+				- "rid": [RID] The RID of the object that was hit
+				Returns an empty dictionary if no collision occurred.
+
+				[codeblock]
+				# Example: Check if we can reach a target
+				var result = YPhysics.raycast2d_to(\
+				    start_position,\
+				    target_position\
+				)
+				if !result.is_empty():
+				    print("Hit obstacle at: ", result["position"])
+				[/codeblock]
 			</description>
 		</method>
 		<method name="raycast3d" qualifiers="static">
@@ -217,7 +426,11 @@
 
 				[codeblock]
 				# Example: Check if there's an obstacle ahead
-				var result = YPhysics.raycast3d(player_position, player_forward, 10.0)
+				var result = YPhysics.raycast3d(\
+				    player_position,\
+				    player_forward,\
+				    10.0\
+				)
 				if !result.is_empty():
 				    var hit_pos = result["position"]
 				    var hit_normal = result["normal"]
@@ -234,6 +447,25 @@
 			<param index="3" name="collision_mask" type="int" default="4294967295" />
 			<param index="4" name="exclude" type="RID[]" default="[]" />
 			<description>
+				Casts a ray in 3D space between two points. Returns a dictionary containing collision information:
+				- "position": [Vector3] The point where the ray collided
+				- "normal": [Vector3] The normal of the surface at the collision point
+				- "collider_id": The object ID of the collider
+				- "collider": The actual object that was hit
+				- "shape": The shape index of the collider
+				- "rid": [RID] The RID of the object that was hit
+				- "face_index": The index of the face that was hit (if applicable)
+				Returns an empty dictionary if no collision occurred.
+
+				[codeblock]
+				# Example: Check if we can reach a target
+				var result = YPhysics.raycast3d_to(\
+				    start_position,\
+				    target_position\
+				)
+				if !result.is_empty():
+				    print("Hit obstacle at: ", result["position"])
+				[/codeblock]
 			</description>
 		</method>
 		<method name="shapecast" qualifiers="static">
@@ -253,14 +485,24 @@
 				- "collider_id": The object ID of the collider
 				- "collider": The actual object that was hit
 				- "shape": The shape index of the collider
+				- "point": [Vector3] The point of contact
+				- "normal": [Vector3] The collision normal
+				- "linear_velocity": [Vector3] The linear velocity of the collider
 
 				[codeblock]
 				# Example: Check if a box can move forward
 				var box_shape = BoxShape3D.new()
 				box_shape.size = Vector3(1, 1, 1)
-				var results = YPhysics.shapecast(box_shape, transform, 0.04, Vector3.FORWARD * 5)
+				var transform = Transform3D(Basis(), position)
+				var results = YPhysics.shapecast(\
+				    box_shape,\
+				    transform,\
+				    0.04,\
+				    Vector3.FORWARD * 5\
+				)
 				for collision in results:
 				    print("Collided with: ", collision["collider"].name)
+				    print("At point: ", collision["point"])
 				[/codeblock]
 			</description>
 		</method>
@@ -274,6 +516,29 @@
 			<param index="5" name="collision_mask" type="int" default="4294967295" />
 			<param index="6" name="exclude" type="RID[]" default="[]" />
 			<description>
+				Casts a sphere through space and returns an array of dictionaries containing information about all collisions.
+				Each dictionary contains:
+				- "rid": [RID] The RID of the colliding object
+				- "collider_id": The object ID of the collider
+				- "collider": The actual object that was hit
+				- "shape": The shape index of the collider
+				- "point": [Vector3] The point of contact
+				- "normal": [Vector3] The collision normal
+				- "linear_velocity": [Vector3] The linear velocity of the collider
+
+				[codeblock]
+				# Example: Cast a sphere along a path
+				var sphere_radius = 1.0
+				var results = YPhysics.spherecast(\
+				    start_position,\
+				    sphere_radius,\
+				    movement_vector,\
+				    5  # Max 5 results\
+				)
+				for collision in results:
+				    print("Hit: ", collision["collider"].name)
+				    print("At: ", collision["point"])
+				[/codeblock]
 			</description>
 		</method>
 	</methods>

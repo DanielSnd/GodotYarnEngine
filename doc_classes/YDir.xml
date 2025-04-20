@@ -1,0 +1,876 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YDir" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A utility class for handling directional operations and transformations in both 2D and 3D space.
+	</brief_description>
+	<description>
+		YDir provides a comprehensive set of static methods for working with directions, rotations, and transformations in both 2D and 3D space. It simplifies common operations like getting forward/right/up vectors, setting orientations, performing look-at operations, and generating evenly spaced directions.
+
+		The class includes methods for both local and global space operations, making it easier to work with Node2D and Node3D nodes in their respective coordinate systems. It also provides utilities for random direction generation and position interpolation.
+
+		Key features include:
+		- Get/Set forward, right, and up vectors in both local and global space
+		- Look-at operations with smooth interpolation
+		- Random direction generation with customizable constraints
+		- Even distribution of directions and positions
+		- Transform operations for points and directions
+		- Specialized 2D and 3D variants of most operations
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_even_directions" qualifiers="static">
+			<return type="Vector3[]" />
+			<param index="0" name="forward" type="Vector3" />
+			<param index="1" name="amount" type="int" />
+			<param index="2" name="min_angle" type="float" />
+			<param index="3" name="max_angle" type="float" />
+			<description>
+				Generates an array of evenly spaced direction vectors around a forward vector. Useful for creating radial patterns or distributing objects in a cone shape.
+
+				[b]Parameters:[/b]
+				- forward: The central direction vector
+				- amount: Number of directions to generate
+				- min_angle: Minimum angle in degrees from the forward vector
+				- max_angle: Maximum angle in degrees from the forward vector
+
+				[codeblock]
+				var forward = Vector3(0, 0, 1)
+				var directions = YDir.get_even_directions(forward, 8, 0, 360) # 8 directions in full circle
+				for dir in directions:
+				    spawn_object(dir * 5.0) # Spawn objects in a circle
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_even_directions_2d" qualifiers="static">
+			<return type="Vector2[]" />
+			<param index="0" name="forward" type="Vector2" />
+			<param index="1" name="amount" type="int" />
+			<param index="2" name="min_angle" type="float" />
+			<param index="3" name="max_angle" type="float" />
+			<description>
+				Generates an array of evenly spaced 2D direction vectors around a forward vector. Perfect for creating circular patterns or spread patterns in 2D.
+
+				[b]Parameters:[/b]
+				- forward: The central direction vector
+				- amount: Number of directions to generate
+				- min_angle: Minimum angle in degrees from the forward vector
+				- max_angle: Maximum angle in degrees from the forward vector
+
+				[codeblock]
+				var forward = Vector2(1, 0)
+				# Generate 6 directions in a 90-degree arc
+				var directions = YDir.get_even_directions_2d(forward, 6, -45, 45)
+				for dir in directions:
+				    shoot_bullet(dir * 100) # Shoot bullets in a spread pattern
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_even_directions_flat" qualifiers="static">
+			<return type="Vector3[]" />
+			<param index="0" name="forward" type="Vector3" />
+			<param index="1" name="amount" type="int" />
+			<param index="2" name="min_angle" type="float" />
+			<param index="3" name="max_angle" type="float" />
+			<description>
+				Similar to get_even_directions, but generates directions only in the XZ plane (Y = 0). Useful for creating radial patterns on flat surfaces.
+
+				[b]Parameters:[/b]
+				- forward: The central direction vector (will be projected onto XZ plane)
+				- amount: Number of directions to generate
+				- min_angle: Minimum angle in degrees from the forward vector
+				- max_angle: Maximum angle in degrees from the forward vector
+
+				[codeblock]
+				var forward = Vector3(0, 0, 1)
+				# Generate 8 directions in a half circle on the ground
+				var directions = YDir.get_even_directions_flat(forward, 8, -90, 90)
+				for dir in directions:
+				    spawn_ground_effect(dir * 5.0) # Spawn effects in semicircle
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_even_positions" qualifiers="static">
+			<return type="Vector3[]" />
+			<param index="0" name="pos1" type="Vector3" />
+			<param index="1" name="pos2" type="Vector3" />
+			<param index="2" name="amount" type="int" />
+			<description>
+				Generates an array of evenly spaced positions between two points. Useful for creating paths or distributing objects in a line.
+
+				[b]Parameters:[/b]
+				- pos1: Starting position
+				- pos2: Ending position
+				- amount: Number of positions to generate (including start and end points)
+
+				[codeblock]
+				var start = Vector3(0, 0, 0)
+				var end = Vector3(10, 0, 0)
+				var positions = YDir.get_even_positions(start, end, 5)
+				for pos in positions:
+				    spawn_object(pos) # Spawn objects in a line
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_even_positions_2d" qualifiers="static">
+			<return type="Vector2[]" />
+			<param index="0" name="pos1" type="Vector2" />
+			<param index="1" name="pos2" type="Vector2" />
+			<param index="2" name="amount" type="int" />
+			<description>
+				Generates an array of evenly spaced positions between two 2D points. Perfect for creating paths or distributing objects in a line.
+
+				[b]Parameters:[/b]
+				- pos1: Starting position
+				- pos2: Ending position
+				- amount: Number of positions to generate (including start and end points)
+
+				[codeblock]
+				var start = Vector2(0, 0)
+				var end = Vector2(100, 100)
+				# Generate 5 evenly spaced points
+				var positions = YDir.get_even_positions_2d(start, end, 5)
+				for pos in positions:
+				    spawn_object_2d(pos) # Place objects along diagonal line
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_forward" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<description>
+				Returns the forward direction vector of the given Node3D in local space. In Godot's coordinate system, this corresponds to the node's local Z axis.
+
+				[codeblock]
+				var character = $Character # A Node3D node
+				var forward_dir = YDir.get_forward(character) # Get character's forward direction
+				var target_pos = character.position + forward_dir * 5.0 # Point 5 units ahead
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_forward_2d" qualifiers="static">
+			<return type="Vector2" />
+			<param index="0" name="node" type="Node2D" />
+			<description>
+				Returns the forward direction vector of the given Node2D in local space. In Godot's 2D coordinate system, this corresponds to the direction the node is facing (rotation angle).
+
+				[codeblock]
+				var character = $Character2D # A Node2D node
+				var forward = YDir.get_forward_2d(character)
+				var ahead_pos = character.position + forward * 100 # Point 100 pixels ahead
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_global_forward" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<description>
+				Returns the forward direction vector of the given Node3D in world space. This takes into account all parent transformations.
+
+				[codeblock]
+				var character = $Character
+				var world_forward = YDir.get_global_forward(character)
+				# world_forward is now in global coordinates
+				var world_target = character.global_position + world_forward * 10
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_global_forward_2d" qualifiers="static">
+			<return type="Vector2" />
+			<param index="0" name="node" type="Node2D" />
+			<description>
+				Returns the forward direction vector of the given Node2D in global space. This takes into account all parent transformations.
+
+				[codeblock]
+				var character = $Character2D
+				var global_forward = YDir.get_global_forward_2d(character)
+				var global_ahead = character.global_position + global_forward * 100 # Point 100 pixels ahead in global space
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_global_pos_above" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="amount" type="float" />
+			<description>
+				Returns a position above the node in world space by the specified amount. Uses the node's global up vector for the calculation.
+
+				[codeblock]
+				var character = $Character
+				var world_pos = YDir.get_global_pos_above(character, 4.0) # 4 units above in world space
+				spawn_floating_text(world_pos) # Display text above character
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_global_pos_forward" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="amount" type="float" />
+			<description>
+				Returns a position in front of the node in world space by the specified amount. Uses the node's global forward vector for the calculation.
+
+				[codeblock]
+				var character = $Character
+				var world_pos = YDir.get_global_pos_forward(character, 10.0) # 10 units forward in world space
+				place_target_marker(world_pos) # Place marker where character is facing
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_global_pos_right" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="amount" type="float" />
+			<description>
+				Returns a position to the right of the node in world space by the specified amount. Uses the node's global right vector for the calculation.
+
+				[codeblock]
+				var character = $Character
+				var world_pos = YDir.get_global_pos_right(character, 3.0) # 3 units right in world space
+				spawn_shield(world_pos) # Spawn shield beside character
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_global_right" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<description>
+				Returns the right direction vector of the given Node3D in world space. This takes into account all parent transformations.
+
+				[codeblock]
+				var character = $Character
+				var world_right = YDir.get_global_right(character)
+				var world_side = character.global_position + world_right * 2.0 # Point 2 units right in world space
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_global_right_2d" qualifiers="static">
+			<return type="Vector2" />
+			<param index="0" name="node" type="Node2D" />
+			<description>
+				Returns the right direction vector of the given Node2D in global space. This takes into account all parent transformations.
+
+				[codeblock]
+				var character = $Character2D
+				var global_right = YDir.get_global_right_2d(character)
+				var global_side = character.global_position + global_right * 50 # Point 50 pixels right in global space
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_global_up" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<description>
+				Returns the up direction vector of the given Node3D in world space. This takes into account all parent transformations.
+
+				[codeblock]
+				var character = $Character
+				var world_up = YDir.get_global_up(character)
+				var world_above = character.global_position + world_up * 2.0 # Point 2 units up in world space
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_pos_above" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="amount" type="float" />
+			<description>
+				Returns a position above the node in local space by the specified amount. Uses the node's up vector for the calculation.
+
+				[codeblock]
+				var character = $Character
+				var spawn_pos = YDir.get_pos_above(character, 3.0) # 3 units above character
+				spawn_effect(spawn_pos) # Spawn effect above character
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_pos_forward" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="amount" type="float" />
+			<description>
+				Returns a position in front of the node in local space by the specified amount. Uses the node's forward vector for the calculation.
+
+				[codeblock]
+				var character = $Character
+				var spawn_pos = YDir.get_pos_forward(character, 5.0) # 5 units in front
+				spawn_projectile(spawn_pos) # Spawn projectile in front of character
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_pos_right" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="amount" type="float" />
+			<description>
+				Returns a position to the right of the node in local space by the specified amount. Uses the node's right vector for the calculation.
+
+				[codeblock]
+				var character = $Character
+				var spawn_pos = YDir.get_pos_right(character, 2.0) # 2 units to the right
+				spawn_companion(spawn_pos) # Spawn companion beside character
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_random_point_on_top_of_mesh" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="mesh_instance_3d" type="MeshInstance3D" />
+			<description>
+				Returns a random point on top of the given mesh's bounding box in global coordinates. Useful for spawning objects on top of terrain or platforms.
+
+				[codeblock]
+				var platform = $Platform # A MeshInstance3D node
+				var spawn_pos = YDir.get_random_point_on_top_of_mesh(platform)
+				spawn_item(spawn_pos) # Spawn item at random position on platform
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_right" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<description>
+				Returns the right direction vector of the given Node3D in local space. In Godot's coordinate system, this corresponds to the node's local X axis.
+
+				[codeblock]
+				var character = $Character
+				var right_dir = YDir.get_right(character)
+				var side_pos = character.position + right_dir * 2.0 # Point 2 units to the right
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_right_2d" qualifiers="static">
+			<return type="Vector2" />
+			<param index="0" name="node" type="Node2D" />
+			<description>
+				Returns the right direction vector of the given Node2D in local space. This is perpendicular to the forward direction (90 degrees clockwise).
+
+				[codeblock]
+				var character = $Character2D
+				var right = YDir.get_right_2d(character)
+				var side_pos = character.position + right * 50 # Point 50 pixels to the right
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_up" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<description>
+				Returns the up direction vector of the given Node3D in local space. In Godot's coordinate system, this corresponds to the node's local Y axis.
+
+				[codeblock]
+				var character = $Character
+				var up_dir = YDir.get_up(character)
+				var above_pos = character.position + up_dir * 2.0 # Point 2 units up
+				[/codeblock]
+			</description>
+		</method>
+		<method name="inverse_transform_dir" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="dir" type="Vector3" />
+			<description>
+				Transforms a direction vector from world space to local space using only the node's inverse rotation. This is the opposite of transform_dir.
+
+				[codeblock]
+				var node = $Node3D
+				var world_dir = Vector3(0, 0, 1)
+				var local_dir = YDir.inverse_transform_dir(node, world_dir)
+				# local_dir is now oriented in node's local space
+				[/codeblock]
+			</description>
+		</method>
+		<method name="inverse_transform_dir_2d" qualifiers="static">
+			<return type="Vector2" />
+			<param index="0" name="node" type="Node2D" />
+			<param index="1" name="dir" type="Vector2" />
+			<description>
+				Transforms a direction vector from world space to local space using only the node's inverse rotation in 2D. This is the opposite of transform_dir_2d.
+
+				[codeblock]
+				var node = $Node2D
+				var world_dir = Vector2(1, 0)
+				var local_dir = YDir.inverse_transform_dir_2d(node, world_dir)
+				# local_dir is now oriented in node's local space
+				[/codeblock]
+			</description>
+		</method>
+		<method name="inverse_transform_point" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="point" type="Vector3" />
+			<description>
+				Transforms a point from world space to local space using the node's inverse transform. This is the opposite of transform_point.
+
+				[codeblock]
+				var node = $Node3D
+				var world_point = Vector3(10, 0, 0)
+				var local_point = YDir.inverse_transform_point(node, world_point)
+				# local_point is now relative to node's local space
+				[/codeblock]
+			</description>
+		</method>
+		<method name="inverse_transform_point_2d" qualifiers="static">
+			<return type="Vector2" />
+			<param index="0" name="node" type="Node2D" />
+			<param index="1" name="point" type="Vector2" />
+			<description>
+				Transforms a point from world space to local space using the node's inverse transform in 2D. This is the opposite of transform_point_2d.
+
+				[codeblock]
+				var node = $Node2D
+				var world_point = Vector2(200, 200)
+				var local_point = YDir.inverse_transform_point_2d(node, world_point)
+				# local_point is now relative to node's local space
+				[/codeblock]
+			</description>
+		</method>
+		<method name="look_at" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="target" type="Vector3" />
+			<param index="2" name="up" type="Vector3" default="Vector3(0, 1, 0)" />
+			<param index="3" name="t" type="float" default="1.0" />
+			<description>
+				Makes a Node3D look at a target position in local space, with optional smooth interpolation.
+
+				[b]Parameters:[/b]
+				- node: The Node3D to rotate
+				- target: The position to look at
+				- up: The up vector to use for orientation (default is Vector3(0, 1, 0))
+				- t: Interpolation factor between 0 and 1 (1 = instant, lower values for smooth rotation)
+
+				[codeblock]
+				var character = $Character # A Node3D node
+				var target_pos = Vector3(10, 0, 10)
+				
+				# Instant look
+				YDir.look_at(character, target_pos)
+				
+				# Smooth look (50% interpolation)
+				YDir.look_at(character, target_pos, Vector3(0, 1, 0), 0.5)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="look_at_global" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="target" type="Vector3" />
+			<param index="2" name="up" type="Vector3" default="Vector3(0, 1, 0)" />
+			<param index="3" name="t" type="float" default="1.0" />
+			<description>
+			</description>
+		</method>
+		<method name="random_direction" qualifiers="static">
+			<return type="Vector3" />
+			<description>
+				Returns a random normalized direction vector in 3D space. The distribution is uniform over a sphere.
+
+				[codeblock]
+				# Generate 5 random directions
+				for i in range(5):
+				    var random_dir = YDir.random_direction()
+				    spawn_particle(random_dir * 10.0) # Spawn particle in random direction
+				[/codeblock]
+			</description>
+		</method>
+		<method name="random_direction_2d" qualifiers="static">
+			<return type="Vector2" />
+			<description>
+				Returns a random normalized direction vector in 2D space. The distribution is uniform around a circle.
+
+				[codeblock]
+				# Spawn 10 particles in random directions
+				for i in range(10):
+				    var dir = YDir.random_direction_2d()
+				    spawn_particle_2d(dir * 50) # 50 pixels in random direction
+				[/codeblock]
+			</description>
+		</method>
+		<method name="random_from_dir" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="direction" type="Vector3" />
+			<param index="1" name="angle_radians" type="float" />
+			<description>
+				Returns a random direction vector within a cone around the specified direction. The angle parameter determines the maximum deviation from the input direction.
+
+				[b]Parameters:[/b]
+				- direction: The central direction vector
+				- angle_radians: Maximum angle of deviation in radians
+
+				[codeblock]
+				var forward = Vector3(0, 0, 1)
+				# Get random direction within 45 degrees of forward
+				var spread_dir = YDir.random_from_dir(forward, deg_to_rad(45))
+				shoot_projectile(spread_dir)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="random_from_dir_2d" qualifiers="static">
+			<return type="Vector2" />
+			<param index="0" name="direction" type="Vector2" />
+			<param index="1" name="angle_radians" type="float" />
+			<description>
+				Returns a random direction vector within an arc around the specified 2D direction. The angle parameter determines the maximum deviation from the input direction.
+
+				[b]Parameters:[/b]
+				- direction: The central direction vector
+				- angle_radians: Maximum angle of deviation in radians
+
+				[codeblock]
+				var forward = Vector2(1, 0)
+				# Get random direction within 30 degrees of forward
+				var spread = YDir.random_from_dir_2d(forward, deg_to_rad(30))
+				shoot_bullet_2d(spread * 200) # Shoot with spread
+				[/codeblock]
+			</description>
+		</method>
+		<method name="random_from_dir_flat" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="direction" type="Vector3" />
+			<param index="1" name="angle_radians" type="float" />
+			<description>
+				Returns a random direction vector within a cone around the specified direction, but projected onto the XZ plane (Y = 0). Useful for generating random directions for ground-based entities.
+
+				[b]Parameters:[/b]
+				- direction: The central direction vector (will be projected onto XZ plane)
+				- angle_radians: Maximum angle of deviation in radians
+
+				[codeblock]
+				var forward = Vector3(0, 0, 1)
+				# Get random direction within 60 degrees on the ground plane
+				var spread_dir = YDir.random_from_dir_flat(forward, deg_to_rad(60))
+				spawn_ground_enemy(spread_dir * 10.0) # Spawn enemy at random position on ground
+				[/codeblock]
+			</description>
+		</method>
+		<method name="set_forward" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="direction" type="Vector3" />
+			<param index="2" name="t" type="float" default="1.0" />
+			<description>
+			</description>
+		</method>
+		<method name="set_forward_2d" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node2D" />
+			<param index="1" name="direction" type="Vector2" />
+			<param index="2" name="t" type="float" default="1.0" />
+			<description>
+				Sets the forward direction of a Node2D in local space, with optional smooth interpolation. This effectively sets the node's rotation.
+
+				[b]Parameters:[/b]
+				- node: The Node2D to orient
+				- direction: Desired forward direction
+				- t: Interpolation factor between 0 and 1 (1 = instant, lower values for smooth rotation)
+
+				[codeblock]
+				var character = $Character2D
+				var new_forward = Vector2(0, 1)
+				
+				# Instant change
+				YDir.set_forward_2d(character, new_forward)
+				
+				# Smooth change (30% per frame)
+				YDir.set_forward_2d(character, new_forward, 0.3)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="set_forward_and_up" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="forward" type="Vector3" />
+			<param index="2" name="up" type="Vector3" default="Vector3(0, 1, 0)" />
+			<param index="3" name="t" type="float" default="1.0" />
+			<description>
+				Sets both the forward and up directions of a Node3D simultaneously, with optional smooth interpolation. This is useful when you need precise control over the node's orientation.
+
+				[b]Parameters:[/b]
+				- node: The Node3D to orient
+				- forward: Desired forward direction
+				- up: Desired up direction (default is Vector3(0, 1, 0))
+				- t: Interpolation factor between 0 and 1 (1 = instant, lower values for smooth rotation)
+
+				[codeblock]
+				var character = $Character
+				var forward = Vector3(1, 0, 0)
+				var up = Vector3(0, 1, 0)
+				
+				# Instant orientation change
+				YDir.set_forward_and_up(character, forward, up)
+				
+				# Smooth orientation change (25% per frame)
+				YDir.set_forward_and_up(character, forward, up, 0.25)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="set_global_forward" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="direction" type="Vector3" />
+			<param index="2" name="t" type="float" default="1.0" />
+			<description>
+				Sets the forward direction of a Node3D in world space, with optional smooth interpolation. This takes into account all parent transformations.
+
+				[b]Parameters:[/b]
+				- node: The Node3D to orient
+				- direction: Desired world space forward direction
+				- t: Interpolation factor between 0 and 1 (1 = instant, lower values for smooth rotation)
+
+				[codeblock]
+				var character = $Character
+				var world_dir = Vector3(1, 0, 0)
+				
+				# Instant orientation change in world space
+				YDir.set_global_forward(character, world_dir)
+				
+				# Smooth orientation change (30% per frame)
+				YDir.set_global_forward(character, world_dir, 0.3)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="set_global_forward_2d" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node2D" />
+			<param index="1" name="direction" type="Vector2" />
+			<param index="2" name="t" type="float" default="1.0" />
+			<description>
+				Sets the forward direction of a Node2D in global space, with optional smooth interpolation. Takes into account all parent transformations.
+
+				[b]Parameters:[/b]
+				- node: The Node2D to orient
+				- direction: Desired global forward direction
+				- t: Interpolation factor between 0 and 1 (1 = instant, lower values for smooth rotation)
+
+				[codeblock]
+				var character = $Character2D
+				var global_forward = Vector2(0, 1)
+				
+				# Instant change in global space
+				YDir.set_global_forward_2d(character, global_forward)
+				
+				# Smooth change (40% per frame)
+				YDir.set_global_forward_2d(character, global_forward, 0.4)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="set_global_forward_and_up" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="forward" type="Vector3" />
+			<param index="2" name="up" type="Vector3" default="Vector3(0, 1, 0)" />
+			<param index="3" name="t" type="float" default="1.0" />
+			<description>
+			</description>
+		</method>
+		<method name="set_global_right" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="direction" type="Vector3" />
+			<param index="2" name="t" type="float" default="1.0" />
+			<description>
+				Sets the right direction of a Node3D in world space, with optional smooth interpolation. Takes into account all parent transformations.
+
+				[b]Parameters:[/b]
+				- node: The Node3D to orient
+				- direction: Desired world space right direction
+				- t: Interpolation factor between 0 and 1 (1 = instant, lower values for smooth rotation)
+
+				[codeblock]
+				var character = $Character
+				var world_right = Vector3(1, 0, 0)
+				
+				# Instant change in world space
+				YDir.set_global_right(character, world_right)
+				
+				# Smooth change (25% per frame)
+				YDir.set_global_right(character, world_right, 0.25)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="set_global_right_2d" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node2D" />
+			<param index="1" name="direction" type="Vector2" />
+			<param index="2" name="t" type="float" default="1.0" />
+			<description>
+				Sets the right direction of a Node2D in global space, with optional smooth interpolation. Takes into account all parent transformations.
+
+				[b]Parameters:[/b]
+				- node: The Node2D to orient
+				- direction: Desired global right direction
+				- t: Interpolation factor between 0 and 1 (1 = instant, lower values for smooth rotation)
+
+				[codeblock]
+				var character = $Character2D
+				var global_right = Vector2(1, 0)
+				
+				# Instant change in global space
+				YDir.set_global_right_2d(character, global_right)
+				
+				# Smooth change (45% per frame)
+				YDir.set_global_right_2d(character, global_right, 0.45)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="set_global_up" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="direction" type="Vector3" />
+			<param index="2" name="t" type="float" default="1.0" />
+			<description>
+				Sets the up direction of a Node3D in world space, with optional smooth interpolation. Takes into account all parent transformations.
+
+				[b]Parameters:[/b]
+				- node: The Node3D to orient
+				- direction: Desired world space up direction
+				- t: Interpolation factor between 0 and 1 (1 = instant, lower values for smooth rotation)
+
+				[codeblock]
+				var character = $Character
+				var world_up = Vector3(0, 1, 0)
+				
+				# Instant change in world space
+				YDir.set_global_up(character, world_up)
+				
+				# Smooth change (15% per frame)
+				YDir.set_global_up(character, world_up, 0.15)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="set_right" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="direction" type="Vector3" />
+			<param index="2" name="t" type="float" default="1.0" />
+			<description>
+				Sets the right direction of a Node3D in local space, with optional smooth interpolation. The node's up direction will be adjusted to maintain proper orientation.
+
+				[b]Parameters:[/b]
+				- node: The Node3D to orient
+				- direction: Desired right direction
+				- t: Interpolation factor between 0 and 1 (1 = instant, lower values for smooth rotation)
+
+				[codeblock]
+				var character = $Character
+				var new_right = Vector3(1, 0, 0)
+				
+				# Instant change
+				YDir.set_right(character, new_right)
+				
+				# Smooth change (20% per frame)
+				YDir.set_right(character, new_right, 0.2)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="set_right_2d" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node2D" />
+			<param index="1" name="direction" type="Vector2" />
+			<param index="2" name="t" type="float" default="1.0" />
+			<description>
+				Sets the right direction of a Node2D in local space, with optional smooth interpolation. This will automatically set the forward direction perpendicular to it.
+
+				[b]Parameters:[/b]
+				- node: The Node2D to orient
+				- direction: Desired right direction
+				- t: Interpolation factor between 0 and 1 (1 = instant, lower values for smooth rotation)
+
+				[codeblock]
+				var character = $Character2D
+				var new_right = Vector2(1, 0)
+				
+				# Instant change
+				YDir.set_right_2d(character, new_right)
+				
+				# Smooth change (35% per frame)
+				YDir.set_right_2d(character, new_right, 0.35)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="set_up" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="direction" type="Vector3" />
+			<param index="2" name="t" type="float" default="1.0" />
+			<description>
+				Sets the up direction of a Node3D in local space, with optional smooth interpolation. The node's forward direction will be adjusted to maintain proper orientation.
+
+				[b]Parameters:[/b]
+				- node: The Node3D to orient
+				- direction: Desired up direction
+				- t: Interpolation factor between 0 and 1 (1 = instant, lower values for smooth rotation)
+
+				[codeblock]
+				var character = $Character
+				var new_up = Vector3(0, 1, 0)
+				
+				# Instant change
+				YDir.set_up(character, new_up)
+				
+				# Smooth change (40% per frame)
+				YDir.set_up(character, new_up, 0.4)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="transform_dir" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="dir" type="Vector3" />
+			<description>
+				Transforms a direction vector from local space to world space using only the node's rotation. Unlike transform_point, this ignores the node's position.
+
+				[codeblock]
+				var node = $Node3D
+				var local_dir = Vector3(0, 0, 1)
+				var world_dir = YDir.transform_dir(node, local_dir)
+				# world_dir is now oriented in world space
+				[/codeblock]
+			</description>
+		</method>
+		<method name="transform_dir_2d" qualifiers="static">
+			<return type="Vector2" />
+			<param index="0" name="node" type="Node2D" />
+			<param index="1" name="dir" type="Vector2" />
+			<description>
+				Transforms a direction vector from local space to world space using only the node's rotation in 2D. Unlike transform_point_2d, this ignores the node's position.
+
+				[codeblock]
+				var node = $Node2D
+				var local_dir = Vector2(1, 0)
+				var world_dir = YDir.transform_dir_2d(node, local_dir)
+				# world_dir is now oriented in world space
+				[/codeblock]
+			</description>
+		</method>
+		<method name="transform_point" qualifiers="static">
+			<return type="Vector3" />
+			<param index="0" name="node" type="Node3D" />
+			<param index="1" name="point" type="Vector3" />
+			<description>
+				Transforms a point from local space to world space using the node's transform. This is useful for converting positions between coordinate spaces.
+
+				[codeblock]
+				var node = $Node3D
+				var local_point = Vector3(1, 0, 0)
+				var world_point = YDir.transform_point(node, local_point)
+				# world_point is now in global coordinates
+				[/codeblock]
+			</description>
+		</method>
+		<method name="transform_point_2d" qualifiers="static">
+			<return type="Vector2" />
+			<param index="0" name="node" type="Node2D" />
+			<param index="1" name="point" type="Vector2" />
+			<description>
+				Transforms a point from local space to world space using the node's transform in 2D. This is useful for converting positions between coordinate spaces.
+
+				[codeblock]
+				var node = $Node2D
+				var local_point = Vector2(100, 0)
+				var world_point = YDir.transform_point_2d(node, local_point)
+				# world_point is now in global coordinates
+				[/codeblock]
+			</description>
+		</method>
+	</methods>
+</class>

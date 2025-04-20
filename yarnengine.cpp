@@ -91,38 +91,9 @@ Dictionary YEngine::get_script_base_properties(Node* p_node) {
     return base_values;
 }
 
-Vector3 YEngine::get_random_point_on_top_of_mesh(MeshInstance3D *p_meshInstance, Ref<RandomNumberGenerator> p_rng) {
-    if (p_meshInstance == nullptr) {
-        return Vector3{0.0,0.0,0.0};
-    }
-    if (p_rng.is_null() || !p_rng.is_valid())
-        p_rng.instantiate();
-
-    AABB boundingBox = p_meshInstance->get_aabb();
-    Vector3 position = boundingBox.position;
-    Vector3 size = boundingBox.size;
-
-    Vector3 randomPoint;
-    randomPoint.x = p_rng->randf_range(position.x, position.x + size.x);
-    randomPoint.y = position.y + size.y;
-    randomPoint.z = p_rng->randf_range(position.z, position.z + size.z);
-
-    return p_meshInstance->to_global(randomPoint);;
-}
-
 void YEngine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_current_scene"), &YEngine::get_current_scene);
 
-    ClassDB::bind_method(D_METHOD("set_last_button_click_time", "last_button_click_time"), &YEngine::set_last_button_click_time);
-    ClassDB::bind_method(D_METHOD("get_last_button_click_time"), &YEngine::get_last_button_click_time);
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "last_button_click_time"), "set_last_button_click_time", "get_last_button_click_time");
-    
-    ClassDB::bind_method(D_METHOD("set_can_button_click", "can_button_click"), &YEngine::set_can_button_click);
-    ClassDB::bind_method(D_METHOD("get_can_button_click"), &YEngine::get_can_button_click);
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "can_button_click"), "set_can_button_click", "get_can_button_click");
-
-    ClassDB::bind_method(D_METHOD("button_click_callable", "callable"), &YEngine::button_click_callable);
-    ClassDB::bind_method(D_METHOD("button_click_callable_if_modulate", "callable","control"), &YEngine::button_click_callable_if_modulate);
 
     ClassDB::bind_method(D_METHOD("find_packedscenes_in", "path", "name_contains"), &YEngine::find_packedscenes_in,DEFVAL(""));
     ClassDB::bind_method(D_METHOD("find_resources_in", "path", "name_contains"), &YEngine::find_resources_in,DEFVAL(""));
@@ -132,15 +103,12 @@ void YEngine::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("find_node_with_method","parent_node","method_name"), &YEngine::find_node_with_method);
 
-
     ClassDB::bind_method(D_METHOD("set_flag_value","flags","flag","set_value"), &YEngine::set_flag_value);
     ClassDB::bind_method(D_METHOD("check_flag_value","flags","check_flag"), &YEngine::check_flag_value);
 
-    ClassDB::bind_method(D_METHOD("get_menu_stack"), &YEngine::get_menu_stack);
-    ClassDB::bind_method(D_METHOD("get_menu_stack_size"), &YEngine::get_menu_stack_size);
-    ClassDB::bind_method(D_METHOD("is_top_of_menu_stack","menu_to_check"), &YEngine::is_top_of_menu_stack);
-
     ClassDB::bind_method(D_METHOD("spawn","packed_scene","parent","global_pos","force_readable_name"), &YEngine::spawn, DEFVAL(false));
+
+    ClassDB::bind_method(D_METHOD("spawn_with_rot","packed_scene","parent","global_pos", "global_rot","force_readable_name"), &YEngine::spawn_with_rot, DEFVAL(false));
 
     ClassDB::bind_method(D_METHOD("EKey","dict","value"), &YEngine::EKey);
     ClassDB::bind_method(D_METHOD("string_to_hash","input_string"), &YEngine::string_to_hash);
@@ -154,15 +122,172 @@ void YEngine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_all_game_resources_of_type","resource_type"), &YEngine::get_all_game_resources_of_type);
     ClassDB::bind_method(D_METHOD("get_all_game_resources_types"), &YEngine::get_all_game_resources_types);
 
+    ClassDB::bind_method(D_METHOD("fade_to_black","duration","text"), &YEngine::fade_to_black, DEFVAL(0.5), DEFVAL(""));
+    ClassDB::bind_method(D_METHOD("fade_to_transparent","duration"), &YEngine::fade_to_transparent, DEFVAL(0.5));
+    ClassDB::bind_method(D_METHOD("fade_to_black_then_transparent","duration","text","callable_in_middle"), &YEngine::fade_to_black_then_transparent, DEFVAL(0.5), DEFVAL(""), DEFVAL(Callable()));
+
+    ClassDB::bind_method(D_METHOD("get_fader_label"), &YEngine::get_fader_label);
+    ClassDB::bind_method(D_METHOD("set_fader_text","text"), &YEngine::set_fader_text);
+    ClassDB::bind_method(D_METHOD("is_fading"), &YEngine::is_fading);
+
     ClassDB::bind_method(D_METHOD("are_resources_virtually_the_same","resource_a","resource_b"), &YEngine::are_resources_virtually_the_same);
     ClassDB::bind_method(D_METHOD("get_diverging_variables_in_resources","resource_a","resource_b"), &YEngine::get_diverging_variables_in_resources);
 
     ClassDB::bind_method(D_METHOD("get_script_base_properties","node"), &YEngine::get_script_base_properties);
 
-    ClassDB::bind_method(D_METHOD("get_random_point_on_top_of_mesh","mesh_instance_3d","random_number_generator"), &YEngine::get_random_point_on_top_of_mesh);
+    ClassDB::bind_method(D_METHOD("get_canvas_layer","layer_index"), &YEngine::get_canvas_layer, DEFVAL(0));
+
+    ClassDB::bind_method(D_METHOD("instant_fade_to_alpha","alpha"), &YEngine::instant_fade_to_alpha);
+
+    ClassDB::bind_method(D_METHOD("set_last_button_click_time", "last_button_click_time"), &YEngine::set_last_button_click_time);
+    ClassDB::bind_method(D_METHOD("get_last_button_click_time"), &YEngine::get_last_button_click_time);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "last_button_click_time"), "set_last_button_click_time", "get_last_button_click_time");
+    
+    ClassDB::bind_method(D_METHOD("set_can_button_click", "can_button_click"), &YEngine::set_can_button_click);
+    ClassDB::bind_method(D_METHOD("get_can_button_click"), &YEngine::get_can_button_click);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "can_button_click"), "set_can_button_click", "get_can_button_click");
 
     ADD_SIGNAL(MethodInfo("changed_pause", PropertyInfo(Variant::BOOL, "pause_value")));
     ADD_SIGNAL(MethodInfo("initialized"));
+}
+
+CanvasLayer* YEngine::get_canvas_layer(int layer_index) {
+    if (is_exiting) {
+        return nullptr;
+    }
+    if (!canvas_layers.has(layer_index)) {
+        CanvasLayer* new_canvas_layer = memnew(CanvasLayer);
+        canvas_layers[layer_index] = new_canvas_layer;
+        add_child(new_canvas_layer);
+        new_canvas_layer->set_name(vformat("CanvasLayer_%d",layer_index));
+        new_canvas_layer->set_layer(layer_index);
+    }
+
+    return canvas_layers[layer_index];
+}
+
+RichTextLabel* YEngine::get_fader_label() {
+        if (fader_label == nullptr) {
+            create_fader();
+        }
+        return fader_label;
+}
+
+void YEngine::create_fader() {
+    if (fader_control != nullptr) {
+        return;
+    }
+    
+    fader_control = memnew(Control);
+    fader_control->set_anchors_preset(Control::PRESET_FULL_RECT);
+    fader_control->set_mouse_filter(Control::MOUSE_FILTER_IGNORE);
+    fader_control->set_focus_mode(Control::FOCUS_NONE);
+    
+    ColorRect* rect = memnew(ColorRect);
+    rect->set_anchors_preset(Control::PRESET_FULL_RECT);
+    rect->set_color(Color(0, 0, 0, 1.0));
+    rect->set_mouse_filter(Control::MOUSE_FILTER_IGNORE);
+    rect->set_focus_mode(Control::FOCUS_NONE);
+    
+    fader_label = memnew(RichTextLabel);
+    fader_label->set_anchors_preset(Control::PRESET_FULL_RECT);
+    fader_label->set_text("");
+    fader_label->set_scroll_active(false);
+    fader_label->set_use_bbcode(true);
+    fader_label->set_horizontal_alignment(HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER);
+    fader_label->set_vertical_alignment(VerticalAlignment::VERTICAL_ALIGNMENT_CENTER);
+    fader_label->set_mouse_filter(Control::MOUSE_FILTER_IGNORE);
+    fader_label->set_focus_mode(Control::FOCUS_NONE);
+    
+    get_canvas_layer(100)->add_child(fader_control);
+    fader_control->add_child(rect);
+    fader_control->add_child(fader_label);
+}
+
+void YEngine::instant_fade_to_alpha(float alpha) {
+    if (fader_control == nullptr) {
+        create_fader();
+    }
+    fader_control->set_modulate(Color(1.0,1.0,1.0,alpha));
+    fader_control->set_visible(alpha > 0.0001);
+}
+
+Ref<YTweenWrap> YEngine::fade_to_black(float duration, const String& text) {
+    if (is_exiting) return Ref<YTweenWrap>();
+    if (fader_control == nullptr) {
+        create_fader();
+    }
+
+    // Set the text if provided
+    if (!text.is_empty()) {
+        set_fader_text(text);
+    }
+    
+    // Get the ColorRect and animate its alpha
+    fader_control->set_visible(true);
+    
+    Ref<YTweenWrap> tween = YTween::get_singleton()->create_unique_tween(fader_control);
+    tween->tween_property(fader_control, NodePath("modulate"), Color(1.0,1.0,1.0,1.0), duration)
+            ->set_ease(Tween::EaseType::EASE_IN)
+            ->set_trans(Tween::TransitionType::TRANS_QUAD);
+    return tween;
+}
+
+Ref<YTweenWrap> YEngine::fade_to_transparent(float duration) {
+    if (!fader_control || is_exiting) {
+        return Ref<YTweenWrap>();
+    }
+    
+    Ref<YTweenWrap> tween = YTween::get_singleton()->create_unique_tween(fader_control);
+    tween->tween_property(fader_control, NodePath("modulate"), Color(1.0,1.0,1.0,0.0), duration)
+            ->set_ease(Tween::EaseType::EASE_OUT)
+            ->set_trans(Tween::TransitionType::TRANS_QUAD);
+    tween->connect("finished",(callable_mp(this,&YEngine::hide_fader)));
+    return tween;
+}
+
+Ref<YTweenWrap> YEngine::fade_to_black_then_transparent(float duration, const String& text, const Callable &p_callable_in_middle) {
+    if (is_exiting) return Ref<YTweenWrap>();
+    if (fader_control == nullptr) {
+        create_fader();
+    }
+    if (!text.is_empty()) {
+        set_fader_text(text);
+    }
+    fader_control->set_visible(true);
+
+    Ref<YTweenWrap> tween = YTween::get_singleton()->create_unique_tween(fader_control);
+    tween->tween_property(fader_control, NodePath("modulate"), Color(1.0,1.0,1.0,1.0), duration * 0.375)
+            ->set_ease(Tween::EaseType::EASE_IN)
+            ->set_trans(Tween::TransitionType::TRANS_QUAD);
+    tween->connect("step_finished",p_callable_in_middle, CONNECT_ONE_SHOT);
+    tween->chain()->tween_interval(duration * 0.25);
+    tween->chain()->tween_property(fader_control, NodePath("modulate"), Color(1.0,1.0,1.0,0.0), duration * 0.375)
+            ->set_ease(Tween::EaseType::EASE_OUT)
+            ->set_trans(Tween::TransitionType::TRANS_QUAD);
+    tween->connect("finished",(callable_mp(this,&YEngine::hide_fader)));
+    return tween;
+}
+
+void YEngine::hide_fader() {
+    if (fader_control) {
+        fader_control->set_visible(false);
+    }
+}
+
+void YEngine::set_fader_text(const String& text) {
+    if (!fader_control) {
+        create_fader();
+    }
+    fader_label->set_text(text);
+}
+
+bool YEngine::is_fading() const {
+    if (!fader_control) {
+        return false;
+    }
+    
+    return fader_control->is_visible() && fader_control->get_modulate().a > 0.0f && fader_control->get_modulate().a < 1.0f;
 }
 
 Variant YEngine::execute_button_click_callable_if_modulate(const Callable &p_callable,Control* p_control) {
@@ -185,7 +310,7 @@ void YEngine::game_state_starting(const Ref<YGameState> &ygs) {
     if (ygs.is_valid()) {
         ygamestate = ygs.ptr();
         using_game_state=true;
-        print_line("Registered using game state ",ygamestate," using game state now? ",using_game_state);
+        // print_line("Registered using game state ",ygamestate," using game state now? ",using_game_state);
     }
 }
 
@@ -267,6 +392,9 @@ void YEngine::_notification(int p_what) {
         // } break;
         case NOTIFICATION_EXIT_TREE: {
             ydir = Ref<YDir>();
+            canvas_layers.clear();
+            fader_control = nullptr;
+            fader_label = nullptr;
             break;
         }
         case NOTIFICATION_PARENTED: {
@@ -389,6 +517,12 @@ void YEngine::setting_position_in_parent(Node *node_entered_tree, const Variant 
         node_entered_tree->call("set_global_position",p_spawn_pos);
     }
 }
+void YEngine::setting_position_and_rotation_in_parent(Node *node_entered_tree, const Variant &p_spawn_pos, const Variant &p_spawn_rot) {
+    if (node_entered_tree != nullptr) {
+        node_entered_tree->call("set_global_position",p_spawn_pos);
+        node_entered_tree->call("set_global_rotation",p_spawn_rot);
+    }
+}
 
 Node * YEngine::spawn(const Ref<PackedScene> &p_spawnable_scene, Node *p_desired_parent, const Variant &p_spawn_pos, bool p_force_readable_name) {
     ERR_FAIL_COND_V_MSG(p_spawnable_scene.is_null() || !p_spawnable_scene.is_valid(), nullptr, "ERROR: Spawnable scene is not valid");
@@ -397,6 +531,16 @@ Node * YEngine::spawn(const Ref<PackedScene> &p_spawnable_scene, Node *p_desired
     ERR_FAIL_COND_V_MSG(spawned_instance == nullptr, nullptr, "ERROR: Spawned Instance is null");
     p_desired_parent->connect("child_entered_tree",callable_mp(this,&YEngine::setting_position_in_parent).bind(p_spawn_pos), CONNECT_ONE_SHOT);
     p_desired_parent->add_child(spawned_instance,p_force_readable_name);
+    return spawned_instance;
+}
+
+Node * YEngine::spawn_with_rot(const Ref<PackedScene> &p_spawnable_scene, Node *p_desired_parent, const Variant &p_spawn_pos, const Variant &p_spawn_rot, bool p_force_readable_name) {
+    ERR_FAIL_COND_V_MSG(p_spawnable_scene.is_null() || !p_spawnable_scene.is_valid(), nullptr, "ERROR: Spawnable scene is not valid");
+    ERR_FAIL_COND_V_MSG(p_desired_parent == nullptr, nullptr, "ERROR: Parent node is not valid");
+    auto spawned_instance = p_spawnable_scene->instantiate();
+    ERR_FAIL_COND_V_MSG(spawned_instance == nullptr, nullptr, "ERROR: Spawned Instance is null");
+    p_desired_parent->connect("child_entered_tree",callable_mp(this,&YEngine::setting_position_and_rotation_in_parent).bind(p_spawn_pos,p_spawn_rot), CONNECT_ONE_SHOT);
+    p_desired_parent->add_child(spawned_instance, p_force_readable_name);
     return spawned_instance;
 }
 
@@ -418,6 +562,7 @@ YEngine::YEngine() {
     ysave=nullptr;
     ytime=nullptr;
     ygamestate = nullptr;
+    ydir.instantiate();
 }
 
 YEngine::~YEngine() {

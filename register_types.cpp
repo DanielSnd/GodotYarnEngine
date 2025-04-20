@@ -42,7 +42,6 @@
 #endif
 
 // This is your singleton reference.
-static YEngine* YEnginePtr;
 static Ref<YSave> yarn_save_ref;
 static Ref<YTime> yarn_time_ref;
 static Ref<YPhysics> yarn_physics_ref;

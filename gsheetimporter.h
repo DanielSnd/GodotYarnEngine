@@ -29,8 +29,6 @@ public:
 
     void on_import_completed(int p_status, int p_code, const PackedStringArray &p_headers, const PackedByteArray &p_data);
 
-    void save_resource_if_different(const String &resource_path, const Ref<Resource> &resource_saving);
-
     void handle_import_on_gdscript(const String &sheet_name, const Array &entries);
     int str_hash(String s);
 
@@ -45,7 +43,6 @@ public:
     GDVIRTUAL2(on_imported_data, String, Array)
     GDVIRTUAL0RC(String,get_sheet_id)
     GDVIRTUAL0RC(String,get_sheet_name)
-    GDVIRTUAL0RC(String,get_resource_file_prefix)
     void start_import_progress_bar(int p_steps, const String &p_task_name, const String &p_task_description);
     void step_import_progress_bar(int p_step, const String &p_step_description);
     void end_import_progress_bar();

@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YNavHelper2D" inherits="Node2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A 2D navigation helper node that provides context-aware steering behaviors for game entities.
+	</brief_description>
+	<description>
+		YNavHelper2D is a versatile navigation helper that implements context-aware steering behaviors for 2D game entities. It uses raycasting to detect obstacles and provides various navigation modes including target following, fleeing, encircling, and wandering behaviors.
+
+		The node uses a context-based steering system that considers both interest (where the entity wants to go) and danger (obstacles to avoid) to determine the optimal movement direction. This makes it particularly useful for creating natural-looking movement behaviors for NPCs, enemies, or any other game entities that need to navigate a 2D environment while avoiding obstacles.
+
+		Features:
+		- Multiple navigation modes (following, fleeing, encircling, wandering)
+		- Obstacle avoidance using raycasts
+		- Configurable steering parameters
+		- Line of sight checking
+		- Debug visualization options
+		- Smooth movement transitions
+		
+		Example usage for creating a following enemy:
+		[codeblock]
+		var nav_helper = YNavHelper2D.new()
+		add_child(nav_helper)
+		nav_helper.follow_target = player_node
+		nav_helper.navigation_mode = YNavHelper2D.TOWARDS_TARGET
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_desired_direction" qualifiers="const">
+			<return type="Vector2" />
+			<description>
+				Returns the current desired movement direction as calculated by the navigation system. This is a normalized vector indicating the optimal direction of movement based on the current navigation mode and context.
+			</description>
+		</method>
+		<method name="get_relevant_direction" qualifiers="const">
+			<return type="Vector2" />
+			<description>
+				Returns the current relevant direction being used for navigation when in direction-based navigation modes.
+			</description>
+		</method>
+		<method name="get_relevant_position" qualifiers="const">
+			<return type="Vector2" />
+			<description>
+				Returns the current relevant position being used for navigation when in position-based navigation modes.
+			</description>
+		</method>
+		<method name="set_relevant_direction">
+			<return type="void" />
+			<param index="0" name="direction" type="Vector2" />
+			<description>
+				Sets the relevant direction for direction-based navigation modes (TOWARDS_DIRECTION, AWAY_FROM_DIRECTION). The direction will be automatically normalized.
+			</description>
+		</method>
+		<method name="set_relevant_position">
+			<return type="void" />
+			<param index="0" name="position" type="Vector2" />
+			<description>
+				Sets the relevant position for position-based navigation modes (TOWARDS_POSITION, AWAY_FROM_POSITION, ENCIRCLE_POSITION).
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="auto_steer" type="bool" setter="set_auto_steer" getter="get_auto_steer" default="true">
+			When enabled, automatically applies steering forces to the parent node's velocity property. Disable this if you want to handle movement manually using get_desired_direction().
+		</member>
+		<member name="auto_steering_speed" type="float" setter="set_auto_steering_speed" getter="get_auto_steering_speed" default="45.0">
+			The base movement speed when auto_steer is enabled. This value is modified by speed_multiplier and other contextual factors.
+		</member>
+		<member name="away_when_close_enough" type="bool" setter="set_away_when_close_enough" getter="get_away_when_close_enough" default="false">
+			If true, the entity will move away from the target when within stop_close_enough distance, until reaching stop_away_enough distance.
+		</member>
+		<member name="direction_amount" type="int" setter="set_direction_amount" getter="get_direction_amount" default="12">
+			The number of raycasts used for context mapping. Higher values provide more precise navigation but increase computational cost. Must be set before initialization.
+		</member>
+		<member name="direction_lerp_speed_closer" type="float" setter="set_direction_lerp_speed_closer" getter="get_direction_lerp_speed_closer" default="4.0">
+			The interpolation speed for direction changes when close to obstacles or targets. Higher values result in sharper turns.
+		</member>
+		<member name="direction_lerp_speed_far" type="float" setter="set_direction_lerp_speed_far" getter="get_direction_lerp_speed_far" default="1.5">
+			The interpolation speed for direction changes when far from obstacles or targets. Lower values result in smoother turns.
+		</member>
+		<member name="draw_debug" type="bool" setter="set_draw_debug" getter="get_draw_debug" default="false">
+			When enabled, visualizes navigation data including raycasts, danger zones, and movement directions.
+		</member>
+		<member name="encircle_when_close_enough" type="bool" setter="set_encircle_when_close_enough" getter="get_encircle_when_close_enough" default="false">
+			If true, the entity will start circling around the target when within stop_close_enough distance.
+		</member>
+		<member name="extend_length" type="float" setter="set_extend_length" getter="get_extend_length" default="45.0">
+			The length of the raycasts used for obstacle detection. Longer raycasts allow earlier obstacle detection but may cause the entity to take wider paths around obstacles.
+		</member>
+		<member name="follow_target" type="Node2D" setter="set_follow_target" getter="get_follow_target">
+			The target Node2D to follow, flee from, or encircle when using target-based navigation modes.
+		</member>
+		<member name="keep_looking_at_position" type="bool" setter="set_keep_looking_at_position" getter="get_keep_looking_at_position" default="true">
+			If true, the entity will always face the relevant position regardless of movement direction.
+		</member>
+		<member name="max_wander" type="float" setter="set_max_wander" getter="get_max_wander" default="140.0">
+			The maximum distance the entity can wander from its initial position in WANDERING mode before being pulled back.
+		</member>
+		<member name="navigation_collide_mask" type="int" setter="set_navigation_collide_mask" getter="get_navigation_collide_mask" default="1">
+			The physics layer mask used for obstacle detection raycasts.
+		</member>
+		<member name="navigation_enabled" type="bool" setter="set_navigation_enabled" getter="get_navigation_enabled" default="true">
+			Enables or disables the navigation system. When disabled, no steering forces are calculated or applied.
+		</member>
+		<member name="navigation_mode" type="int" setter="set_navigation_mode" getter="get_navigation_mode" enum="YNavHelper2D.NavigationMode" default="8">
+			The current navigation behavior mode. See NavigationMode enum for available options.
+		</member>
+		<member name="requires_line_of_sight" type="bool" setter="set_requires_line_of_sight" getter="get_requires_line_of_sight" default="true">
+			If true, target-based navigation modes will only work when there is a clear line of sight to the target.
+		</member>
+		<member name="speed_multiplier" type="float" setter="set_speed_multiplier" getter="get_speed_multiplier" default="1.0">
+			Multiplies the base movement speed. Can be used to make entities move faster or slower.
+		</member>
+		<member name="steering_lerp_speed" type="float" setter="set_steering_lerp_speed" getter="get_steering_lerp_speed" default="3.0">
+			The interpolation speed for velocity changes. Higher values result in more responsive but less smooth movement.
+		</member>
+		<member name="stop_away_enough" type="float" setter="set_stop_away_enough" getter="get_stop_away_enough" default="80.0">
+			The distance at which the entity stops moving away when in fleeing modes or when away_when_close_enough is true.
+		</member>
+		<member name="stop_close_enough" type="float" setter="set_stop_close_enough" getter="get_stop_close_enough" default="40.0">
+			The distance at which the entity considers itself close enough to the target to stop or change behavior.
+		</member>
+		<member name="verbose_debug" type="bool" setter="set_verbose_debug" getter="get_verbose_debug" default="false">
+			When enabled, prints detailed debug information about the navigation state to the output.
+		</member>
+		<member name="wander_speed_multiplier" type="float" setter="set_wander_speed_multiplier" getter="get_wander_speed_multiplier" default="1.0">
+			Multiplies the movement speed when in WANDERING mode.
+		</member>
+		<member name="way_too_close_flee_speed" type="float" setter="set_way_too_close_flee_speed" getter="get_way_too_close_flee_speed" default="2.0">
+			Speed multiplier applied when the entity is way too close to its target (within stop_close_enough * way_too_close_multiplier).
+		</member>
+		<member name="way_too_close_multiplier" type="float" setter="set_way_too_close_multiplier" getter="get_way_too_close_multiplier" default="0.4">
+			Multiplier for stop_close_enough that determines when the entity is considered way too close to its target.
+		</member>
+	</members>
+	<constants>
+		<constant name="TOWARDS_TARGET" value="0" enum="NavigationMode">
+			Navigation mode where the entity moves towards the follow_target.
+		</constant>
+		<constant name="AWAY_FROM_TARGET" value="1" enum="NavigationMode">
+			Navigation mode where the entity moves away from the follow_target.
+		</constant>
+		<constant name="ENCIRCLE_TARGET" value="2" enum="NavigationMode">
+			Navigation mode where the entity circles around the follow_target.
+		</constant>
+		<constant name="TOWARDS_POSITION" value="3" enum="NavigationMode">
+			Navigation mode where the entity moves towards a specific position.
+		</constant>
+		<constant name="TOWARDS_DIRECTION" value="4" enum="NavigationMode">
+			Navigation mode where the entity moves in a specific direction.
+		</constant>
+		<constant name="AWAY_FROM_POSITION" value="5" enum="NavigationMode">
+			Navigation mode where the entity moves away from a specific position.
+		</constant>
+		<constant name="ENCIRCLE_POSITION" value="6" enum="NavigationMode">
+			Navigation mode where the entity circles around a specific position.
+		</constant>
+		<constant name="AWAY_FROM_DIRECTION" value="7" enum="NavigationMode">
+			Navigation mode where the entity moves away from a specific direction.
+		</constant>
+		<constant name="WANDERING" value="8" enum="NavigationMode">
+			Navigation mode where the entity wanders randomly within max_wander distance of its initial position.
+		</constant>
+	</constants>
+</class>

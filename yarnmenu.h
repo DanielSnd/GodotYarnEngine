@@ -77,9 +77,20 @@ public:
     }
 
     Ref<Tween> fade_out();
-
+    Ref<Tween> fade_out_and_queue_free();
+    void fade_out_completed();
+    bool is_fading_out_to_queue_free = false;
     Node* instantiate_child_menu(Control *parent_node, const PackedScene *child_menu_scene, bool auto_start = true);
     Node* instantiate_replacement_menu(Control* parent_node, const PackedScene* child_menu_scene, bool auto_start = true);
+
+    static Callable button_click_callable(const Callable &callable);
+    static Callable button_click_callable_if_modulate(const Callable &callable, Control* control);
+
+    static Array get_menu_stack() { return YEngine::get_singleton()->get_menu_stack(); }
+    static int get_menu_stack_size() { return YEngine::get_singleton()->get_menu_stack_size(); }
+    
+
+    static Node* instantiate_menu(const Ref<PackedScene> menu_scene, int layer_index = 0, bool auto_start = true);
 
     GDVIRTUAL0(_on_back_button_pressed)
     GDVIRTUAL0(_on_started_menu)

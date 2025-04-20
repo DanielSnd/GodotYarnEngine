@@ -38,19 +38,25 @@ void YMenu::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_can_click_buttons"), &YMenu::get_can_click_buttons);
 
     ClassDB::bind_method(D_METHOD("fade_out"), &YMenu::fade_out);
+    ClassDB::bind_method(D_METHOD("fade_out_and_queue_free"), &YMenu::fade_out_and_queue_free);
     ClassDB::bind_method(D_METHOD("set_last_clicked_time"), &YMenu::set_last_clicked_time);
 
     ClassDB::bind_method(D_METHOD("instantiate_child_menu", "parent_node","child_menu_scene","auto_start"), &YMenu::instantiate_child_menu, DEFVAL(true));
     ClassDB::bind_method(D_METHOD("instantiate_replacement_menu", "parent_node","child_menu_scene","auto_start"), &YMenu::instantiate_replacement_menu, DEFVAL(true));
 
+    ClassDB::bind_static_method("YMenu", D_METHOD("button_click_callable", "callable"), &YMenu::button_click_callable);
+    ClassDB::bind_static_method("YMenu", D_METHOD("button_click_callable_if_modulate", "callable","control"), &YMenu::button_click_callable_if_modulate);
+
+    ClassDB::bind_static_method("YMenu", D_METHOD("get_menu_stack"), &YMenu::get_menu_stack);
+    ClassDB::bind_static_method("YMenu", D_METHOD("get_menu_stack_size"), &YMenu::get_menu_stack_size);
     
-    
+    ClassDB::bind_static_method("YMenu", D_METHOD("instantiate_menu", "menu_scene", "layer_index", "auto_start"), &YMenu::instantiate_menu, DEFVAL(0), DEFVAL(true));
     ClassDB::bind_static_method("YMenu", D_METHOD("calculate_ideal_control_center","control_size", "control_parent"), &YMenu::calculate_ideal_control_center);
+
     ADD_SIGNAL(MethodInfo("go_back_to_menu"));
     ADD_SIGNAL(MethodInfo("started_menu"));
     ADD_SIGNAL(MethodInfo("on_back_to_menu"));
     
-
     GDVIRTUAL_BIND(_can_back_button_auto_close_menu)
     GDVIRTUAL_BIND(_on_back_button_pressed);
     GDVIRTUAL_BIND(_on_back_to_menu);
@@ -110,8 +116,7 @@ void YMenu::_on_back_button_pressed() {
     // 	queue_free()
     if (can_auto_close) {
         emit_signal("go_back_to_menu");
-        auto tween = fade_out();
-        if (tween.is_valid()) tween->tween_callback(callable_mp(this,&YMenu::menu_queue_free));
+        fade_out_and_queue_free();
     }
 }
 
@@ -165,11 +170,58 @@ Vector2 YMenu::calculate_ideal_control_center(Vector2 size,Control *parent) {
     return parent->get_size() * 0.5 - size * 0.5;
 }
 
+void YMenu::fade_out_completed() {
+    GDVIRTUAL_CALL(_on_fade_out);
+    if (is_fading_out_to_queue_free) {
+        queue_free();
+    }
+}
+
+Node* YMenu::instantiate_menu(const Ref<PackedScene> menu_scene, int layer_index, bool auto_start) {
+    if (menu_scene.is_null() || !menu_scene.is_valid()) {
+        ERR_PRINT("Attempted to instantiate empty or invalidmenu scene");
+        return nullptr;
+    }
+    
+    Node* instantiated = menu_scene->instantiate(PackedScene::GEN_EDIT_STATE_DISABLED);
+    if (instantiated == nullptr) {
+        ERR_PRINT("Error instantiating menu");
+        return nullptr;
+    }
+    
+    CanvasLayer* find_canvas_layer = YEngine::get_singleton()->get_canvas_layer(layer_index);
+    if (find_canvas_layer != nullptr) {
+        find_canvas_layer->add_child(instantiated);
+        if (auto_start && instantiated->has_method("_on_started_menu")) {
+            auto ymenu = Object::cast_to<YMenu>(instantiated);
+            if (ymenu!=nullptr && !ymenu->called_start_from_process) ymenu->_on_started_menu();
+        }
+    }
+    return instantiated;
+}
+
 Ref<Tween> YMenu::fade_out() {
     auto tween = YTween::get_singleton()->create_unique_tween(this);
     tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,0.0}, fade_out_time)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);
-    GDVIRTUAL_CALL(_on_fade_out);
+    is_fading_out_to_queue_free = false;
+    if (tween.is_valid()) tween->tween_callback(callable_mp(this,&YMenu::fade_out_completed));
     return tween;
+}
+
+Ref<Tween> YMenu::fade_out_and_queue_free() {
+    auto tween = YTween::get_singleton()->create_unique_tween(this);
+    tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,0.0}, fade_out_time)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);
+    is_fading_out_to_queue_free = true;
+    if (tween.is_valid()) tween->tween_callback(callable_mp(this,&YMenu::fade_out_completed));
+    return tween;
+}
+
+Callable YMenu::button_click_callable(const Callable &callable) {
+    return YEngine::get_singleton()->button_click_callable(callable);
+}
+
+Callable YMenu::button_click_callable_if_modulate(const Callable &callable, Control* control) {
+    return YEngine::get_singleton()->button_click_callable_if_modulate(callable, control);
 }
 
 Node* YMenu::instantiate_child_menu(Control *parent_node, const PackedScene *child_menu_scene, const bool auto_start) {
