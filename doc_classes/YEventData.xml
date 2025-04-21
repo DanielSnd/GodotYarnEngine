@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YEventData" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A flexible event system for game development that allows modification of event data through a priority-based callback system.
+	</brief_description>
+	<description>
+		YEventData is a powerful event system designed for game development that enables flexible data modification through a priority-based callback system. It's particularly useful for implementing game mechanics where multiple systems need to interact with and modify data, such as damage systems, stat modifications, or item effects.
+
+		Each YEventData instance has an event type (identified by an integer) and can store multiple key-value pairs. The system allows registration of callbacks that can read and modify this data, with callbacks being executed in order of priority (lower numbers execute first).
+
+		Common use cases include:
+		- Damage calculation systems where multiple effects can modify the final damage
+		- Stat systems where items and buffs can modify base values
+		- Item interaction systems where effects can be chained
+		- Any system requiring decoupled modification of values
+
+		[codeblock]
+		# Example of a damage system using YEventData
+		enum GameEvents {
+		    BEFORE_TAKE_DAMAGE,
+		    TAKE_DAMAGE,
+		    AFTER_TAKE_DAMAGE
+		}
+		enum EventParameters {
+		    DAMAGE
+		}
+
+		# In your item script
+		func _ready():
+		    # Register a callback for the before damage event with priority 50
+		    YEventData.register_listener_with_node(self, GameEvents.BEFORE_TAKE_DAMAGE, _on_before_damage)
+
+		func _on_before_damage(event_data: YEventData):
+		    if is_player_in_air(): # Custom check
+		        # Get current damage
+		        var damage = event_data.get_value(EventParameters.DAMAGE)
+		        # Halve the damage
+		        event_data.set_value(EventParameters.DAMAGE, damage * 0.5)
+
+		# In your health component
+		func take_damage(amount: float):
+		    # Create and setup the event
+		    var event = YEventData.new()
+		    event.set_event_type(GameEvents.BEFORE_TAKE_DAMAGE)
+			event.set_value(EventParameters.DAMAGE, amount)
+
+		    # Emit the event to let items modify the damage
+		    event.emit_to_node(get_parent())
+
+		    # Get the modified damage
+		    var final_damage = event.get_value(EventParameters.DAMAGE)
+
+		    # Apply the damage
+		    health -= final_damage
+
+		    # Change event type and emit for other systems
+		    event.set_event_type(GameEvents.TAKE_DAMAGE)
+		    event.emit_to_node(get_parent())
+		[/codeblock]
+
+		The priority system allows fine control over the order of modifications. Lower priority numbers execute first (e.g., priority 0 executes before priority 100). The default priority is 50, allowing easy insertion of callbacks both before and after the default handlers.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="add_data_from_dictionary">
+			<return type="YEventData" />
+			<param index="0" name="dict" type="Dictionary" />
+			<description>
+				Adds all key-value pairs from the given dictionary to the event data. Existing values with the same keys will be overwritten.
+			</description>
+		</method>
+		<method name="create" qualifiers="static">
+			<return type="YEventData" />
+			<param index="0" name="with_type" type="int" />
+			<param index="1" name="parameter_one" type="int" default="0" />
+			<param index="2" name="value_one" type="Variant" default="null" />
+			<description>
+				Creates and returns a new YEventData instance with the specified event type. Optionally sets an initial parameter value using parameter_one as the identifier and value_one as the value. This is a convenience method for quickly creating and initializing event data.
+			</description>
+		</method>
+		</method>
+		<method name="duplicate" qualifiers="const">
+			<return type="YEventData" />
+			<description>
+				Creates and returns a new YEventData instance with a copy of all the current event data and the same event type.
+			</description>
+		</method>
+		<method name="emit" qualifiers="const">
+			<return type="YEventData" />
+			<description>
+				Emits the event to all registered listeners for this event type. Callbacks are called in order of priority (lower numbers first).
+			</description>
+		</method>
+		<method name="emit_to_node" qualifiers="const">
+			<return type="YEventData" />
+			<param index="0" name="node" type="Node" />
+			<description>
+				Emits the event only to listeners registered with the specified node. Callbacks are still called in order of priority.
+			</description>
+		</method>
+		<method name="get_data_as_dictionary" qualifiers="const">
+			<return type="Dictionary" />
+			<description>
+				Returns all event data as a dictionary. Useful for serialization or debugging.
+			</description>
+		</method>
+		<method name="get_value" qualifiers="const">
+			<return type="Variant" />
+			<param index="0" name="identifier" type="int" />
+			<param index="1" name="default_value" type="Variant" default="null" />
+			<description>
+				Returns the value associated with the given identifier. If the identifier doesn't exist, returns the default_value.
+			</description>
+		</method>
+		<method name="has_value" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="identifier" type="int" />
+			<description>
+				Returns [code]true[/code] if the event data contains a value for the given identifier.
+			</description>
+		</method>
+		<method name="increment_value">
+			<return type="YEventData" />
+			<param index="0" name="identifier" type="int" />
+			<param index="1" name="amount" type="Variant" />
+			<description>
+				Increments the numeric value associated with the identifier by the given amount. If the identifier doesn't exist, sets it to the amount. Works with both integer and float values.
+			</description>
+		</method>
+		<method name="is_event_type" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="type" type="int" />
+			<description>
+				Returns [code]true[/code] if this event's type matches the given type.
+			</description>
+		</method>
+		<method name="register_listener" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="event_id" type="int" />
+			<param index="1" name="callable" type="Callable" />
+			<param index="2" name="priority" type="int" default="50" />
+			<description>
+				Registers a global listener for the specified event type. The callable will be called when events of this type are emitted.
+				[b]Note:[/b] Lower priority numbers are called first. Default priority is 50.
+			</description>
+		</method>
+		<method name="register_listener_with_node" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node" />
+			<param index="1" name="event_id" type="int" />
+			<param index="2" name="callable" type="Callable" />
+			<param index="3" name="priority" type="int" default="50" />
+			<description>
+				Registers a listener associated with a specific node. The callable will be automatically unregistered when the node exits the scene tree.
+				[b]Note:[/b] Lower priority numbers are called first. Default priority is 50.
+			</description>
+		</method>
+		<method name="set_data_from_dictionary">
+			<return type="YEventData" />
+			<param index="0" name="dict" type="Dictionary" />
+			<description>
+				Clears all current event data and sets it to the key-value pairs from the given dictionary.
+			</description>
+		</method>
+		<method name="set_event_type">
+			<return type="YEventData" />
+			<param index="0" name="type" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="set_value">
+			<return type="YEventData" />
+			<param index="0" name="identifier" type="int" />
+			<param index="1" name="value" type="Variant" />
+			<description>
+				Sets the value for the given identifier in the event data.
+			</description>
+		</method>
+		<method name="unregister_listener" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="event_id" type="int" />
+			<param index="1" name="callable" type="Callable" />
+			<description>
+				Unregisters a global listener for the specified event type.
+			</description>
+		</method>
+		<method name="unregister_listener_with_node" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node" />
+			<param index="1" name="event_id" type="int" />
+			<param index="2" name="callable" type="Callable" />
+			<description>
+				Unregisters a listener associated with the specified node for the given event type.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="event_type" type="int" setter="set_event_type" getter="get_event_type" default="0">
+			The type identifier for this event. Usually defined in an enum for better code organization and autocompletion.
+		</member>
+	</members>
+</class>

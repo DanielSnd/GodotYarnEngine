@@ -18,6 +18,7 @@
 #include "ydir.h"
 #include "yarnsave.h"
 #include "yarntime.h"
+#include "yeventdata.h"
 #include "ybone_attachment_3d.h"
 #include "yboxcontainer.h"
 #include "yvisualelement3d.h"
@@ -112,6 +113,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<YMeshGen>();
  	ClassDB::register_class<YEngine>();
 	ClassDB::register_class<YMenu>();
+	ClassDB::register_class<YEventData>();
 	ClassDB::register_class<YBoxContainer>();
 	ClassDB::register_class<YHBoxContainer>();
 	ClassDB::register_class<YVBoxContainer>();

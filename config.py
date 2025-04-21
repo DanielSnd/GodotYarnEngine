@@ -44,5 +44,6 @@ def get_doc_classes():
         "YSceneSpawner3D",
         "YBoneAttachment3D",
         "CombinedTexture2D",
-        "YSaveable3D"
+        "YSaveable3D",
+        "YEventData"
     ]
