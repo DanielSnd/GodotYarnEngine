@@ -61,18 +61,20 @@ void YPhysics::_bind_methods() {
                     DEFVAL(32),
                     DEFVAL(UINT32_MAX),
                     DEFVAL(TypedArray<RID>()));
-    ClassDB::bind_static_method("YPhysics",D_METHOD("shapecast", "shape", "world_transform", "margin", "motion", "max_results", "collide_type", "collision_mask", "exclude"),
+    ClassDB::bind_static_method("YPhysics",D_METHOD("shapecast", "shape", "world_transform", "margin", "direction", "distance", "max_results", "collide_type", "collision_mask", "exclude"),
                      &YPhysics::shapecast,
                      DEFVAL(0.04),
                      DEFVAL(Vector3()),
+                     DEFVAL(10.0),
                      DEFVAL(32),
                      DEFVAL(YPhysics::COLLIDE_WITH_BODIES),
                      DEFVAL(UINT32_MAX),
                      DEFVAL(TypedArray<RID>()));
-    ClassDB::bind_static_method("YPhysics",D_METHOD("spherecast", "world_position", "radius", "motion", "max_results", "collide_type", "collision_mask", "exclude"),
+    ClassDB::bind_static_method("YPhysics",D_METHOD("spherecast", "world_position", "radius", "direction", "distance", "max_results", "collide_type", "collision_mask", "exclude"),
                      &YPhysics::spherecast,
                      DEFVAL(1.0),
                      DEFVAL(Vector3()),
+                     DEFVAL(10.0),
                      DEFVAL(32),
                      DEFVAL(YPhysics::COLLIDE_WITH_BODIES),
                      DEFVAL(UINT32_MAX),
@@ -522,7 +524,6 @@ TypedArray<Dictionary> YPhysics::spherecast(const Vector3 p_world_position, real
     Vector<PhysicsDirectSpaceState3D::ShapeRestInfo> all_results;
     real_t remaining_distance = ray_dist;
     Vector3 current_position = p_world_position;
-    HashSet<RID> excluded_rids = shape_params.exclude;
 
     while (remaining_distance > 0.0 && all_results.size() < p_max_results) {
         real_t collision_safe_fraction = 0.0;
@@ -531,7 +532,6 @@ TypedArray<Dictionary> YPhysics::spherecast(const Vector3 p_world_position, real
         // Update motion and transform for the remaining distance
         shape_params.motion = ray_dir * remaining_distance;
         shape_params.transform = Transform3D{Basis{}, current_position};
-        shape_params.exclude = excluded_rids; // Use our accumulated excludes
 
         world_3d->get_direct_space_state()->cast_motion(shape_params, collision_safe_fraction, collision_unsafe_fraction);
 
@@ -552,7 +552,7 @@ TypedArray<Dictionary> YPhysics::spherecast(const Vector3 p_world_position, real
             intersected = world_3d->get_direct_space_state()->rest_info(shape_params, &info);
             if (intersected) {
                 all_results.push_back(info);
-                excluded_rids.insert(info.rid);
+                shape_params.exclude.insert(info.rid);
             }
         }
 
@@ -618,7 +618,6 @@ TypedArray<Dictionary> YPhysics::shapecast(const Ref<Shape3D> &p_shape, const Tr
     Vector<PhysicsDirectSpaceState3D::ShapeRestInfo> all_results;
     real_t remaining_distance = ray_dist;
     Vector3 current_position = p_world_transform.origin;
-    HashSet<RID> excluded_rids = shape_params.exclude;
 
     while (remaining_distance > 0.0 && all_results.size() < p_max_results) {
         real_t collision_safe_fraction = 0.0;
@@ -627,7 +626,6 @@ TypedArray<Dictionary> YPhysics::shapecast(const Ref<Shape3D> &p_shape, const Tr
         // Update motion and transform for the remaining distance
         shape_params.motion = ray_dir * remaining_distance;
         shape_params.transform = Transform3D{p_world_transform.basis, current_position};
-        shape_params.exclude = excluded_rids; // Use our accumulated excludes
 
         world_3d->get_direct_space_state()->cast_motion(shape_params, collision_safe_fraction, collision_unsafe_fraction);
 
@@ -648,7 +646,7 @@ TypedArray<Dictionary> YPhysics::shapecast(const Ref<Shape3D> &p_shape, const Tr
             intersected = world_3d->get_direct_space_state()->rest_info(shape_params, &info);
             if (intersected) {
                 all_results.push_back(info);
-                excluded_rids.insert(info.rid);
+                shape_params.exclude.insert(info.rid);
             }
         }
 

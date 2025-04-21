@@ -43,6 +43,7 @@ void YNavHelper3D::_notification(int p_what) {
                 center_location = get_global_position();
                 
                 initialized = true;
+
                 set_process(true);
                 set_physics_process(true);
             }
@@ -229,8 +230,22 @@ void YNavHelper3D::initialize_raycasts() {
     }
 }
 
+void YNavHelper3D::set_update_interval(float p_interval) {
+    update_interval = p_interval;
+}
+
+float YNavHelper3D::get_update_interval() const {
+    return update_interval;
+}
+
 void YNavHelper3D::do_process(double delta) {
     if (!initialized || !navigation_enabled) {
+        return;
+    }
+
+    if (YTime::get_singleton()->has_time_elapsed(last_time_updated_context_map, update_interval)) {
+        last_time_updated_context_map = YTime::get_singleton()->get_time();
+    } else {
         return;
     }
 
@@ -429,57 +444,73 @@ void YNavHelper3D::reset_danger_values() {
 
 void YNavHelper3D::calculate_danger_and_interest_values(const Vector3& use_direction) {
     Vector3 start_position = get_global_position();
-    for (int i = 0; i < directions.size(); i++) {
-        Vector3 dir = directions[i];
-        
-        if (encircling || ((encircle_when_close_enough && is_close_enough) && !way_too_close)) {
-            // For encircling, use a cross product to find perpendicular direction
-            Vector3 up_vector = get_global_transform().basis.get_column(1).normalized();
-            Vector3 perpendicular = use_direction.cross(up_vector).normalized();
-            
-            if (get_preferred_break_direction() < 0) {
-                perpendicular = -perpendicular;
-            }
-            
-            interest_values.write[i] = dir.dot(perpendicular);
-        } else {
-            float dot_product = dir.dot(use_direction);
-            
-            // If moving away or too close, invert the interest
-            float multiplier = (away_from || 
-                               (away_when_close_enough && is_close_enough && distance_to_relevant < stop_away_enough) || 
-                               way_too_close) ? -1.0f : 1.0f;
-                               
-            interest_values.write[i] = dot_product * multiplier;
-            
-            // Apply horizontal preference for wandering
-            if (wander_prefer_horizontal && navigation_mode == WANDERING) {
-                // Penalize directions that point too much up or down
-                // Get the Y component of the direction (assuming Y is up)
-                float y_component = fabsf(dir.y);
+    auto world_3d = SceneTree::get_singleton()->get_root()->get_world_3d();
+    if (world_3d.is_valid()) {
+        auto space_state = world_3d->get_direct_space_state();
+        if (space_state != nullptr) {
+            for (int i = 0; i < directions.size(); i++) {
+                Vector3 dir = directions[i];
                 
-                // Apply a penalty based on how vertical the direction is
-                // The more vertical, the higher the penalty
-                float horizontal_bonus = (1.0f - y_component) * horizontal_preference_strength;
-                interest_values.write[i] += horizontal_bonus;
+                if (encircling || ((encircle_when_close_enough && is_close_enough) && !way_too_close)) {
+                    // For encircling, use a cross product to find perpendicular direction
+                    Vector3 up_vector = get_global_transform().basis.get_column(1).normalized();
+                    Vector3 perpendicular = use_direction.cross(up_vector).normalized();
+                    
+                    if (get_preferred_break_direction() < 0) {
+                        perpendicular = -perpendicular;
+                    }
+                    
+                    interest_values.write[i] = dir.dot(perpendicular);
+                } else {
+                    float dot_product = dir.dot(use_direction);
+                    
+                    // If moving away or too close, invert the interest
+                    float multiplier = (away_from || 
+                                    (away_when_close_enough && is_close_enough && distance_to_relevant < stop_away_enough) || 
+                                    way_too_close) ? -1.0f : 1.0f;
+                                    
+                    interest_values.write[i] = dot_product * multiplier;
+                    
+                    // Apply horizontal preference for wandering
+                    if (wander_prefer_horizontal && navigation_mode == WANDERING) {
+                        // Penalize directions that point too much up or down
+                        // Get the Y component of the direction (assuming Y is up)
+                        float y_component = fabsf(dir.y);
+                        
+                        // Apply a penalty based on how vertical the direction is
+                        // The more vertical, the higher the penalty
+                        float horizontal_bonus = (1.0f - y_component) * horizontal_preference_strength;
+                        interest_values.write[i] += horizontal_bonus;
+                    }
+                }
+                
+                // Check for collisions
+                PhysicsDirectSpaceState3D::RayResult result;
+                PhysicsDirectSpaceState3D::RayParameters ray_params;
+
+                ray_params.from = start_position;
+                ray_params.to = start_position + (directions[i] * extend_length);
+                ray_params.collide_with_areas = false;
+                ray_params.collide_with_bodies = true;
+                ray_params.collision_mask = navigation_collide_mask;
+                ray_params.hit_from_inside = false;
+                if (space_state->intersect_ray(ray_params, result)) {
+                    danger_values.write[i] += 5.0f;
+                    
+                    // Add danger to neighboring directions
+                    int prev_index = get_prev_index(i);
+                    int next_index = get_next_index(i);
+                    danger_values.write[prev_index] += 2.0f;
+                    danger_values.write[next_index] += 2.0f;
+                    
+                    // For finer direction resolution
+                    if (direction_amount > 8) {
+                        danger_values.write[get_prev_index(prev_index)] += 1.0f;
+                        danger_values.write[get_next_index(next_index)] += 1.0f;
+                    }
+                }
             }
-        }
         
-        // Check for collisions
-        if (YPhysics::has_raycast3d_hit(start_position, directions[i], extend_length, YPhysics::COLLIDE_WITH_BODIES, navigation_collide_mask)) {
-            danger_values.write[i] += 5.0f;
-            
-            // Add danger to neighboring directions
-            int prev_index = get_prev_index(i);
-            int next_index = get_next_index(i);
-            danger_values.write[prev_index] += 2.0f;
-            danger_values.write[next_index] += 2.0f;
-            
-            // For finer direction resolution
-            if (direction_amount > 8) {
-                danger_values.write[get_prev_index(prev_index)] += 1.0f;
-                danger_values.write[get_next_index(next_index)] += 1.0f;
-            }
         }
     }
 }

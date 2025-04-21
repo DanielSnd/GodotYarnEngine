@@ -41,6 +41,7 @@ private:
     
     bool auto_steer = true;
     float auto_steering_speed = 25.0f;
+    float update_interval = 0.01f;
     Node3D* follow_target = nullptr;
     bool draw_debug = false;
     bool verbose_debug = false;
@@ -73,6 +74,7 @@ private:
     Vector3 relevant_position = Vector3(0, 0, 0);
     Vector3 relevant_direction = Vector3(0, 0, -1);
     
+    float last_time_updated_context_map = 0.0f;
     float distance_to_relevant = 0.0f;
     bool away_from = false;
     bool using_position = false;
@@ -126,6 +128,9 @@ public:
     // Getters and setters
     void set_auto_steer(bool p_auto_steer);
     bool get_auto_steer() const;
+
+    void set_update_interval(float p_interval);
+    float get_update_interval() const;
 
     void set_auto_steering_speed(float p_speed);
     float get_auto_steering_speed() const;
