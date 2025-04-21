@@ -17,6 +17,7 @@
 #include "scene/gui/color_rect.h"
 #include <core/string/translation_server.h>
 #include "ypersistentid.h"
+#include "scene/3d/camera_3d.h"
 
 class YGameState;
 class YTween;
@@ -48,6 +49,9 @@ protected:
     static YEngine* singleton;
     HashMap<StringName, Node *> othersingletons;
     YGameState* ygamestate = nullptr;
+
+    Camera3D* main_camera = nullptr;
+
 public:
     Control* fader_control = nullptr;
     RichTextLabel* fader_label = nullptr;
@@ -195,6 +199,7 @@ public:
         return returndict;
     }
 
+    Vector2 get_control_pos_for_3d_pos(const Vector3 &p_global_pos, bool sticky = false);
     Dictionary get_script_base_properties(Node* p_node);
     void instant_fade_to_alpha(float alpha);
     RichTextLabel* get_fader_label();

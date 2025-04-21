@@ -134,6 +134,8 @@ void YEngine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("are_resources_virtually_the_same","resource_a","resource_b"), &YEngine::are_resources_virtually_the_same);
     ClassDB::bind_method(D_METHOD("get_diverging_variables_in_resources","resource_a","resource_b"), &YEngine::get_diverging_variables_in_resources);
 
+    ClassDB::bind_method(D_METHOD("get_control_pos_for_3d_pos","global_pos","sticky"), &YEngine::get_control_pos_for_3d_pos, DEFVAL(false));
+    
     ClassDB::bind_method(D_METHOD("get_script_base_properties","node"), &YEngine::get_script_base_properties);
 
     ClassDB::bind_method(D_METHOD("get_canvas_layer","layer_index"), &YEngine::get_canvas_layer, DEFVAL(0));
@@ -375,6 +377,63 @@ void YEngine::after_prepare_save() {
             ysave->get_save_data()["scene_paths_and_ids"] = YPersistentID::get_all_scene_paths_and_ids();
         }
     }
+}
+
+Vector2 YEngine::get_control_pos_for_3d_pos(const Vector3 &p_global_pos, bool p_sticky) {
+    if (main_camera != nullptr && !main_camera->is_current()) {
+        main_camera = get_viewport()->get_camera_3d();
+    }
+    if (main_camera == nullptr) {
+        main_camera = get_viewport()->get_camera_3d();
+        if (main_camera == nullptr) {
+            return Vector2();
+        }
+    }
+    
+    const Transform3D camera_transform = main_camera->get_global_transform();
+    const Vector3 camera_position = camera_transform.get_origin();
+
+    // Check if object is behind camera
+    bool is_behind = camera_transform.get_basis().get_column(2).dot(p_global_pos - camera_position) > 0;
+
+    Vector2 unprojected_position = main_camera->unproject_position(p_global_pos);
+    
+    // Get viewport size
+    Vector2i viewport_base_size;
+    Size2i content_scale = get_viewport()->get_visible_rect().size;
+    viewport_base_size = content_scale;
+
+    const float MARGIN = 32.0f; // Define margin constant
+
+    // For non-sticky waypoints
+    if (!p_sticky) {
+        return unprojected_position;
+    }
+
+    // Handle X axis for sticky waypoints
+    if (is_behind) {
+        if (unprojected_position.x < viewport_base_size.x / 2) {
+            unprojected_position.x = viewport_base_size.x - MARGIN;
+        } else {
+            unprojected_position.x = MARGIN;
+        }
+    }
+
+    // Handle Y axis for sticky waypoints
+    if (is_behind || unprojected_position.x < MARGIN || 
+        unprojected_position.x > viewport_base_size.x - MARGIN) {
+        Transform3D look = camera_transform.looking_at(p_global_pos, Vector3(0, 1, 0));
+        float diff = Math::angle_difference(look.get_basis().get_euler().x, camera_transform.get_basis().get_euler().x);
+        unprojected_position.y = viewport_base_size.y * (0.5 + (diff / Math::deg_to_rad(main_camera->get_fov())));
+    }
+
+    // Clamp position to screen bounds
+    Vector2 final_position = Vector2(
+        CLAMP(unprojected_position.x, MARGIN, viewport_base_size.x - MARGIN),
+        CLAMP(unprojected_position.y, MARGIN, viewport_base_size.y - MARGIN)
+    );
+
+    return final_position;
 }
 
 void YEngine::on_loaded_save(Dictionary save_data) {

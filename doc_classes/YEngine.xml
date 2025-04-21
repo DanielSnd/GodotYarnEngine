@@ -268,6 +268,30 @@
 				[/codeblock]
 			</description>
 		</method>
+		<method name="get_control_pos_for_3d_pos">
+			<return type="Vector2" />
+			<param index="0" name="global_pos" type="Vector3" />
+			<param index="1" name="sticky" type="bool" default="false" />
+			<description>
+				Converts a 3D world position to a 2D screen position. Returns the screen coordinates where the 3D point would appear.
+
+				If [param sticky] is [code]true[/code], the returned position will be clamped to the screen edges when the 3D point is outside the viewport or behind the camera. This is useful for UI elements that should always remain visible on screen.
+
+				If [param sticky] is [code]false[/code], returns the raw screen projection of the 3D point, which may be outside the viewport bounds.
+
+				Example:
+				[codeblock]
+				# Get screen position of a 3D object
+				var world_pos = $Enemy3D.global_position
+				var screen_pos = YEngine.get_control_pos_for_3d_pos(world_pos)
+				$UIMarker.position = screen_pos
+
+				# Get screen position with sticky behavior
+				var sticky_pos = YEngine.get_control_pos_for_3d_pos(world_pos, true)
+				$UIArrow.position = sticky_pos # Arrow will stay on screen edges
+				[/codeblock]
+			</description>
+		</method>
 		<method name="get_current_scene">
 			<return type="Node" />
 			<description>

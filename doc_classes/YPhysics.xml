@@ -472,13 +472,13 @@
 			<return type="Dictionary[]" />
 			<param index="0" name="shape" type="Shape3D" />
 			<param index="1" name="world_transform" type="Transform3D" />
-			<param index="2" name="margin" type="float" />
-			<param index="3" name="motion" type="Vector3" default="0.04" />
-			<param index="4" name="max_results" type="float" default="Vector3(0, 0, 0)" />
-			<param index="5" name="collide_type" type="int" default="32" />
-			<param index="6" name="collision_mask" type="int" enum="YPhysics.CollideType" default="0" />
-			<param index="7" name="exclude" type="int" default="4294967295" />
-			<param index="8" name="_unnamed_arg8" type="RID[]" default="[]" />
+			<param index="2" name="margin" type="float" default="0.04" />
+			<param index="3" name="direction" type="Vector3" default="Vector3(0, 0, 0)" />
+			<param index="4" name="distance" type="float" default="10.0" />
+			<param index="5" name="max_results" type="int" default="32" />
+			<param index="6" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="7" name="collision_mask" type="int" default="4294967295" />
+			<param index="8" name="exclude" type="RID[]" default="[]" />
 			<description>
 				Casts a shape through space and returns an array of dictionaries containing information about all collisions.
 				Each dictionary contains:
@@ -510,13 +510,13 @@
 		<method name="spherecast" qualifiers="static">
 			<return type="Dictionary[]" />
 			<param index="0" name="world_position" type="Vector3" />
-			<param index="1" name="radius" type="float" />
-			<param index="2" name="motion" type="Vector3" default="1.0" />
-			<param index="3" name="max_results" type="float" default="Vector3(0, 0, 0)" />
-			<param index="4" name="collide_type" type="int" default="32" />
-			<param index="5" name="collision_mask" type="int" enum="YPhysics.CollideType" default="0" />
-			<param index="6" name="exclude" type="int" default="4294967295" />
-			<param index="7" name="_unnamed_arg7" type="RID[]" default="[]" />
+			<param index="1" name="radius" type="float" default="1.0" />
+			<param index="2" name="direction" type="Vector3" default="Vector3(0, 0, 0)" />
+			<param index="3" name="distance" type="float" default="10.0" />
+			<param index="4" name="max_results" type="int" default="32" />
+			<param index="5" name="collide_type" type="int" enum="YPhysics.CollideType" default="0" />
+			<param index="6" name="collision_mask" type="int" default="4294967295" />
+			<param index="7" name="exclude" type="RID[]" default="[]" />
 			<description>
 				Casts a sphere through space and returns an array of dictionaries containing information about all collisions.
 				Each dictionary contains:
