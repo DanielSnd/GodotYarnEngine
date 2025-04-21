@@ -92,10 +92,10 @@ public:
 
     static Object *check_collision_sphere(Vector3 p_world_position, real_t radius, uint32_t collision_mask = UINT32_MAX, const TypedArray<RID> &p_exclude = {});
 
-    static TypedArray<Dictionary> spherecast(const Vector3 p_world_position, real_t radius, const Vector3 &p_motion, int p_max_results,
+    static TypedArray<Dictionary> spherecast(const Vector3 p_world_position, real_t radius, const Vector3 &p_dir, float p_max_dist, int p_max_results,
                                              CollideType p_collide_type, uint32_t collision_mask, const TypedArray<RID> &p_exclude);
 
-    static TypedArray<Dictionary> shapecast(const Ref<Shape3D> &p_shape, const Transform3D &p_world_transform, real_t p_margin, const Vector3 &p_motion, int
+    static TypedArray<Dictionary> shapecast(const Ref<Shape3D> &p_shape, const Transform3D &p_world_transform, real_t p_margin, const Vector3 &p_dir, float p_max_dist, int
                                             p_max_results,
                                             CollideType p_collide_type, uint32_t collision_mask, const TypedArray<RID> &p_exclude);
 

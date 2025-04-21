@@ -55,7 +55,7 @@ void YSpecialPoint3D::_notification(int p_what) {
 
 YSpecialPoint3D * YSpecialPoint3D::get_closest_point_to(Vector3 p_global_pos) {
     if (all_points.is_empty()) return nullptr;
-    float best_distance = 9999.0;
+    float best_distance = 999999.0;
     YSpecialPoint3D* return_ypoint = nullptr;
     for (auto ypoint_testing: all_points) {
         if (ypoint_testing == nullptr) continue;
@@ -70,10 +70,11 @@ YSpecialPoint3D * YSpecialPoint3D::get_closest_point_to(Vector3 p_global_pos) {
 
 TypedArray<Node> YSpecialPoint3D::get_points_in_range_of(const Vector3 p_global_pos, const float p_range) {
     TypedArray<Node> return_points;
+    const float p_range_squared = p_range * p_range;
     for (auto return_point: all_points) {
         if (return_point != nullptr) {
             const Vector3 return_point_global_pos = return_point->get_global_position();
-            if (return_point_global_pos.distance_to(p_global_pos) <= p_range) {
+            if (return_point_global_pos.distance_squared_to(p_global_pos) <= p_range_squared) {
                 return_points.push_back(return_point);
             }
         }
@@ -91,7 +92,7 @@ struct LessComparator {
 TypedArray<Vector3> YSpecialPoint3D::get_dijkstra_path_from_to(Vector3 start, Vector3 end) {
     TypedArray<Vector3> return_path;
     if (all_points.is_empty()) return return_path;
-    int max_iterations = 2000;
+    int max_iterations = 10000;
     YSpecialPoint3D* start_point = get_closest_point_to(start);
     YSpecialPoint3D* end_point = get_closest_point_to(end);
     Dictionary previous;
@@ -193,19 +194,36 @@ TypedArray<Vector3> YSpecialPoint3D::get_rert_path_from_to(Vector3 start, Vector
 }
 
 void YSpecialPoint3D::create_connections(float p_max_dist,uint32_t blocking_layermask) {
-    const int point_count = get_point_count();
-    for (auto ypoint: all_points) {
-        if (ypoint == nullptr) continue;
-        for (auto other_ypoint: all_points) {
-            if (other_ypoint == nullptr) continue;
-            if (ypoint->connections.has(other_ypoint->get_instance_id()))
-                continue;
-            const float distance_between_points = other_ypoint->get_global_position().distance_to(ypoint->get_global_position());
-            if (distance_between_points > p_max_dist) continue;
-            if (YPhysics::get_singleton()->free_line_check(ypoint->get_global_position(),other_ypoint->get_global_position(),YPhysics::COLLIDE_WITH_BODIES,blocking_layermask))
-                continue;
-            ypoint->add_connection(other_ypoint,distance_between_points);
-            other_ypoint->add_connection(ypoint,distance_between_points);
+    const float p_max_dist_squared = p_max_dist * p_max_dist;
+    auto world_3d = SceneTree::get_singleton()->get_root()->get_world_3d();
+    if (world_3d.is_valid()) {
+        auto space_state = world_3d->get_direct_space_state();
+        if (space_state != nullptr) {
+                    
+            for (auto ypoint: all_points) {
+                if (ypoint == nullptr) continue;
+                for (auto other_ypoint: all_points) {
+                    if (other_ypoint == nullptr) continue;
+                    if (ypoint->connections.has(other_ypoint->get_instance_id()))
+                        continue;
+
+                    const float distance_between_points = other_ypoint->get_global_position().distance_squared_to(ypoint->get_global_position());
+                    if (distance_between_points > p_max_dist_squared) continue;
+                    PhysicsDirectSpaceState3D::RayResult result;
+                    PhysicsDirectSpaceState3D::RayParameters ray_params = PhysicsDirectSpaceState3D::RayParameters();
+                    ray_params.from = ypoint->get_global_position();
+                    ray_params.to = other_ypoint->get_global_position();
+                    ray_params.collide_with_areas = false;
+                    ray_params.collide_with_bodies = true;
+                    ray_params.collision_mask = blocking_layermask;
+                    if (space_state->intersect_ray(ray_params, result)) {
+                        continue;
+                    } else {
+                        ypoint->add_connection(other_ypoint,distance_between_points);
+                        other_ypoint->add_connection(ypoint,distance_between_points);
+                    }
+                }
+            }
         }
     }
 }

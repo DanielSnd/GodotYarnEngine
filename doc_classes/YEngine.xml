@@ -294,21 +294,6 @@
 				[/codeblock]
 			</description>
 		</method>
-		<method name="set_current_scene_name">
-			<return type="void" />
-			<param index="0" name="scene_name" type="String" />
-			<description>
-				Sets the name of the current scene.
-				This is typically used internally by the scene management system, but can be called manually if needed.
-
-				[param scene_name] The name to set for the current scene.
-
-				Example:
-				[codeblock]
-				YEngine.set_current_scene_name("MainMenu")
-				[/codeblock]
-			</description>
-		</method>
 		<method name="get_diverging_variables_in_resources">
 			<return type="PackedStringArray" />
 			<param index="0" name="resource_a" type="Resource" />
@@ -435,6 +420,21 @@
 				# Same seed will produce the same shuffle
 				var shuffled2 = YEngine.seeded_shuffle(items, 42)
 				# shuffled1 and shuffled2 will have identical ordering
+				[/codeblock]
+			</description>
+		</method>
+		<method name="set_current_scene_name">
+			<return type="void" />
+			<param index="0" name="scene_name" type="String" />
+			<description>
+				Sets the name of the current scene.
+				This is typically used internally by the scene management system, but can be called manually if needed.
+
+				[param scene_name] The name to set for the current scene.
+
+				Example:
+				[codeblock]
+				YEngine.set_current_scene_name("MainMenu")
 				[/codeblock]
 			</description>
 		</method>

@@ -15,11 +15,11 @@
 		# In your scene setup:
 		var saveable_node = YSaveable3D.new()
 		your_3d_node.add_child(saveable_node)
-		
+
 		# Add metadata to be saved
 		your_3d_node.set_meta("health", 100)
 		your_3d_node.set_meta("inventory", ["sword", "shield"])
-		
+
 		# The node's transform and metadata will be automatically saved
 		# when YSave.request_save() is called
 		[/codeblock]

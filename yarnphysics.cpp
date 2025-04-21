@@ -489,7 +489,7 @@ Object* YPhysics::check_collision_sphere(const Vector3 p_world_position, real_t 
 }
 
 
-TypedArray<Dictionary> YPhysics::spherecast(const Vector3 p_world_position, real_t radius, const Vector3 &p_motion, int p_max_results, CollideType p_collide_type, uint32_t collision_mask, const
+TypedArray<Dictionary> YPhysics::spherecast(const Vector3 p_world_position, real_t radius, const Vector3 &ray_dir, float ray_dist, int p_max_results, CollideType p_collide_type, uint32_t collision_mask, const
                                                    TypedArray<RID> &p_exclude) {
     auto world_3d = SceneTree::get_singleton()->get_root()->get_world_3d();
     if (!has_sphere_shape) {
@@ -503,7 +503,7 @@ TypedArray<Dictionary> YPhysics::spherecast(const Vector3 p_world_position, real
     shape_params.transform = Transform3D{Basis{},p_world_position};
     shape_params.collision_mask = collision_mask;
     shape_params.shape_rid = sphere_rid;
-    shape_params.motion = p_motion;
+    shape_params.motion = ray_dir * ray_dist;
 
     // Determine what we are colliding with
     if (p_collide_type == COLLIDE_WITH_BOTH) {
@@ -519,69 +519,87 @@ TypedArray<Dictionary> YPhysics::spherecast(const Vector3 p_world_position, real
         }
     }
 
-	real_t collision_safe_fraction = 0.0;
-	real_t collision_unsafe_fraction = 0.0;
-    Vector3 position_for_impact = p_world_position;
-	if (p_motion != Vector3()) {
-		world_3d->get_direct_space_state()->cast_motion(shape_params, collision_safe_fraction, collision_unsafe_fraction);
-		if (collision_unsafe_fraction < 1.0) {
-			// Move shape transform to the point of impact,
-			// so we can collect contact info at that point.
-			position_for_impact += shape_params.motion * (collision_unsafe_fraction + CMP_EPSILON);
-            shape_params.transform = Transform3D{Basis{},position_for_impact};
-		}
-	}
+    Vector<PhysicsDirectSpaceState3D::ShapeRestInfo> all_results;
+    real_t remaining_distance = ray_dist;
+    Vector3 current_position = p_world_position;
+    HashSet<RID> excluded_rids = shape_params.exclude;
 
-	// Regardless of whether the shape is stuck or it's moved along
-	// the motion vector, we'll only consider static collisions from now on.
-	shape_params.motion = Vector3();
+    while (remaining_distance > 0.0 && all_results.size() < p_max_results) {
+        real_t collision_safe_fraction = 0.0;
+        real_t collision_unsafe_fraction = 0.0;
+        
+        // Update motion and transform for the remaining distance
+        shape_params.motion = ray_dir * remaining_distance;
+        shape_params.transform = Transform3D{Basis{}, current_position};
+        shape_params.exclude = excluded_rids; // Use our accumulated excludes
 
-    Vector<PhysicsDirectSpaceState3D::ShapeRestInfo> result;
-	bool intersected = true;
-	while (intersected && result.size() < p_max_results) {
-		PhysicsDirectSpaceState3D::ShapeRestInfo info;
-		intersected = world_3d->get_direct_space_state()->rest_info(shape_params, &info);
-		if (intersected) {
-			result.push_back(info);
-			shape_params.exclude.insert(info.rid);
-		}
-	}
+        world_3d->get_direct_space_state()->cast_motion(shape_params, collision_safe_fraction, collision_unsafe_fraction);
 
-    if (result.size() == 0) {
+        if (collision_unsafe_fraction >= 1.0) {
+            // No more collisions ahead, we can stop
+            break;
+        }
+
+        // Move to the impact point
+        Vector3 position_for_impact = current_position + shape_params.motion * (collision_unsafe_fraction + CMP_EPSILON);
+        shape_params.transform = Transform3D{Basis{}, position_for_impact};
+        shape_params.motion = Vector3(); // Clear motion for rest_info check
+
+        // Get all objects touching at this position
+        bool intersected = true;
+        while (intersected && all_results.size() < p_max_results) {
+            PhysicsDirectSpaceState3D::ShapeRestInfo info;
+            intersected = world_3d->get_direct_space_state()->rest_info(shape_params, &info);
+            if (intersected) {
+                all_results.push_back(info);
+                excluded_rids.insert(info.rid);
+            }
+        }
+
+        // Update for next iteration
+        real_t distance_covered = remaining_distance * collision_unsafe_fraction;
+        remaining_distance -= distance_covered;
+        current_position = position_for_impact;
+
+        // Add a small offset in the direction to prevent getting stuck
+        current_position += ray_dir * CMP_EPSILON;
+        remaining_distance = MAX(0.0, remaining_distance - CMP_EPSILON);
+    }
+
+    if (all_results.size() == 0) {
         return TypedArray<Dictionary>();
     }
 
     TypedArray<Dictionary> r;
-    r.resize(p_max_results);
-    for (int i = 0; i < result.size(); i++) {
+    for (int i = 0; i < all_results.size(); i++) {
         Dictionary d;
-        d["rid"] = result[i].rid;
-        d["collider_id"] = result[i].collider_id;
-        Node* collider = Object::cast_to<Node>(ObjectDB::get_instance(result[i].collider_id));
+        d["rid"] = all_results[i].rid;
+        d["collider_id"] = all_results[i].collider_id;
+        Node* collider = Object::cast_to<Node>(ObjectDB::get_instance(all_results[i].collider_id));
         if (collider != nullptr) {
             d["collider"] = collider;
         }
-        d["shape"] = result[i].shape;
-        d["point"] = result[i].point;
-        d["normal"] = result[i].normal;
-        d["linear_velocity"] = result[i].linear_velocity;
-        r[i] = d;
+        d["shape"] = all_results[i].shape;
+        d["point"] = all_results[i].point;
+        d["normal"] = all_results[i].normal;
+        d["linear_velocity"] = all_results[i].linear_velocity;
+        r.push_back(d);
     }
     return r;
 }
 
 TypedArray<Dictionary> YPhysics::shapecast(const Ref<Shape3D> &p_shape, const Transform3D &p_world_transform,
-    real_t p_margin, const Vector3 &p_motion, int p_max_results, CollideType p_collide_type,
+    real_t p_margin, const Vector3 &ray_dir, float ray_dist, int p_max_results, CollideType p_collide_type,
     uint32_t collision_mask, const TypedArray<RID> &p_exclude) {
     ERR_FAIL_COND_V(!p_shape.is_valid(), TypedArray<Dictionary>());
-
+    
     auto world_3d = SceneTree::get_singleton()->get_root()->get_world_3d();
 
     PhysicsDirectSpaceState3D::ShapeParameters shape_params;
     shape_params.transform = p_world_transform;
     shape_params.collision_mask = collision_mask;
     shape_params.shape_rid = p_shape->get_rid();
-    shape_params.motion = p_motion;
+    shape_params.motion = ray_dir * ray_dist;
 
     // Determine what we are colliding with
     if (p_collide_type == COLLIDE_WITH_BOTH) {
@@ -597,53 +615,71 @@ TypedArray<Dictionary> YPhysics::shapecast(const Ref<Shape3D> &p_shape, const Tr
         }
     }
 
-	real_t collision_safe_fraction = 0.0;
-	real_t collision_unsafe_fraction = 0.0;
-    Vector3 position_for_impact = p_world_transform.get_origin();
-	if (p_motion != Vector3()) {
-		world_3d->get_direct_space_state()->cast_motion(shape_params, collision_safe_fraction, collision_unsafe_fraction);
-		if (collision_unsafe_fraction < 1.0) {
-			// Move shape transform to the point of impact,
-			// so we can collect contact info at that point.
-			position_for_impact += shape_params.motion * (collision_unsafe_fraction + CMP_EPSILON);
-            shape_params.transform = Transform3D{Basis{},position_for_impact};
-		}
-	}
+    Vector<PhysicsDirectSpaceState3D::ShapeRestInfo> all_results;
+    real_t remaining_distance = ray_dist;
+    Vector3 current_position = p_world_transform.origin;
+    HashSet<RID> excluded_rids = shape_params.exclude;
 
-	// Regardless of whether the shape is stuck or it's moved along
-	// the motion vector, we'll only consider static collisions from now on.
-	shape_params.motion = Vector3();
+    while (remaining_distance > 0.0 && all_results.size() < p_max_results) {
+        real_t collision_safe_fraction = 0.0;
+        real_t collision_unsafe_fraction = 0.0;
+        
+        // Update motion and transform for the remaining distance
+        shape_params.motion = ray_dir * remaining_distance;
+        shape_params.transform = Transform3D{p_world_transform.basis, current_position};
+        shape_params.exclude = excluded_rids; // Use our accumulated excludes
 
-    Vector<PhysicsDirectSpaceState3D::ShapeRestInfo> result;
-	bool intersected = true;
-	while (intersected && result.size() < p_max_results) {
-		PhysicsDirectSpaceState3D::ShapeRestInfo info;
-		intersected = world_3d->get_direct_space_state()->rest_info(shape_params, &info);
-		if (intersected) {
-			result.push_back(info);
-			shape_params.exclude.insert(info.rid);
-		}
-	}
+        world_3d->get_direct_space_state()->cast_motion(shape_params, collision_safe_fraction, collision_unsafe_fraction);
 
-    if (result.size() == 0) {
+        if (collision_unsafe_fraction >= 1.0) {
+            // No more collisions ahead, we can stop
+            break;
+        }
+
+        // Move to the impact point
+        Vector3 position_for_impact = current_position + shape_params.motion * (collision_unsafe_fraction + CMP_EPSILON);
+        shape_params.transform = Transform3D{Basis{}, position_for_impact};
+        shape_params.motion = Vector3(); // Clear motion for rest_info check
+
+        // Get all objects touching at this position
+        bool intersected = true;
+        while (intersected && all_results.size() < p_max_results) {
+            PhysicsDirectSpaceState3D::ShapeRestInfo info;
+            intersected = world_3d->get_direct_space_state()->rest_info(shape_params, &info);
+            if (intersected) {
+                all_results.push_back(info);
+                excluded_rids.insert(info.rid);
+            }
+        }
+
+        // Update for next iteration
+        real_t distance_covered = remaining_distance * collision_unsafe_fraction;
+        remaining_distance -= distance_covered;
+        current_position = position_for_impact;
+
+        // Add a small offset in the direction to prevent getting stuck
+        current_position += ray_dir * CMP_EPSILON;
+        remaining_distance = MAX(0.0, remaining_distance - CMP_EPSILON);
+    }
+
+    if (all_results.size() == 0) {
         return TypedArray<Dictionary>();
     }
 
     TypedArray<Dictionary> r;
-    r.resize(p_max_results);
-    for (int i = 0; i < result.size(); i++) {
+    for (int i = 0; i < all_results.size(); i++) {
         Dictionary d;
-        d["rid"] = result[i].rid;
-        d["collider_id"] = result[i].collider_id;
-        Node* collider = Object::cast_to<Node>(ObjectDB::get_instance(result[i].collider_id));
+        d["rid"] = all_results[i].rid;
+        d["collider_id"] = all_results[i].collider_id;
+        Node* collider = Object::cast_to<Node>(ObjectDB::get_instance(all_results[i].collider_id));
         if (collider != nullptr) {
             d["collider"] = collider;
         }
-        d["shape"] = result[i].shape;
-        d["point"] = result[i].point;
-        d["normal"] = result[i].normal;
-        d["linear_velocity"] = result[i].linear_velocity;
-        r[i] = d;
+        d["shape"] = all_results[i].shape;
+        d["point"] = all_results[i].point;
+        d["normal"] = all_results[i].normal;
+        d["linear_velocity"] = all_results[i].linear_velocity;
+        r.push_back(d);
     }
     return r;
 }

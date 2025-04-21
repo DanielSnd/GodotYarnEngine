@@ -6,6 +6,7 @@
 #define YSPECIALPOINT3D_H
 
 #include "scene/3d/node_3d.h"
+#include "yarnphysics.h"
 
 class YSpecialPoint3D : public Node3D {
     GDCLASS(YSpecialPoint3D, Node3D);
