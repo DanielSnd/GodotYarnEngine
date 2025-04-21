@@ -2,6 +2,8 @@
 
 HashMap<int, YEventData::RegEventCallback> YEventData::reg_event_callbacks;
 HashMap<ObjectID, int> YEventData::count_node_callbacks;
+HashMap<int, String> YEventData::parameter_names;
+HashMap<int, String> YEventData::event_id_names;
 
 void YEventData::_bind_methods() {
     ClassDB::bind_method(D_METHOD("is_event_type", "type"), &YEventData::is_event_type);
@@ -19,7 +21,8 @@ void YEventData::_bind_methods() {
     ClassDB::bind_method(D_METHOD("emit"), &YEventData::emit);
     ClassDB::bind_method(D_METHOD("emit_to_node", "node"), &YEventData::emit_to_node);
     ClassDB::bind_method(D_METHOD("duplicate"), &YEventData::duplicate);
-
+    ClassDB::bind_static_method("YEventData", D_METHOD("set_parameters_enum", "enum"), &YEventData::set_parameter_name_dictionary);
+    ClassDB::bind_static_method("YEventData", D_METHOD("set_event_ids_enum", "enum"), &YEventData::set_event_id_name_dictionary);
     ClassDB::bind_static_method("YEventData", D_METHOD("register_listener", "event_id", "callable", "priority"), &YEventData::register_listener, DEFVAL(50));
     ClassDB::bind_static_method("YEventData", D_METHOD("unregister_listener", "event_id", "callable"), &YEventData::unregister_listener);
     ClassDB::bind_static_method("YEventData", D_METHOD("register_listener_with_node", "node", "event_id", "callable", "priority"), &YEventData::register_listener_with_node, DEFVAL(50));
@@ -39,6 +42,30 @@ void YEventData::_sort_event_callbacks(int p_event_id) {
 void YEventData::_node_exiting_tree(Node *p_node) {
     ERR_FAIL_NULL(p_node);
     clear_node_callbacks(p_node);
+}
+
+void YEventData::set_parameter_name_dictionary(const Dictionary &p_dict) {
+    parameter_names.clear();
+    for (const Variant *key = p_dict.next(nullptr); key; key = p_dict.next(key)) {
+        if (key->get_type() == Variant::STRING) {
+            Variant value = p_dict[*key];
+            if (value.get_type() == Variant::INT) {
+                parameter_names[value.operator int64_t()] = key->operator String();
+            }
+        }
+    }
+}
+
+void YEventData::set_event_id_name_dictionary(const Dictionary &p_dict) {
+    event_id_names.clear();
+    for (const Variant *key = p_dict.next(nullptr); key; key = p_dict.next(key)) {
+        if (key->get_type() == Variant::STRING) {
+            Variant value = p_dict[*key];
+            if (value.get_type() == Variant::INT) {
+                event_id_names[value.operator int64_t()] = key->operator String();
+            }
+        }
+    }
 }
 
 void YEventData::register_listener(int p_event_id, const Callable &p_callable, int p_priority) {
@@ -206,6 +233,20 @@ Ref<YEventData> YEventData::duplicate() const {
 
 bool YEventData::is_event_type(int p_type) const {
     return event_type == p_type;
+}
+
+String YEventData::to_string() {
+    String build_parameters = "";
+    bool is_first = true;
+    for (const KeyValue<int, Variant> &E : data) {
+        if (is_first) {
+            is_first = false;
+        } else {
+            build_parameters += ", ";
+        }
+        build_parameters += vformat("%s:%s", (parameter_names.has(E.key) ? String(parameter_names[E.key]) : String::num_int64(E.key)), E.value);
+    }
+    return vformat("YEventData %s {%s}", (event_id_names.has(event_type) ? String(event_id_names[event_type]) : String::num_int64(event_type)), build_parameters);
 }
 
 Dictionary YEventData::get_data_as_dictionary() const {

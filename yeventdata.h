@@ -28,6 +28,10 @@ private:
 
     static HashMap<int, RegEventCallback> reg_event_callbacks;
     static HashMap<ObjectID, int> count_node_callbacks;
+    static HashMap<int, String> parameter_names;
+    static HashMap<int, String> event_id_names;
+    static void set_parameter_name_dictionary(const Dictionary &p_dict);
+    static void set_event_id_name_dictionary(const Dictionary &p_dict);
 
     HashMap<int, Variant> data;
     int event_type;
@@ -68,6 +72,8 @@ public:
     static void unregister_listener_with_node(Node *p_node, int p_event_id, const Callable &p_callable);
     static void clear_node_callbacks(Node *p_node);
     static Ref<YEventData> create(int with_type, int parameter_one, Variant value_one);
+
+	virtual String to_string() override;
 
     Ref<YEventData> duplicate() const;
 };

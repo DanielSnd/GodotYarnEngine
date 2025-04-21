@@ -79,7 +79,6 @@
 				Creates and returns a new YEventData instance with the specified event type. Optionally sets an initial parameter value using parameter_one as the identifier and value_one as the value. This is a convenience method for quickly creating and initializing event data.
 			</description>
 		</method>
-		</method>
 		<method name="duplicate" qualifiers="const">
 			<return type="YEventData" />
 			<description>
@@ -163,10 +162,25 @@
 				Clears all current event data and sets it to the key-value pairs from the given dictionary.
 			</description>
 		</method>
+		<method name="set_event_ids_enum" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="enum" type="Dictionary" />
+			<description>
+				Sets the enum dictionary that maps event ID names to their integer values. This enables better code organization and autocompletion when working with event types.
+			</description>
+		</method>
 		<method name="set_event_type">
 			<return type="YEventData" />
 			<param index="0" name="type" type="int" />
 			<description>
+				Sets the type identifier for this event. Returns self for method chaining.
+			</description>
+		</method>
+		<method name="set_parameters_enum" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="enum" type="Dictionary" />
+			<description>
+				Sets the enum dictionary that maps parameter names to their integer identifiers. This enables better code organization and autocompletion when working with event parameters.
 			</description>
 		</method>
 		<method name="set_value">
