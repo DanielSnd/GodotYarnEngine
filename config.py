@@ -43,5 +43,6 @@ def get_doc_classes():
         "YThreaderInterrupter",
         "YSceneSpawner3D",
         "YBoneAttachment3D",
-        "CombinedTexture2D"
+        "CombinedTexture2D",
+        "YSaveable3D"
     ]

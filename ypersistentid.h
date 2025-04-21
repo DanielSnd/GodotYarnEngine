@@ -58,6 +58,7 @@ protected:
     void set_persistent_id(uint64_t p_id) { persistent_id = p_id; }
 
 public:
+    static int amount_of_saved_scene_paths() { return packed_scene_id_to_scene_path.size(); }
     // GDScript bound methods
     static Node* find_by_persistent_id(uint64_t p_id);
     static void add_to_deleted_ids(uint64_t p_id, int p_time = 0);
@@ -80,7 +81,9 @@ public:
     // Scene path ID management
     static int get_scene_path_id(const String& p_path);
     static String get_scene_path_from_id(int p_id);
+    static Ref<PackedScene> get_packed_scene_from_id(int p_id);
     static Dictionary get_all_scene_paths_and_ids();
+    static void set_scene_paths_and_ids(const Dictionary& p_scene_paths_and_ids);
 
     // Respawn functionality
     static Node* respawn(uint64_t p_id, Node* p_parent);

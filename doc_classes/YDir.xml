@@ -441,10 +441,10 @@
 				[codeblock]
 				var character = $Character # A Node3D node
 				var target_pos = Vector3(10, 0, 10)
-				
+
 				# Instant look
 				YDir.look_at(character, target_pos)
-				
+
 				# Smooth look (50% interpolation)
 				YDir.look_at(character, target_pos, Vector3(0, 1, 0), 0.5)
 				[/codeblock]
@@ -566,10 +566,10 @@
 				[codeblock]
 				var character = $Character2D
 				var new_forward = Vector2(0, 1)
-				
+
 				# Instant change
 				YDir.set_forward_2d(character, new_forward)
-				
+
 				# Smooth change (30% per frame)
 				YDir.set_forward_2d(character, new_forward, 0.3)
 				[/codeblock]
@@ -594,10 +594,10 @@
 				var character = $Character
 				var forward = Vector3(1, 0, 0)
 				var up = Vector3(0, 1, 0)
-				
+
 				# Instant orientation change
 				YDir.set_forward_and_up(character, forward, up)
-				
+
 				# Smooth orientation change (25% per frame)
 				YDir.set_forward_and_up(character, forward, up, 0.25)
 				[/codeblock]
@@ -619,10 +619,10 @@
 				[codeblock]
 				var character = $Character
 				var world_dir = Vector3(1, 0, 0)
-				
+
 				# Instant orientation change in world space
 				YDir.set_global_forward(character, world_dir)
-				
+
 				# Smooth orientation change (30% per frame)
 				YDir.set_global_forward(character, world_dir, 0.3)
 				[/codeblock]
@@ -644,10 +644,10 @@
 				[codeblock]
 				var character = $Character2D
 				var global_forward = Vector2(0, 1)
-				
+
 				# Instant change in global space
 				YDir.set_global_forward_2d(character, global_forward)
-				
+
 				# Smooth change (40% per frame)
 				YDir.set_global_forward_2d(character, global_forward, 0.4)
 				[/codeblock]
@@ -678,10 +678,10 @@
 				[codeblock]
 				var character = $Character
 				var world_right = Vector3(1, 0, 0)
-				
+
 				# Instant change in world space
 				YDir.set_global_right(character, world_right)
-				
+
 				# Smooth change (25% per frame)
 				YDir.set_global_right(character, world_right, 0.25)
 				[/codeblock]
@@ -703,10 +703,10 @@
 				[codeblock]
 				var character = $Character2D
 				var global_right = Vector2(1, 0)
-				
+
 				# Instant change in global space
 				YDir.set_global_right_2d(character, global_right)
-				
+
 				# Smooth change (45% per frame)
 				YDir.set_global_right_2d(character, global_right, 0.45)
 				[/codeblock]
@@ -728,10 +728,10 @@
 				[codeblock]
 				var character = $Character
 				var world_up = Vector3(0, 1, 0)
-				
+
 				# Instant change in world space
 				YDir.set_global_up(character, world_up)
-				
+
 				# Smooth change (15% per frame)
 				YDir.set_global_up(character, world_up, 0.15)
 				[/codeblock]
@@ -753,10 +753,10 @@
 				[codeblock]
 				var character = $Character
 				var new_right = Vector3(1, 0, 0)
-				
+
 				# Instant change
 				YDir.set_right(character, new_right)
-				
+
 				# Smooth change (20% per frame)
 				YDir.set_right(character, new_right, 0.2)
 				[/codeblock]
@@ -778,10 +778,10 @@
 				[codeblock]
 				var character = $Character2D
 				var new_right = Vector2(1, 0)
-				
+
 				# Instant change
 				YDir.set_right_2d(character, new_right)
-				
+
 				# Smooth change (35% per frame)
 				YDir.set_right_2d(character, new_right, 0.35)
 				[/codeblock]
@@ -803,10 +803,10 @@
 				[codeblock]
 				var character = $Character
 				var new_up = Vector3(0, 1, 0)
-				
+
 				# Instant change
 				YDir.set_up(character, new_up)
-				
+
 				# Smooth change (40% per frame)
 				YDir.set_up(character, new_up, 0.4)
 				[/codeblock]

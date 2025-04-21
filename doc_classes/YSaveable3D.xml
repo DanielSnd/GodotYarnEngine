@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YSaveable3D" inherits="Node" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A node that enables automatic saving and loading of 3D scene nodes with their transforms and metadata.
+	</brief_description>
+	<description>
+		YSaveable3D is a helper node that works in conjunction with [YSave] to automatically save and load 3D scene nodes. When added as a child to a Node3D, it will:
+		- Save the node's position, rotation, and scale
+		- Save all metadata attached to the node
+		- Handle automatic loading and spawning of saved nodes
+		- Manage cleanup of saved nodes during scene transitions
+
+		Example of basic usage:
+		[codeblock]
+		# In your scene setup:
+		var saveable_node = YSaveable3D.new()
+		your_3d_node.add_child(saveable_node)
+		
+		# Add metadata to be saved
+		your_3d_node.set_meta("health", 100)
+		your_3d_node.set_meta("inventory", ["sword", "shield"])
+		
+		# The node's transform and metadata will be automatically saved
+		# when YSave.request_save() is called
+		[/codeblock]
+
+		The node will automatically save:
+		- Global position ("p")
+		- Global rotation ("r") if different from original
+		- Scale ("s") if different from original
+		- Node name ("n") if not an internal name
+		- Scene path ID ("scn") for proper instantiation
+		- All metadata that doesn't start with "_"
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="_on_load_save" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="saved_values" type="Dictionary" />
+			<description>
+				Virtual method called when saved values are loaded. Override this method to handle custom loading logic.
+
+				[param saved_values] contains all the saved data for this node, including transforms and metadata.
+			</description>
+		</method>
+		<method name="_on_prepare_save" qualifiers="virtual const">
+			<return type="bool" />
+			<param index="0" name="save_values" type="Dictionary" />
+			<description>
+				Virtual method called before saving. Override this method to add custom save logic or prevent saving.
+
+				Return [code]false[/code] to prevent the node from being saved, [code]true[/code] to proceed with saving.
+				[param save_values] contains the current values to be saved, which can be modified before saving.
+			</description>
+		</method>
+		<method name="cleanup_all_saved_nodes" qualifiers="static">
+			<return type="void" />
+			<description>
+				Static method that triggers cleanup of all YSaveable3D nodes in the scene tree. This is typically called during scene transitions or when resetting the game state.
+			</description>
+		</method>
+		<method name="load_all_saved_nodes" qualifiers="static">
+			<return type="void" />
+			<description>
+				Static method that loads and spawns all saved nodes from the current save data. This should be called after loading a save file to restore the saved game state.
+			</description>
+		</method>
+		<method name="set_spawn_under_node" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="node" type="Node" />
+			<description>
+				Sets the parent node under which saved nodes will be spawned when loading. If not set, nodes will be spawned under the current scene root.
+			</description>
+		</method>
+	</methods>
+</class>

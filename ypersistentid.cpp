@@ -29,6 +29,7 @@ void YPersistentID::_bind_methods() {
     ClassDB::bind_static_method("YPersistentID", D_METHOD("get_scene_path_id", "path"), &YPersistentID::get_scene_path_id);
     ClassDB::bind_static_method("YPersistentID", D_METHOD("get_scene_path_from_id", "id"), &YPersistentID::get_scene_path_from_id);
     ClassDB::bind_static_method("YPersistentID", D_METHOD("get_all_scene_paths_and_ids"), &YPersistentID::get_all_scene_paths_and_ids);
+    ClassDB::bind_static_method("YPersistentID", D_METHOD("set_scene_paths_and_ids", "scene_paths_and_ids"), &YPersistentID::set_scene_paths_and_ids);
     ClassDB::bind_static_method("YPersistentID", D_METHOD("count_deleted_ids"), &YPersistentID::count_deleted_ids);
     ClassDB::bind_static_method("YPersistentID", D_METHOD("clear_deleted_ids"), &YPersistentID::clear_deleted_ids);
     ClassDB::bind_static_method("YPersistentID", D_METHOD("respawn", "id", "parent"), &YPersistentID::respawn);
@@ -196,6 +197,26 @@ String YPersistentID::get_scene_path_from_id(int p_id) {
         return packed_scene_id_to_scene_path[p_id];
     }
     return String();
+}
+
+Ref<PackedScene> YPersistentID::get_packed_scene_from_id(int p_id) {
+    if (packed_scene_id_to_scene_path.has(p_id) && ResourceLoader::exists(packed_scene_id_to_scene_path[p_id])) {
+        return ResourceLoader::load(packed_scene_id_to_scene_path[p_id]);
+    }
+    return Ref<PackedScene>();
+}
+
+void YPersistentID::set_scene_paths_and_ids(const Dictionary& p_scene_paths_and_ids) {
+    Array keys = p_scene_paths_and_ids.keys();
+    for (int i = 0; i < keys.size(); i++) {
+        Variant key = keys[i];
+        int value = p_scene_paths_and_ids[key];
+        scene_path_to_id[key] = value;
+        packed_scene_id_to_scene_path[value] = key;
+        if (next_scene_path_id <= value) {
+            next_scene_path_id = value + 1;
+        }
+    }
 }
 
 Dictionary YPersistentID::get_all_scene_paths_and_ids() {

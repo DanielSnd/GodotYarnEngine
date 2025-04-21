@@ -232,6 +232,9 @@ public:
     Dictionary load_save_details(const String &path = "");
 
     void request_save(bool immediate);
+    
+    void setup_queue_free_with_signal(StringName signal_name, Node* node);
+    void execute_queue_free_from_signal(Node* node);
 
     static YSave *get_singleton();
 

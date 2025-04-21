@@ -311,6 +311,21 @@
 				Returns [code]true[/code] if this menu is at the top of the menu stack.
 			</description>
 		</method>
+		<method name="on_back_button_pressed">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="on_back_to_menu">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="on_started_menu">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
 		<method name="remove_from_menu_stack">
 			<return type="void" />
 			<description>

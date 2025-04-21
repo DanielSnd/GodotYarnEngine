@@ -42,7 +42,7 @@
 				var transform = Transform2D(0, position)
 				var motion = target_position - position
 				var result = YPhysics.cast_motion_2d(shape, transform, 0.04, motion)
-				
+
 				if !result.is_empty():
 				    var safe_fraction = result[0]
 				    var unsafe_fraction = result[1]
@@ -68,10 +68,10 @@
 				var capsule = CapsuleShape3D.new()
 				capsule.radius = 0.5
 				capsule.height = 2.0
-				
+
 				var transform = Transform3D(Basis(), position)
 				var motion = velocity * delta
-				
+
 				var result = YPhysics.cast_motion_3d(capsule, transform, 0.04, motion)
 				if !result.is_empty():
 				    var safe_fraction = result[0]
@@ -121,7 +121,7 @@
 				var box = BoxShape3D.new()
 				box.size = Vector3(1, 1, 1)
 				var transform = Transform3D(Basis(), position)
-				
+
 				var info = YPhysics.check_rest_info_3d(box, transform)
 				if !info.is_empty():
 				    var contact_point = info["point"]
@@ -304,7 +304,7 @@
 				var box = BoxShape3D.new()
 				box.size = Vector3(2, 2, 2)
 				var transform = Transform3D(Basis(), position)
-				
+
 				var results = YPhysics.intersect_shape_3d(\
 				    box,\
 				    transform,\

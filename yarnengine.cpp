@@ -93,7 +93,8 @@ Dictionary YEngine::get_script_base_properties(Node* p_node) {
 
 void YEngine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_current_scene"), &YEngine::get_current_scene);
-
+    ClassDB::bind_method(D_METHOD("get_current_scene_name"), &YEngine::get_current_scene_name);
+    ClassDB::bind_method(D_METHOD("set_current_scene_name","scene_name"), &YEngine::set_current_scene_name);
 
     ClassDB::bind_method(D_METHOD("find_packedscenes_in", "path", "name_contains"), &YEngine::find_packedscenes_in,DEFVAL(""));
     ClassDB::bind_method(D_METHOD("find_resources_in", "path", "name_contains"), &YEngine::find_resources_in,DEFVAL(""));
@@ -359,9 +360,38 @@ void YEngine::cleanup_node() {
     }
 }
 
+void YEngine::before_prepare_save() {
+    if (ysave != nullptr) {
+        String current_scene_name = vformat("%s_saved_nodes3d", get_current_scene_name());
+        if (ysave->get_save_data().has(current_scene_name)) {
+            ysave->get_save_data()[current_scene_name] = Array();
+        }
+    }
+}
+
+void YEngine::after_prepare_save() {
+    if (ysave != nullptr) {
+        if (YPersistentID::amount_of_saved_scene_paths() > 0) {
+            ysave->get_save_data()["scene_paths_and_ids"] = YPersistentID::get_all_scene_paths_and_ids();
+        }
+    }
+}
+
+void YEngine::on_loaded_save(Dictionary save_data) {
+    // print_line("YEngine On loaded save");
+    if (save_data.has("scene_paths_and_ids")) {
+        YPersistentID::set_scene_paths_and_ids(save_data["scene_paths_and_ids"]);
+    }
+}
+
 void YEngine::setup_node() {
     if(!already_setup_in_tree && SceneTree::get_singleton() != nullptr) {
         ysave = YSave::get_singleton();
+        if (ysave != nullptr) {
+            ysave->connect("before_prepare_save",callable_mp(this,&YEngine::before_prepare_save));
+            ysave->connect("after_prepare_save",callable_mp(this,&YEngine::after_prepare_save));
+            ysave->connect("loaded_save",callable_mp(this,&YEngine::on_loaded_save));
+        }
         ytime = YTime::get_singleton();
         ydir.instantiate();
         ytween = YTween::get_singleton();
@@ -562,6 +592,7 @@ YEngine::YEngine() {
     ysave=nullptr;
     ytime=nullptr;
     ygamestate = nullptr;
+    current_scene_name = "";
     ydir.instantiate();
 }
 
@@ -571,7 +602,7 @@ YEngine::~YEngine() {
     if (singleton == this) {
         singleton = nullptr;
     }
-    
+    current_scene_name = "";
     // Clear any remaining references
     if (using_game_state) {
         using_game_state = false;

@@ -35,6 +35,7 @@
 #include "ymeshgen.h"
 #include "ynavhelper3d.h"
 #include "ynavhelper2d.h"
+#include "ysaveable3d.h"
 #include "importers/resource_importer_glb_as_mesh.h"
 
 #ifdef NO_FMOD
@@ -136,6 +137,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
  	ClassDB::register_class<YThreaderInterrupter>();
  	ClassDB::register_class<YSceneSpawner3D>();
  	ClassDB::register_class<YBoneAttachment3D>();
+	ClassDB::register_class<YSaveable3D>();
 	ClassDB::register_class<CombinedTexture2D>();
 	ClassDB::register_class<YPersistentID>();
 	ClassDB::register_class<IntersectResult>();

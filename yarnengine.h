@@ -16,6 +16,7 @@
 #include "scene/gui/control.h"
 #include "scene/gui/color_rect.h"
 #include <core/string/translation_server.h>
+#include "ypersistentid.h"
 
 class YGameState;
 class YTween;
@@ -62,9 +63,11 @@ public:
     Callable button_click_callable_if_modulate(const Callable &p_callable, Control* p_control);
 
     List<Node *> menu_stack;
-
+    String current_scene_name;
     int get_menu_stack_size() const {return menu_stack.size();}
 
+    void set_current_scene_name(const String& val) {current_scene_name = val;}
+    String get_current_scene_name() { if(current_scene_name.is_empty()) {current_scene_name = get_current_scene()->get_name();} return current_scene_name; }
     TypedArray<Node> get_menu_stack() {
         TypedArray<Node> btns;
         for (const auto _node: menu_stack) {
@@ -143,6 +146,9 @@ public:
 
     static YEngine* get_singleton();
 
+    void before_prepare_save();
+    void after_prepare_save();
+    void on_loaded_save(Dictionary save_data);
     String EKey(const Dictionary &dict,int val);
     HashMap<int,HashMap<int,String>> game_resource_paths;
     HashMap<int,HashMap<int,Ref<Resource>>> game_resources;

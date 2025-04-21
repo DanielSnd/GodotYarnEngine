@@ -77,8 +77,10 @@ void YSave::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_registered_event_callbacks"), &YSave::get_registered_event_callbacks);
 
     ADD_SIGNAL(MethodInfo("executed_save_reset"));
+    ADD_SIGNAL(MethodInfo("free_all_saveable_node3d"));
     ADD_SIGNAL(MethodInfo("before_prepare_save"));
     ADD_SIGNAL(MethodInfo("prepare_save"));
+    ADD_SIGNAL(MethodInfo("after_prepare_save"));
     ADD_SIGNAL(MethodInfo("saved", PropertyInfo(Variant::STRING, "save_path")));
     ADD_SIGNAL(MethodInfo("loaded_save", PropertyInfo(Variant::DICTIONARY, "save_data")));
 
@@ -335,10 +337,18 @@ YSave *YSave::add_to_save_data(String p_save_key, Variant p_save_value) {
     return this;
 }
 
+void YSave::setup_queue_free_with_signal(StringName signal_name, Node* node) {
+    connect(signal_name, callable_mp(this, &YSave::execute_queue_free_from_signal).bind(node));
+}
+
+void YSave::execute_queue_free_from_signal(Node* node) {
+    node->queue_free();
+}
 
 void YSave::execute_save() {
     emit_signal(SNAME("before_prepare_save"));
     emit_signal(SNAME("prepare_save"));
+    emit_signal(SNAME("after_prepare_save"));
     save_next_frame = true;
 }
 
@@ -524,6 +534,7 @@ void YSave::request_save(bool immediate = false) {
     if(immediate) {
         emit_signal(SNAME("before_prepare_save"));
         emit_signal(SNAME("prepare_save"));
+        emit_signal(SNAME("after_prepare_save"));
         actually_save();
     } else {
         save_requested = true;

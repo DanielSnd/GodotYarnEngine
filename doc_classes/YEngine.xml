@@ -50,13 +50,13 @@
 				[codeblock]
 				var item1 = preload("res://items/sword1.tres")
 				var item2 = preload("res://items/sword2.tres")
-				
+
 				if YEngine.are_resources_virtually_the_same(item1, item2):
 				    print("Items have the same properties!")
 				[/codeblock]
 			</description>
 		</method>
-		<method name="check_flag_value">
+		<method name="check_flag_value" qualifiers="const">
 			<return type="bool" />
 			<param index="0" name="flags" type="int" />
 			<param index="1" name="check_flag" type="int" />
@@ -261,7 +261,7 @@
 				[codeblock]
 				# Get or create a canvas layer at index 10
 				var layer = YEngine.get_canvas_layer(10)
-				
+
 				# Add a UI element to this layer
 				var label = Label.new()
 				layer.add_child(label)
@@ -278,6 +278,34 @@
 				[codeblock]
 				var current_scene = YEngine.get_current_scene()
 				print("Current scene: ", current_scene.get_name())
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_current_scene_name">
+			<return type="String" />
+			<description>
+				Returns the name of the current scene.
+				This is a convenience method to get the name of the active scene. (But it can also be set manually)
+
+				Example:
+				[codeblock]
+				var scene_name = YEngine.get_current_scene_name()
+				print("Current scene name: ", scene_name)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="set_current_scene_name">
+			<return type="void" />
+			<param index="0" name="scene_name" type="String" />
+			<description>
+				Sets the name of the current scene.
+				This is typically used internally by the scene management system, but can be called manually if needed.
+
+				[param scene_name] The name to set for the current scene.
+
+				Example:
+				[codeblock]
+				YEngine.set_current_scene_name("MainMenu")
 				[/codeblock]
 			</description>
 		</method>
@@ -355,13 +383,13 @@
 				[codeblock]
 				# Instantly make screen black
 				YEngine.instant_fade_to_alpha(1.0)
-				
+
 				# Instantly make screen transparent
 				YEngine.instant_fade_to_alpha(0.0)
 				[/codeblock]
 			</description>
 		</method>
-		<method name="is_fading">
+		<method name="is_fading" qualifiers="const">
 			<return type="bool" />
 			<description>
 				Returns [code]true[/code] if a fade transition is currently in progress.
@@ -400,10 +428,10 @@
 				Example:
 				[codeblock]
 				var items = ["sword", "shield", "potion"]
-				
+
 				# Shuffle with seed 42
 				var shuffled1 = YEngine.seeded_shuffle(items, 42)
-				
+
 				# Same seed will produce the same shuffle
 				var shuffled2 = YEngine.seeded_shuffle(items, 42)
 				# shuffled1 and shuffled2 will have identical ordering
@@ -437,13 +465,13 @@
 				Example:
 				[codeblock]
 				var flags = 0 # Binary: 0
-				
+
 				# Set flag 1 (returns 1, binary: 1)
 				flags = YEngine.set_flag_value(flags, 1, true)
-				
+
 				# Set flag 3 (returns 5, binary: 101)
 				flags = YEngine.set_flag_value(flags, 3, true)
-				
+
 				# Clear flag 1 (returns 4, binary: 100)
 				flags = YEngine.set_flag_value(flags, 1, false)
 				[/codeblock]
@@ -479,7 +507,7 @@
 				[codeblock]
 				# Register path for lazy loading
 				YEngine.set_game_resource_path(1, 42, "res://items/sword.tres")
-				
+
 				# Resource will be loaded when accessed
 				var item = YEngine.get_game_resource(1, 42)
 				[/codeblock]

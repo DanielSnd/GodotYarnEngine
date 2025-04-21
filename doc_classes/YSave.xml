@@ -138,6 +138,25 @@
 				[/codeblock]
 			</description>
 		</method>
+		<method name="increment_to_save">
+			<return type="YSave" />
+			<param index="0" name="save_key" type="String" />
+			<param index="1" name="increment" type="Variant" />
+			<description>
+				Increments a numeric value in the save file by the specified amount. Works with both integer and float values.
+
+				Example:
+				[codeblock]
+				# Increment score by 100
+				YSave.increment_to_save("player/score", 100)
+
+				# Add 0.5 to a float value
+				YSave.increment_to_save("player/stats/speed", 0.5)
+				[/codeblock]
+
+				Returns the YSave instance for method chaining.
+			</description>
+		</method>
 		<method name="load_registered_events_from_save_data">
 			<return type="void" />
 			<description>
@@ -287,6 +306,44 @@
 				[/codeblock]
 			</description>
 		</method>
+		<method name="set_to_save_if_higher">
+			<return type="YSave" />
+			<param index="0" name="save_key" type="String" />
+			<param index="1" name="save_value" type="Variant" />
+			<description>
+				Sets a value in the save file only if it's higher than the current value. Useful for tracking high scores or maximum values.
+
+				Example:
+				[codeblock]
+				# Update high score only if the new score is higher
+				YSave.set_to_save_if_higher("highscore", current_score)
+
+				# Update maximum speed reached
+				YSave.set_to_save_if_higher("player/stats/max_speed", current_speed)
+				[/codeblock]
+
+				Returns the YSave instance for method chaining.
+			</description>
+		</method>
+		<method name="set_to_save_if_lower">
+			<return type="YSave" />
+			<param index="0" name="save_key" type="String" />
+			<param index="1" name="save_value" type="Variant" />
+			<description>
+				Sets a value in the save file only if it's lower than the current value. Useful for tracking best times or minimum values.
+
+				Example:
+				[codeblock]
+				# Update best completion time only if the new time is lower
+				YSave.set_to_save_if_lower("level1/best_time", completion_time)
+
+				# Update minimum altitude reached
+				YSave.set_to_save_if_lower("player/stats/min_altitude", current_altitude)
+				[/codeblock]
+
+				Returns the YSave instance for method chaining.
+			</description>
+		</method>
 		<method name="set_to_settings">
 			<return type="YSave" />
 			<param index="0" name="settings_key" type="String" />
@@ -326,6 +383,11 @@
 		</member>
 	</members>
 	<signals>
+		<signal name="after_prepare_save">
+			<description>
+				Emitted after all save preparation signals have been processed. This is the last signal emitted before the actual save operation occurs.
+			</description>
+		</signal>
 		<signal name="before_prepare_save">
 			<description>
 				Emitted just before preparing for a save operation. Use this signal to prepare any data that needs to be saved.
@@ -334,6 +396,11 @@
 		<signal name="executed_save_reset">
 			<description>
 				Emitted when the save data has been reset using [method reset_save].
+			</description>
+		</signal>
+		<signal name="free_all_saveable_node3d">
+			<description>
+				Emitted when all YSaveable3D nodes should be freed from the scene tree. This is typically used during scene transitions or when resetting the game state.
 			</description>
 		</signal>
 		<signal name="loaded_save">

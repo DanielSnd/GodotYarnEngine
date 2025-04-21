@@ -253,6 +253,24 @@
 				[/codeblock]
 			</description>
 		</method>
+		<method name="set_scene_paths_and_ids" qualifiers="static">
+			<return type="void" />
+			<param index="0" name="scene_paths_and_ids" type="Dictionary" />
+			<description>
+				Sets the mapping between scene paths and their persistent IDs. This is typically used when loading saved games to restore the relationship between scenes and their persistent identifiers.
+
+				[param scene_paths_and_ids] should be a Dictionary where keys are scene paths (String) and values are persistent IDs (int).
+
+				[b]Example:[/b]
+				[codeblock]
+				var paths_and_ids = {
+				    "res://scenes/level1.tscn": 1001,
+				    "res://scenes/level2.tscn": 1002
+				}
+				YPersistentID.set_scene_paths_and_ids(paths_and_ids)
+				[/codeblock]
+			</description>
+		</method>
 		<method name="store_respawn_info">
 			<return type="void" />
 			<description>

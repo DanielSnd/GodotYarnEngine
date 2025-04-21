@@ -15,7 +15,7 @@
 		- Line of sight checking
 		- Debug visualization options
 		- Smooth movement transitions
-		
+
 		Example usage for creating a following enemy:
 		[codeblock]
 		var nav_helper = YNavHelper2D.new()

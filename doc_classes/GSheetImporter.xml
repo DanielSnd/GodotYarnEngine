@@ -29,7 +29,7 @@
 
 		func get_sheet_name() -&gt; String:
 		    return "Sheet1" # Your sheet name
-			
+
 		func on_imported_data(import_type: String, data: Array) -&gt; void:
 		    # Example: Creating resources from sheet data
 		    start_import_progress_bar(data.size(), "Importing Items", "Creating item resources...")
@@ -38,10 +38,10 @@
 		        var item = ItemResource.new()
 		        item.name = entry["Name"]
 		        item.value = entry["Value"]
-		        
+
 		        var path = "res://resources/items/%s.tres" % sanitize_filename(item.name)
 		        save_new_or_update_resource(path, item)
-		        
+
 		        step_import_progress_bar(idx + 1, "Imported %s" % item.name)
 		    end_import_progress_bar()
 		[/codeblock]
@@ -69,7 +69,7 @@
 		- Manages cleanup and reloading of menu items
 
 		[b]Note:[/b] The [code]res://importers/[/code] directory must exist for the automatic script detection to work.
-		
+
 		[b]Security Note:[/b] Make sure your Google Sheet's sharing settings are properly configured. The sheet needs to be accessible via the link for the importer to work.
 	</description>
 	<tutorials>
@@ -79,7 +79,7 @@
 			<return type="void" />
 			<description>
 				Signals the end of an import operation's progress tracking. This method is called automatically when the import process completes, but can also be called manually if needed.
-				
+
 				Typically used in conjunction with [method start_import_progress_bar] and [method step_import_progress_bar] to provide visual feedback during long operations.
 			</description>
 		</method>
@@ -91,7 +91,7 @@
 
 				Example URL: https://docs.google.com/spreadsheets/d/[b]1234567890abcdef[/b]/edit
 				The sheet ID would be "1234567890abcdef"
-				
+
 				[b]Note:[/b] Make sure the sheet has appropriate sharing settings (at least "Anyone with the link can view").
 			</description>
 		</method>
@@ -117,20 +117,20 @@
 				[codeblock]
 				func on_imported_data(import_type: String, data: Array) -&gt; void:
 				    start_import_progress_bar(data.size(), "Importing Characters", "Processing character data...")
-				    
+
 				    for idx in range(data.size()):
 				        var row = data[idx]
 				        var character = CharacterResource.new()
 				        character.name = row["Name"]
 				        character.health = int(row["Health"])
 				        character.speed = float(row["Speed"])
-				        
+
 				        var path = "res://resources/characters/%s.tres" % sanitize_filename(character.name)
 				        if save_new_or_update_resource(path, character):
 				            print("Updated character: ", character.name)
-				            
+
 				        step_import_progress_bar(idx + 1, "Processed %s" % character.name)
-				    
+
 				    end_import_progress_bar()
 				[/codeblock]
 			</description>
@@ -142,7 +142,7 @@
 				The method automatically handles the creation of the HTTP request and connection setup.
 
 				The imported data will be delivered through the [signal imported_data] signal and the [method on_imported_data] virtual method.
-				
+
 				[b]Note:[/b] This method is typically called automatically by the editor plugin when using the menu item, but can also be called manually if needed.
 			</description>
 		</method>
@@ -156,7 +156,7 @@
 				- Removing quotes
 				- Converting to lowercase
 				- Ensuring the result is a valid filename
-				
+
 				Example usage:
 				[codeblock]
 				var safe_name = sanitize_filename("My Cool Item!") # Returns "my_cool_item"
@@ -171,13 +171,13 @@
 			<description>
 				Saves a resource to disk, updating an existing resource if it exists or creating a new one if it doesn't.
 				Returns [code]true[/code] if the resource was created or updated, [code]false[/code] if no changes were needed.
-				
+
 				Example usage:
 				[codeblock]
 				var item = ItemResource.new()
 				item.name = "Sword"
 				item.damage = 10
-				
+
 				var path = "res://resources/items/sword.tres"
 				if save_new_or_update_resource(path, item):
 				    print("Item was created or updated")
@@ -197,7 +197,7 @@
 				[param steps] is the total number of steps in the operation.
 				[param task_name] is a short name for the import task.
 				[param task_description] is a longer description of what's being imported.
-				
+
 				Example usage:
 				[codeblock]
 				start_import_progress_bar(100, "Importing Items", "Processing item database...")
@@ -217,7 +217,7 @@
 
 				[param step] is the current step number (should be between 0 and the total steps specified in [method start_import_progress_bar]).
 				[param step_description] is a description of the current step being executed.
-				
+
 				See [method start_import_progress_bar] for usage example.
 			</description>
 		</method>
@@ -232,12 +232,12 @@
 				[param data] contains an Array of Dictionary objects representing the imported rows.
 
 				Each dictionary in the data array uses the sheet's column headers as keys and the cell values as values.
-				
+
 				Example connection:
 				[codeblock]
 				func _ready():
 				    connect("imported_data", _on_data_imported)
-				
+
 				func _on_data_imported(import_type: String, data: Array) -&gt; void:
 				    print("Received %d rows from sheet: %s" % [data.size(), import_type])
 				[/codeblock]
