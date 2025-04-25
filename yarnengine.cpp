@@ -101,8 +101,11 @@ void YEngine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("find_resources_paths_in", "path", "name_contains"), &YEngine::find_resources_paths_in,DEFVAL(""));
 
     ClassDB::bind_method(D_METHOD("find_node_with_type","parent_node","node_type"), &YEngine::find_node_with_type);
-
+    ClassDB::bind_method(D_METHOD("find_nodes_with_type","parent_node","node_type"), &YEngine::find_nodes_with_type);
     ClassDB::bind_method(D_METHOD("find_node_with_method","parent_node","method_name"), &YEngine::find_node_with_method);
+    ClassDB::bind_method(D_METHOD("find_nodes_with_method","parent_node","method_name"), &YEngine::find_nodes_with_method);
+    ClassDB::bind_method(D_METHOD("find_node_with_meta","parent_node","meta_name"), &YEngine::find_node_with_meta);
+    ClassDB::bind_method(D_METHOD("find_nodes_with_meta","parent_node","meta_name"), &YEngine::find_nodes_with_meta);
 
     ClassDB::bind_method(D_METHOD("set_flag_value","flags","flag","set_value"), &YEngine::set_flag_value);
     ClassDB::bind_method(D_METHOD("check_flag_value","flags","check_flag"), &YEngine::check_flag_value);
@@ -561,6 +564,45 @@ Node * YEngine::find_node_with_type(Node *parent_node, const String &p_type) {
         }
     }
     return nullptr;
+}
+
+TypedArray<Node> YEngine::find_nodes_with_meta(Node *parent_node, const String &p_type) {
+    TypedArray<Node> found_nodes;
+    if (parent_node != nullptr) {
+        TypedArray<Node> find_stuff = parent_node->get_children();
+        while (find_stuff.size()) {
+            Node *_child = Object::cast_to<Node>(find_stuff.pop_back());
+            if (_child->has_meta(p_type)) {
+                found_nodes.push_back(_child);
+            }
+        }
+    }
+    return found_nodes;
+}
+
+TypedArray<Node> YEngine::find_nodes_with_method(Node *parent_node, const String &p_type) {
+    TypedArray<Node> found_nodes;
+    if (parent_node != nullptr) {
+        TypedArray<Node> find_stuff = parent_node->get_children();
+        while (find_stuff.size()) {
+            Node *_child = Object::cast_to<Node>(find_stuff.pop_back());
+            if (_child->has_method(p_type)) {
+                found_nodes.push_back(_child);
+            }
+        }
+    }
+    return found_nodes;
+}
+
+TypedArray<Node> YEngine::find_nodes_with_type(Node *parent_node, const String &p_type) {
+    TypedArray<Node> found_nodes;
+    if (parent_node != nullptr) {
+        TypedArray<Node> find_stuff = parent_node->find_children("*",p_type);
+        while (find_stuff.size()) {
+            found_nodes.push_back(Object::cast_to<Node>(find_stuff.pop_back()));
+        }
+    }
+    return found_nodes;
 }
 
 uint32_t YEngine::set_flag_value(uint32_t collision_layer, int p_layer_number, bool p_value) {

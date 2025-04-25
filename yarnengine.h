@@ -43,8 +43,12 @@ protected:
     void _notification(int p_what);
 
     Node *find_node_with_meta(Node *parent_node, const String &p_type);
-
     Node *find_node_with_method(Node *parent_node, const String &p_type);
+    Node* find_node_with_type(Node* parent_node, const String& type);
+
+    TypedArray<Node> find_nodes_with_meta(Node *parent_node, const String &p_type);
+    TypedArray<Node> find_nodes_with_method(Node *parent_node, const String &p_type);
+    TypedArray<Node> find_nodes_with_type(Node* parent_node, const String& type);
 
     static YEngine* singleton;
     HashMap<StringName, Node *> othersingletons;
@@ -112,7 +116,6 @@ public:
     bool can_button_click;
     bool get_can_button_click() {return can_button_click;}
     void set_can_button_click(const bool val) {can_button_click = val;}
-    Node* find_node_with_type(Node* parent_node, const String& type);
 
     uint32_t set_flag_value(uint32_t collision_layer, int p_layer_number, bool p_value);
     bool check_flag_value(uint32_t collision_layer, int p_layer_number) const;
