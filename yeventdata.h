@@ -35,7 +35,6 @@ private:
 
     HashMap<int, Variant> data;
     int event_type;
-
     static void _node_exiting_tree(Node *p_node);
     static void _clean_invalid_callables(int p_event_id);
     static void _sort_event_callbacks(int p_event_id);
@@ -53,10 +52,15 @@ public:
     Ref<YEventData> set_event_type(int p_type);
     int get_event_type() const;
 
+    bool failed = false;
+    void set_failed(bool p_failed) { failed = p_failed; }
+    bool get_failed() const { return failed; }
+
     bool has_value(int p_identifier) const;
     Variant get_value(int p_identifier, const Variant &p_default = Variant()) const;
     Ref<YEventData> set_value(int p_identifier, const Variant &p_value);
     Ref<YEventData> increment_value(int p_identifier, const Variant &p_amount);
+    Ref<YEventData> multiply_value(int p_identifier, const Variant &p_amount);
 
     bool is_event_type(int p_type) const;
     Dictionary get_data_as_dictionary() const;
@@ -72,6 +76,8 @@ public:
     static void unregister_listener_with_node(Node *p_node, int p_event_id, const Callable &p_callable);
     static void clear_node_callbacks(Node *p_node);
     static Ref<YEventData> create(int with_type, int parameter_one, Variant value_one);
+    static Ref<YEventData> create_and_send(int with_type, int parameter_one, Variant value_one);
+    static Ref<YEventData> create_and_send_to_node(Node *p_node, int with_type, int parameter_one, Variant value_one);
 
 	virtual String to_string() override;
 

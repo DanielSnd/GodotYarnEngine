@@ -11,6 +11,10 @@ void YEventData::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_event_type"), &YEventData::get_event_type);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "event_type"), "set_event_type", "get_event_type");
     
+    ClassDB::bind_method(D_METHOD("get_failed"), &YEventData::get_failed);  
+    ClassDB::bind_method(D_METHOD("set_failed", "failed"), &YEventData::set_failed);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "failed"), "set_failed", "get_failed");
+
     ClassDB::bind_method(D_METHOD("get_data_as_dictionary"), &YEventData::get_data_as_dictionary);
     ClassDB::bind_method(D_METHOD("set_data_from_dictionary", "dict"), &YEventData::set_data_from_dictionary);
     ClassDB::bind_method(D_METHOD("add_data_from_dictionary", "dict"), &YEventData::add_data_from_dictionary);
@@ -20,14 +24,18 @@ void YEventData::_bind_methods() {
     ClassDB::bind_method(D_METHOD("increment_value", "identifier", "amount"), &YEventData::increment_value);
     ClassDB::bind_method(D_METHOD("emit"), &YEventData::emit);
     ClassDB::bind_method(D_METHOD("emit_to_node", "node"), &YEventData::emit_to_node);
+    ClassDB::bind_method(D_METHOD("send"), &YEventData::emit);
+    ClassDB::bind_method(D_METHOD("send_to_node", "node"), &YEventData::emit_to_node);
     ClassDB::bind_method(D_METHOD("duplicate"), &YEventData::duplicate);
+    ClassDB::bind_static_method("YEventData", D_METHOD("create", "with_type", "parameter_one", "value_one"), &YEventData::create, DEFVAL(-1), DEFVAL(Variant()));
+    ClassDB::bind_static_method("YEventData", D_METHOD("create_and_send", "with_type", "parameter_one", "value_one"), &YEventData::create_and_send, DEFVAL(-1), DEFVAL(Variant()));
+    ClassDB::bind_static_method("YEventData", D_METHOD("create_and_send_to_node", "node", "with_type", "parameter_one", "value_one"), &YEventData::create_and_send_to_node, DEFVAL(-1), DEFVAL(Variant()));
     ClassDB::bind_static_method("YEventData", D_METHOD("set_parameters_enum", "enum"), &YEventData::set_parameter_name_dictionary);
     ClassDB::bind_static_method("YEventData", D_METHOD("set_event_ids_enum", "enum"), &YEventData::set_event_id_name_dictionary);
     ClassDB::bind_static_method("YEventData", D_METHOD("register_listener", "event_id", "callable", "priority"), &YEventData::register_listener, DEFVAL(50));
     ClassDB::bind_static_method("YEventData", D_METHOD("unregister_listener", "event_id", "callable"), &YEventData::unregister_listener);
     ClassDB::bind_static_method("YEventData", D_METHOD("register_listener_with_node", "node", "event_id", "callable", "priority"), &YEventData::register_listener_with_node, DEFVAL(50));
     ClassDB::bind_static_method("YEventData", D_METHOD("unregister_listener_with_node", "node", "event_id", "callable"), &YEventData::unregister_listener_with_node);
-    ClassDB::bind_static_method("YEventData", D_METHOD("create", "with_type", "parameter_one", "value_one"), &YEventData::create, DEFVAL(0), DEFVAL(Variant()));
 }
 
 void YEventData::_sort_event_callbacks(int p_event_id) {
@@ -181,8 +189,25 @@ int YEventData::get_event_type() const {
 Ref<YEventData> YEventData::create(int with_type, int parameter_one, Variant value_one) {
     Ref<YEventData> event;
     event.instantiate();
+    if (parameter_one != -1) {
+        event->set_value(parameter_one, value_one);
+    }
     event->event_type = with_type;
-    event->set_value(parameter_one, value_one);
+    return event;
+}
+
+Ref<YEventData> YEventData::create_and_send(int with_type, int parameter_one, Variant value_one) {
+    Ref<YEventData> event = create(with_type, parameter_one, value_one);
+    event->emit();
+    return event;
+}
+
+Ref<YEventData> YEventData::create_and_send_to_node(Node *p_node, int with_type, int parameter_one, Variant value_one) {
+    if (p_node == nullptr) {
+        return Ref<YEventData>();
+    }
+    Ref<YEventData> event = create(with_type, parameter_one, value_one);
+    event->emit_to_node(p_node);
     return event;
 }
 
@@ -219,15 +244,31 @@ Ref<YEventData> YEventData::increment_value(int p_identifier, const Variant &p_a
     return this;
 }
 
+Ref<YEventData> YEventData::multiply_value(int p_identifier, const Variant &p_amount) {
+    if (data.has(p_identifier)) {
+        Variant current = data[p_identifier];
+        if (current.get_type() == Variant::INT) {
+            data[p_identifier] = current.operator int64_t() * p_amount.operator int64_t();
+        } else if (current.get_type() == Variant::FLOAT) {
+            data[p_identifier] = current.operator double() * p_amount.operator double();
+        } else {
+            // If it's not a number, just set it to the amount
+            data[p_identifier] = p_amount;
+        }
+    } else {
+        data[p_identifier] = p_amount;
+    }
+    return this;
+}
+
 Ref<YEventData> YEventData::duplicate() const {
     Ref<YEventData> new_event;
     new_event.instantiate();
     new_event->event_type = event_type;
-    
+    new_event->failed = failed;
     for (const KeyValue<int, Variant> &E : data) {
         new_event->set_value(E.key, E.value);
     }
-    
     return new_event;
 }
 
@@ -310,6 +351,9 @@ Ref<YEventData> YEventData::emit() const {
     for (const RegEventCallbackInstance &instance : callback.callbacks) {
         if (instance.callable.is_valid()) {
             instance.callable.call(this);
+            if (get_failed()) {
+                return Ref<YEventData>(this);
+            }
         } else {
             has_invalid = true;
         }
@@ -337,6 +381,9 @@ Ref<YEventData> YEventData::emit_to_node(Node *p_node) const {
         if (instance.node_inst_id == node_id) {
             if (instance.callable.is_valid()) {
                 instance.callable.call(this);
+                if (get_failed()) {
+                    return Ref<YEventData>(this);
+                }
             } else {
                 has_invalid = true;
             }
