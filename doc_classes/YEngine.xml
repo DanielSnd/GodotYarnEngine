@@ -128,6 +128,23 @@
 				[/codeblock]
 			</description>
 		</method>
+		<method name="find_node_with_meta">
+			<return type="Node" />
+			<param index="0" name="parent_node" type="Node" />
+			<param index="1" name="meta_name" type="String" />
+			<description>
+				Searches through the immediate children of [param parent_node] and returns the first node that has metadata with the specified key [param meta_name].
+				Returns [code]null[/code] if no matching node is found.
+
+				Example:
+				[codeblock]
+				# Find a child node that has metadata with key "item_data"
+				var item_node = YEngine.find_node_with_meta(get_parent(), "item_data")
+				if item_node:
+				    print("Found item with metadata: ", item_node.get_meta("item_data"))
+				[/codeblock]
+			</description>
+		</method>
 		<method name="find_node_with_method">
 			<return type="Node" />
 			<param index="0" name="parent_node" type="Node" />
@@ -159,6 +176,62 @@
 				var camera = YEngine.find_node_with_type(get_tree().root, "Camera3D")
 				if camera:
 				    print("Found camera at: ", camera.get_path())
+				[/codeblock]
+			</description>
+		</method>
+		<method name="find_nodes_with_meta">
+			<return type="Node[]" />
+			<param index="0" name="parent_node" type="Node" />
+			<param index="1" name="meta_name" type="String" />
+			<description>
+				Searches through the immediate children of [param parent_node] and returns an array of all nodes that have metadata with the specified key [param meta_name].
+				Returns an empty array if no matching nodes are found.
+
+				Example:
+				[codeblock]
+				# Find all child nodes that have metadata with key "collectible"
+				var collectibles = YEngine.find_nodes_with_meta(get_parent(), "collectible")
+				for item in collectibles:
+				    print("Found collectible: ", item.get_meta("collectible"))
+				[/codeblock]
+			</description>
+		</method>
+		<method name="find_nodes_with_method">
+			<return type="Node[]" />
+			<param index="0" name="parent_node" type="Node" />
+			<param index="1" name="method_name" type="String" />
+			<description>
+				Searches through the immediate children of [param parent_node] and returns an array of all nodes that have the specified method [param method_name].
+				Returns an empty array if no matching nodes are found.
+
+				Example:
+				[codeblock]
+				# Find all child nodes that have an "interact" method
+				var interactables = YEngine.find_nodes_with_method(get_parent(), "interact")
+				for node in interactables:
+				    node.interact()
+				[/codeblock]
+			</description>
+		</method>
+		<method name="find_nodes_with_type">
+			<return type="Node[]" />
+			<param index="0" name="parent_node" type="Node" />
+			<param index="1" name="node_type" type="String" />
+			<description>
+				Searches through all descendants of [param parent_node] and returns an array of all nodes that match the specified type [param node_type].
+				The search is recursive and includes all children and their descendants. Returns an empty array if no matching nodes are found.
+
+				Example:
+				[codeblock]
+				# Find all Camera3D nodes in the scene
+				var cameras = YEngine.find_nodes_with_type(get_tree().root, "Camera3D")
+				for camera in cameras:
+				    print("Found camera at: ", camera.get_path())
+
+				# Find all RigidBody3D nodes under the current parent
+				var bodies = YEngine.find_nodes_with_type(get_parent(), "RigidBody3D")
+				for body in bodies:
+				    print("Found physics body: ", body.get_name())
 				[/codeblock]
 			</description>
 		</method>

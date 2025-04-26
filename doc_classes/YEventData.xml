@@ -73,10 +73,29 @@
 		<method name="create" qualifiers="static">
 			<return type="YEventData" />
 			<param index="0" name="with_type" type="int" />
-			<param index="1" name="parameter_one" type="int" default="0" />
+			<param index="1" name="parameter_one" type="int" default="-1" />
 			<param index="2" name="value_one" type="Variant" default="null" />
 			<description>
 				Creates and returns a new YEventData instance with the specified event type. Optionally sets an initial parameter value using parameter_one as the identifier and value_one as the value. This is a convenience method for quickly creating and initializing event data.
+			</description>
+		</method>
+		<method name="create_and_send" qualifiers="static">
+			<return type="YEventData" />
+			<param index="0" name="with_type" type="int" />
+			<param index="1" name="parameter_one" type="int" default="-1" />
+			<param index="2" name="value_one" type="Variant" default="null" />
+			<description>
+				Creates a new YEventData instance and immediately emits it to all registered listeners. This is a convenience method combining [method create] and [method emit]. Returns the event instance after emission.
+			</description>
+		</method>
+		<method name="create_and_send_to_node" qualifiers="static">
+			<return type="YEventData" />
+			<param index="0" name="node" type="Node" />
+			<param index="1" name="with_type" type="int" />
+			<param index="2" name="parameter_one" type="int" default="-1" />
+			<param index="3" name="value_one" type="Variant" default="null" />
+			<description>
+				Creates a new YEventData instance and immediately emits it to the specified node's registered listeners. This is a convenience method combining [method create] and [method emit_to_node]. Returns the event instance after emission.
 			</description>
 		</method>
 		<method name="duplicate" qualifiers="const">
@@ -155,6 +174,19 @@
 				[b]Note:[/b] Lower priority numbers are called first. Default priority is 50.
 			</description>
 		</method>
+		<method name="send" qualifiers="const">
+			<return type="YEventData" />
+			<description>
+				An alias for [method emit]. Emits the event to all registered listeners for this event type. Returns self for method chaining.
+			</description>
+		</method>
+		<method name="send_to_node" qualifiers="const">
+			<return type="YEventData" />
+			<param index="0" name="node" type="Node" />
+			<description>
+				An alias for [method emit_to_node]. Emits the event only to listeners registered with the specified node. Returns self for method chaining.
+			</description>
+		</method>
 		<method name="set_data_from_dictionary">
 			<return type="YEventData" />
 			<param index="0" name="dict" type="Dictionary" />
@@ -212,6 +244,8 @@
 	<members>
 		<member name="event_type" type="int" setter="set_event_type" getter="get_event_type" default="0">
 			The type identifier for this event. Usually defined in an enum for better code organization and autocompletion.
+		</member>
+		<member name="failed" type="bool" setter="set_failed" getter="get_failed" default="false">
 		</member>
 	</members>
 </class>
