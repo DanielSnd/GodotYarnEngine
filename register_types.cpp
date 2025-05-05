@@ -4,6 +4,7 @@
 #include "yarnengine.h"
 #include "core/config/engine.h"
 #ifdef TOOLS_ENABLED
+#include "editor/editor_yarn_3d_tools.h"
 #include "editor/AOBakeEditorPlugin.h"
 #include "editor/CatButtonsEditorPlugin.h"
 #include "editor/AssetPlacer.h"
@@ -63,10 +64,12 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 		ClassDB::register_class<AOBakeEditorPlugin>();
 		ClassDB::register_class<GSheetImporterEditorPlugin>();
 		ClassDB::register_class<yarnengine::AssetPanelEditorBottomPanel>();
+		ClassDB::register_class<EditorYarn3DTools>();
 		EditorPlugins::add_by_type<yarnengine::CatButtonsEditorPlugin>();
 		EditorPlugins::add_by_type<yarnengine::AssetPlacerPlugin>();
 		EditorPlugins::add_by_type<AOBakeEditorPlugin>();
 		EditorPlugins::add_by_type<GSheetImporterEditorPlugin>();
+	    EditorPlugins::add_by_type<EditorYarn3DTools>();
 #ifdef NO_FMOD
 		ClassDB::register_class<ProjectCache>();
 #endif
