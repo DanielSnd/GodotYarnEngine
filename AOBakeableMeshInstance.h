@@ -26,11 +26,11 @@ protected:
     void set_debug_vertex(const int b) { debug_vertex = b;}
     int get_debug_vertex() const { return debug_vertex; }
 
-    int vertices_per_batch = 100;
+    int vertices_per_batch = 1000;
     void set_vertices_per_batch(const int b) { vertices_per_batch = b;}
     int get_vertices_per_batch() const { return vertices_per_batch; }
 
-    int max_msecs_per_batch = 300;
+    int max_msecs_per_batch = 250;
     void set_max_msecs_per_batch(const int b) { max_msecs_per_batch = b;}
     int get_max_msecs_per_batch() const { return max_msecs_per_batch; }
 

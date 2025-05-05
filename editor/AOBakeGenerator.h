@@ -20,9 +20,9 @@ class AOBakeGenerator : public RefCounted {
     GDCLASS(AOBakeGenerator, RefCounted);
     RID scenario;
     RID mesh_instance;
-    RID viewport;
-    RID viewport_texture;
-    RID camera;
+    Vector<RID> cameras;
+    Vector<RID> viewports;
+    Vector<RID> viewport_textures;
     RID environment;
     RID shader_material;
     RID occluder_shader;
@@ -33,18 +33,20 @@ protected:
     mutable bool generation_pending=false;
 
 public:
+    int parallel_amount = 15;
     Ref<ArrayMesh> mesh_to_generate;
     Ref<Texture2D> last_generated_texture;
     Ref<ArrayMesh> last_baked_mesh;
     Ref<MeshDataTool> using_mesh_data_tool;
     String current_surface_name = "";
-    mutable float occlusion_distance = 10.0;
+    real_t occlusion_distance = 10.0;
+    real_t occlusion_angle = 135.0;
     mutable int all_vertices = 0;
     mutable int current_vertex = 0;
     mutable int current_surface = 0;
     mutable int all_surfaces = 0;
-    mutable int vert_per_batch = 250;
-    mutable int max_msecs_per_batch = 1000;
+    mutable int vert_per_batch = 1000;
+    mutable int max_msecs_per_batch = 250;
 
     bool is_generating();
 

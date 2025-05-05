@@ -1,4 +1,3 @@
-
 #ifdef TOOLS_ENABLED
 #include "AOBakeGenerator.h"
 
@@ -82,15 +81,20 @@ bool AOBakeGenerator::queue_generation(const Ref<Mesh> &p_from, AOBakeableMeshIn
 				const Vector3 viewport_pos = vertice_pos + (vertice_normal * use_separation);
 				const Vector3 look_at_forward = viewport_pos.direction_to(vertice_pos).normalized() * -1;
 				child->set_transform({calculate_basis(look_at_forward), viewport_pos});
+				child->set_perspective(aomi->get_occlusion_angle(),0.001,aomi->get_occlusion_distance());
 			}
 		}
 	}
 	set_last_baked_mesh(p_from);
 	generation_pending = true;
-	RS::get_singleton()->camera_set_perspective(camera,aomi->get_occlusion_angle(),0.001,aomi->get_occlusion_distance());
 	RS::get_singleton()->environment_set_bg_color(environment, aomi->get_environment_color());
-	RS::get_singleton()->material_set_param(shader_material,"occluder_color",aomi->get_occlusion_color());
 	occlusion_distance = aomi->get_occlusion_distance();
+	occlusion_angle = aomi->get_occlusion_angle();
+	for (int i = 0; i < parallel_amount; i++) {
+		RS::get_singleton()->camera_set_perspective(cameras[i],aomi->get_occlusion_angle(),0.001,aomi->get_occlusion_distance());
+		RS::get_singleton()->camera_set_environment(cameras[i], environment);
+	}
+	RS::get_singleton()->material_set_param(shader_material,"occluder_color",aomi->get_occlusion_color());
 	vert_per_batch = aomi->vertices_per_batch;
 	max_msecs_per_batch = aomi->max_msecs_per_batch;
 	SceneTree::get_singleton()->connect(SNAME("process_frame"),callable_mp(this,&AOBakeGenerator::start_generation), CONNECT_ONE_SHOT);
@@ -143,30 +147,45 @@ void AOBakeGenerator::iterate_generation() {
 	const uint64_t timestarted_iteration = OS::get_singleton()->get_ticks_msec();
 
 	const float sampling_bias = 0.001f;
-	Ref<Image> img;
+	Vector<Ref<Image>> imgs;
+	imgs.resize(parallel_amount);
 	int vertices_done_this_iteration = 0;
-	for (int i = current_vertex; i < all_vertices; ++i) {
-		current_vertex = i;
-		const Vector3 vertice_pos = using_mesh_data_tool->get_vertex(i);
-		const Vector3 viewport_pos = vertice_pos + (using_mesh_data_tool->get_vertex_normal(i) * sampling_bias);
-		const Vector3 look_at_forward = viewport_pos.direction_to(vertice_pos).normalized() * -1;
-		RS::get_singleton()->camera_set_transform(camera, {calculate_basis(look_at_forward), viewport_pos});
-		RS::get_singleton()->viewport_set_update_mode(viewport, RS::VIEWPORT_UPDATE_ONCE); //once used for capture
-		RS::get_singleton()->draw(false);
-
-		img = RS::get_singleton()->texture_2d_get(viewport_texture);
-
-		if(img.is_null()) {
-			print_line("Turns out the image is null :(");
-			generating = false;
-			return;
+	
+	// Process vertices in batches of 3
+	while (current_vertex < all_vertices) {
+		for (int i = 0; i < parallel_amount; i++) {
+			if (current_vertex + i < all_vertices) {
+				const Vector3 vertice_pos = using_mesh_data_tool->get_vertex(current_vertex + i);
+				const Vector3 viewport_pos = vertice_pos + (using_mesh_data_tool->get_vertex_normal(current_vertex + i) * sampling_bias);
+				const Vector3 look_at_forward = viewport_pos.direction_to(vertice_pos).normalized() * -1;
+				RS::get_singleton()->camera_set_transform(cameras[i], {calculate_basis(look_at_forward), viewport_pos});
+				RS::get_singleton()->viewport_set_update_mode(viewports[i], RS::VIEWPORT_UPDATE_ONCE);
+			}
 		}
-		auto color_average = find_color_average(img);
-		using_mesh_data_tool->set_vertex_color(i,color_average);
-		vertices_done_this_iteration+= 1;
+
+		// Single draw call for all viewports
+		RS::get_singleton()->draw(true);
+
+		for (int i = 0; i < parallel_amount; i++) {
+			if (current_vertex + i < all_vertices) {
+				imgs.write[i] = RS::get_singleton()->texture_2d_get(viewport_textures[i]);
+
+				if(imgs[i].is_null()) {
+					print_line("Camera produced null image for vertex ", current_vertex);
+					generating = false;
+					return;
+				}
+				auto color_average = find_color_average(imgs[i]);
+				using_mesh_data_tool->set_vertex_color(current_vertex + i, color_average);
+				vertices_done_this_iteration++;
+			}
+		}
+		
+		// Move to next batch
+		current_vertex += parallel_amount;
+		
 		if (vertices_done_this_iteration > vert_per_batch) {
 			vertices_done_this_iteration = 0;
-
 			const uint64_t time_interval_check_iteration = OS::get_singleton()->get_ticks_msec() - timestarted_iteration;
 			if (current_vertex < all_vertices-2 && time_interval_check_iteration > max_msecs_per_batch) {
 				break;
@@ -174,7 +193,7 @@ void AOBakeGenerator::iterate_generation() {
 		}
 	}
 
-	if (current_vertex == all_vertices-1) {
+	if (current_vertex >= all_vertices-1) {
 		using_mesh_data_tool->commit_to_surface(last_baked_mesh);
 		last_baked_mesh->surface_set_name(current_surface,current_surface_name);
 		last_baked_mesh->surface_set_material(current_surface,mesh_to_generate->surface_get_material(current_surface));
@@ -206,18 +225,20 @@ void AOBakeGenerator::finish_generation() {
 AOBakeGenerator::AOBakeGenerator() {
     scenario = RS::get_singleton()->scenario_create();
 
-	viewport = RS::get_singleton()->viewport_create();
-	RS::get_singleton()->viewport_set_update_mode(viewport, RS::VIEWPORT_UPDATE_DISABLED);
-	RS::get_singleton()->viewport_set_scenario(viewport, scenario);
-	RS::get_singleton()->viewport_set_size(viewport, 32, 32);
-	RS::get_singleton()->viewport_set_transparent_background(viewport, false);
-	RS::get_singleton()->viewport_set_active(viewport, true);
-	viewport_texture = RS::get_singleton()->viewport_get_texture(viewport);
-
-	camera = RS::get_singleton()->camera_create();
-	RS::get_singleton()->viewport_attach_camera(viewport, camera);
-	RS::get_singleton()->camera_set_transform(camera, Transform3D(Basis(), Vector3(0, 0, 3)));
-	RS::get_singleton()->camera_set_perspective(camera,135,0.001,10.0);
+	// Main viewport setup
+	for (int i = 0; i < parallel_amount; i++) {
+		viewports.push_back(RS::get_singleton()->viewport_create());
+		RS::get_singleton()->viewport_set_update_mode(viewports[i], RS::VIEWPORT_UPDATE_DISABLED);
+		RS::get_singleton()->viewport_set_scenario(viewports[i], scenario);
+		RS::get_singleton()->viewport_set_size(viewports[i], 32, 32);
+		RS::get_singleton()->viewport_set_transparent_background(viewports[i], false);
+		RS::get_singleton()->viewport_set_active(viewports[i], true);
+		viewport_textures.push_back(RS::get_singleton()->viewport_get_texture(viewports[i]));
+		cameras.push_back(RS::get_singleton()->camera_create());
+		RS::get_singleton()->viewport_attach_camera(viewports[i], cameras[i]);
+		RS::get_singleton()->camera_set_transform(cameras[i], Transform3D(Basis(), Vector3(0, 0, 3)));
+		RS::get_singleton()->camera_set_perspective(cameras[i],135,0.001,10.0);
+	}
 
 	shader_material = RS::get_singleton()->material_create();
 	occluder_shader = RS::get_singleton()->shader_create();
@@ -233,7 +254,10 @@ AOBakeGenerator::AOBakeGenerator() {
 	environment = RS::get_singleton()->environment_create();
 	RS::get_singleton()->environment_set_background(environment, RenderingServer::ENV_BG_COLOR);
 	RS::get_singleton()->environment_set_bg_color(environment, Color(0.5882353,0.6078432,0.627451,1.0));
-	RS::get_singleton()->camera_set_environment(camera,environment);
+
+	for (int i = 0; i < cameras.size(); i++) {
+		RS::get_singleton()->camera_set_environment(cameras[i], environment);
+	}
 
 	mesh_instance = RS::get_singleton()->instance_create();
 	RS::get_singleton()->instance_set_scenario(mesh_instance, scenario);
@@ -243,9 +267,15 @@ AOBakeGenerator::~AOBakeGenerator() {
     ERR_FAIL_NULL(RenderingServer::get_singleton());
 
 	RS::get_singleton()->free(mesh_instance);
-    RS::get_singleton()->free(viewport);
-
-    RS::get_singleton()->free(camera);
+	for (int i = 0; i < viewports.size(); i++) {
+		RS::get_singleton()->free(viewports[i]);
+	}
+	for (int i = 0; i < viewport_textures.size(); i++) {
+		RS::get_singleton()->free(viewport_textures[i]);
+	}
+	for (int i = 0; i < cameras.size(); i++) {
+		RS::get_singleton()->free(cameras[i]);
+	}
     RS::get_singleton()->free(scenario);
     RS::get_singleton()->free(environment);
 	if (!mesh_to_generate.is_null() && mesh_to_generate.is_valid()) {

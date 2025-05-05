@@ -269,11 +269,9 @@ public:
 			index_from.write[i] = index_from[i] + index_shift;
 		}
 		Vector<int> index_to = mesh_arrays_to[Mesh::ARRAY_INDEX];
-		int indexes_before = index_to.size();
 		index_to.append_array(index_from);
 		mesh_arrays_to[Mesh::ARRAY_INDEX] = index_to;
 		Vector<int> new_index_to = mesh_arrays_to[Mesh::ARRAY_INDEX];
-		int indexes_after = new_index_to.size();
 
 		// ARRAY_TANGENT = RenderingServer::ARRAY_TANGENT,
 		// ARRAY_COLOR = RenderingServer::ARRAY_COLOR,
