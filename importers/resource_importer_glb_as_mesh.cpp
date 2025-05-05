@@ -51,6 +51,7 @@ bool ResourceImporterGLBasMesh::get_option_visibility(const String &p_path, cons
                                                       const HashMap<StringName, Variant> &p_options) const {
     return true;
 }
+
 TypedArray<ImporterMeshInstance3D> ResourceImporterGLBasMesh::find_first_matched_nodes(const Node *checking_node) {
     if (checking_node == nullptr) return {};
     TypedArray<Node> children = checking_node->get_children();
@@ -93,7 +94,7 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
     gltf.instantiate();
     Ref<GLTFState> state;
     state.instantiate();
-    print_verbose(vformat("glTF path: %s", p_source_file));
+	
     Error err = gltf->append_from_file(p_source_file, state);
 
 	ERR_FAIL_COND_V_MSG(err != OK, err, vformat("Couldn't open loading GLB from file '%s', it may not exist or not be readable.", p_source_file));
@@ -103,85 +104,385 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
 	Node* root_node = gltf->generate_scene(state);
 	ERR_FAIL_COND_V_MSG(root_node == nullptr, ERR_CANT_OPEN, vformat("Couldn't find root node in GLB file '%s', it may not exist or not be readable.", p_source_file));
 
-    TypedArray<ImporterMeshInstance3D> found_importers = find_first_matched_nodes(root_node);
-    Ref<ArrayMesh> find_mesh;
-    int overall_i = 0;
-    for (int i = 0; i < static_cast<int>(found_importers.size()); ++i) {
-        auto* importer = Object::cast_to<ImporterMeshInstance3D>(found_importers[i]);
-        if (importer != nullptr) {
-            Ref<ImporterMesh> imp_mesh = importer->get_mesh();
-        	if (imp_mesh.is_null() || !imp_mesh.is_valid()) continue;
-        	Ref<ArrayMesh> mesh = imp_mesh->get_mesh();
-        	if (mesh.is_null() || !mesh.is_valid()) continue;
-			find_mesh = mesh;
-			if (has_scale_replacement || !offset.is_zero_approx() || has_rotate_replacement) {
-				Ref<ArrayMesh> new_mesh;
-				new_mesh.instantiate();
-				if (should_save_mesh) {
-					String _file_path_save = found_importers.size() ? vformat("%s.mesh",p_source_file.replace(".glb","").replace(".gltf","")) : vformat("%s_%02d.mesh", p_source_file.replace(".glb","").replace(".gltf",""), overall_i);
-					if (ResourceLoader::exists(_file_path_save)) {
-						new_mesh = ResourceLoader::load(_file_path_save,"ArrayMesh");
-						if (!new_mesh.is_null() && new_mesh.is_valid()) {
-							new_mesh->clear_surfaces();
-						} else {
+
+	TypedArray<ImporterMeshInstance3D> found_importers = find_first_matched_nodes(root_node);
+	
+	if (root_node->get_child_count() == 1) {
+		 Ref<ArrayMesh> find_mesh;
+		int overall_i = 0;
+
+		for (int i = 0; i < static_cast<int>(found_importers.size()); ++i) {
+			auto* importer = Object::cast_to<ImporterMeshInstance3D>(found_importers[i]);
+			if (importer != nullptr) {
+
+			Ref<ImporterMesh> imp_mesh = importer->get_mesh();
+			if (imp_mesh.is_null() || !imp_mesh.is_valid()) continue;
+
+			Ref<ArrayMesh> mesh = imp_mesh->get_mesh();
+			if (mesh.is_null() || !mesh.is_valid()) continue;
+				find_mesh = mesh;
+
+				if (has_scale_replacement || !offset.is_zero_approx() || has_rotate_replacement) {
+							Ref<ArrayMesh> new_mesh;
 							new_mesh.instantiate();
+							if (should_save_mesh) {
+								String _file_path_save = found_importers.size() ? vformat("%s.mesh",p_source_file.replace(".glb","").replace(".gltf","")) : vformat("%s_%02d.mesh", p_source_file.replace(".glb","").replace(".gltf",""), overall_i);
+								if (ResourceLoader::exists(_file_path_save)) {
+									new_mesh = ResourceLoader::load(_file_path_save,"ArrayMesh");
+									if (!new_mesh.is_null() && new_mesh.is_valid()) {
+										new_mesh->clear_surfaces();
+									} else {
+										new_mesh.instantiate();
+									}
+								}
+							}
+							if (!new_mesh.is_null() && new_mesh.is_valid()) {
+								Transform3D transform = has_rotate_replacement ? Transform3D(Basis(Quaternion::from_euler(rotate))) : Transform3D();
+								for (int surface_i = 0; surface_i < static_cast<int>(find_mesh->get_surface_count()); ++surface_i) {
+									Array surface_array = find_mesh->surface_get_arrays(surface_i);
+									Vector<Vector3> vertex_to = surface_array[Mesh::ARRAY_VERTEX];
+									for (int copy_i = 0; copy_i < static_cast<int>(vertex_to.size()); ++copy_i) {
+										const Vector3 new_vertex_pos = !has_rotate_replacement ? ((Vector3(vertex_to[copy_i]) * replace_scale) + offset) : (transform.xform(((Vector3(vertex_to[copy_i]) * replace_scale) + offset)));
+										vertex_to.write[copy_i] = new_vertex_pos;
+							}
+									surface_array[Mesh::ARRAY_VERTEX] = vertex_to;
+									new_mesh->add_surface_from_arrays(find_mesh->surface_get_primitive_type(surface_i), surface_array);
 						}
+						if (!has_replacement_material || !replace_material.is_valid()) {
+							const int _mesh_surface_count =  static_cast<int>(find_mesh->get_surface_count());
+							for (int _surf_index = 0; _surf_index < _mesh_surface_count; ++_surf_index) {
+								new_mesh->surface_set_material(_surf_index, find_mesh->surface_get_material(_surf_index));
+								new_mesh->surface_set_name(_surf_index, find_mesh->surface_get_name(_surf_index));
+							}
+						}
+						new_mesh->set_name(!find_mesh.is_null() && find_mesh.is_valid() ? find_mesh->get_name() : static_cast<String>(root_node->get_name()));
+						find_mesh = new_mesh;
 					}
 				}
-				if (!new_mesh.is_null() && new_mesh.is_valid()) {
-					Transform3D transform = has_rotate_replacement ? Transform3D(Basis(Quaternion::from_euler(rotate))) : Transform3D();
-					for (int surface_i = 0; surface_i < static_cast<int>(find_mesh->get_surface_count()); ++surface_i) {
-						Array surface_array = find_mesh->surface_get_arrays(surface_i);
-						Vector<Vector3> vertex_to = surface_array[Mesh::ARRAY_VERTEX];
-						for (int copy_i = 0; copy_i < static_cast<int>(vertex_to.size()); ++copy_i) {
-							const Vector3 new_vertex_pos = !has_rotate_replacement ? ((Vector3(vertex_to[copy_i]) * replace_scale) + offset) : (transform.xform(((Vector3(vertex_to[copy_i]) * replace_scale) + offset)));
-							vertex_to.write[copy_i] = new_vertex_pos;
-						}
-						surface_array[Mesh::ARRAY_VERTEX] = vertex_to;
-						new_mesh->add_surface_from_arrays(find_mesh->surface_get_primitive_type(surface_i), surface_array);
+				if (has_replacement_material && replace_material.is_valid() &&  !find_mesh.is_null() && find_mesh.is_valid()) {
+					const int find_mesh_surface_count =  static_cast<int>(find_mesh->get_surface_count());
+					for (int sindex = 0; sindex < find_mesh_surface_count; ++sindex) {
+						find_mesh->surface_set_material(sindex, replace_material);
 					}
-					if (!has_replacement_material || !replace_material.is_valid()) {
-						const int _mesh_surface_count =  static_cast<int>(find_mesh->get_surface_count());
-						for (int _surf_index = 0; _surf_index < _mesh_surface_count; ++_surf_index) {
-							new_mesh->surface_set_material(_surf_index, find_mesh->surface_get_material(_surf_index));
-							new_mesh->surface_set_name(_surf_index, find_mesh->surface_get_name(_surf_index));
+				}
+				if (!find_mesh.is_null() && find_mesh.is_valid()) {
+					find_mesh->set_name(find_mesh->get_name().replace("Root Scene_",""));
+					if (!should_save_mesh) break;
+					String file_path_save = found_importers.size() == 1 ? vformat("%s.mesh", p_source_file.replace(".glb","").replace(".gltf","")) : vformat("%s_%02d.mesh", p_source_file.replace(".glb","").replace(".gltf",""), overall_i);
+
+					#ifdef TOOLS_ENABLED
+						bool file_already_existed = ResourceLoader::exists(file_path_save);
+						ResourceSaver::save(find_mesh, file_path_save);
+						if (file_already_existed) {
+							find_mesh->set_path(file_path_save, true);
+							EditorFileSystem::get_singleton()->update_file(file_path_save);
 						}
+					#else
+						ResourceSaver::save(find_mesh, file_path_save);
+					#endif
+				}
+				overall_i += 1;
+			}
+		}
+
+		root_node->queue_free();
+		String filename = p_save_path + "." + get_save_extension();
+		if (!find_mesh.is_null() && find_mesh.is_valid()) {
+			return ResourceSaver::save(find_mesh, filename);
+		}
+	} else {
+		// Create a new mesh to combine all meshes into
+		Ref<ArrayMesh> combined_mesh;
+		combined_mesh.instantiate();
+		
+
+		// Dictionary to store surfaces by material and attribute set
+		HashMap<String, Dictionary> surfaces_by_material_and_attributes;
+		
+		// Process each mesh
+		for (int i = 0; i < static_cast<int>(found_importers.size()); ++i) {
+			auto* importer = Object::cast_to<ImporterMeshInstance3D>(found_importers[i]);
+			if (importer == nullptr) continue;
+			
+			Ref<ImporterMesh> imp_mesh = importer->get_mesh();
+			if (imp_mesh.is_null() || !imp_mesh.is_valid()) continue;
+			
+			Ref<ArrayMesh> mesh = imp_mesh->get_mesh();
+			if (mesh.is_null() || !mesh.is_valid()) continue;
+			
+			// Get the mesh's transform from the scene
+			Transform3D mesh_transform = importer->get_transform();
+			
+			// Process each surface in the mesh
+			for (int surface_i = 0; surface_i < static_cast<int>(mesh->get_surface_count()); ++surface_i) {
+				Array surface_array = mesh->surface_get_arrays(surface_i);
+				if (surface_array.is_empty()) continue;
+				
+				Ref<Material> material = mesh->surface_get_material(surface_i);
+				
+				// Transform vertices using the mesh's transform
+				PackedVector3Array vertices = surface_array[Mesh::ARRAY_VERTEX];
+				if (vertices.is_empty()) continue;
+				
+				for (int v = 0; v < vertices.size(); v++) {
+					Vector3 vertex = vertices[v];
+					// Apply the mesh's transform first
+					vertex = mesh_transform.xform(vertex);
+					// Then apply any additional transforms from import options
+					if (has_scale_replacement || !offset.is_zero_approx() || has_rotate_replacement) {
+						Transform3D additional_transform = Transform3D();
+						if (has_rotate_replacement) {
+							additional_transform = Transform3D(Basis(Quaternion::from_euler(rotate)));
+						}
+						vertex = !has_rotate_replacement ? 
+							((vertex * replace_scale) + offset) : 
+							(additional_transform.xform(((vertex * replace_scale) + offset)));
 					}
-					new_mesh->set_name(!find_mesh.is_null() && find_mesh.is_valid() ? find_mesh->get_name() : static_cast<String>(root_node->get_name()));
-					find_mesh = new_mesh;
+					vertices.write[v] = vertex;
+				}
+				surface_array[Mesh::ARRAY_VERTEX] = vertices;
+				
+				// Transform normals if they exist
+				if (surface_array[Mesh::ARRAY_NORMAL].get_type() != Variant::NIL) {
+					PackedVector3Array normals = surface_array[Mesh::ARRAY_NORMAL];
+					if (normals.size() == vertices.size()) {
+						Transform3D normal_transform = mesh_transform.basis.inverse().transposed();
+						if (has_rotate_replacement) {
+							normal_transform = normal_transform * Transform3D(Basis(Quaternion::from_euler(rotate))).basis.inverse().transposed();
+						}
+						for (int n = 0; n < normals.size(); n++) {
+							normals.write[n] = normal_transform.xform(normals[n]);
+						}
+						surface_array[Mesh::ARRAY_NORMAL] = normals;
+					}
+				}
+				
+				// Create a key that includes both material and attribute set
+				String material_key = material.is_valid() ? String::num_uint64(material->get_instance_id()) : "null";
+				String attribute_key;
+				for (int array_type = 0; array_type < Mesh::ARRAY_MAX; array_type++) {
+					if (surface_array[array_type].get_type() != Variant::NIL) {
+						attribute_key += String::num_int64(array_type) + ",";
+					}
+				}
+				
+				String combined_key = material_key + ":" + attribute_key;
+				
+				if (!surfaces_by_material_and_attributes.has(combined_key)) {
+					Dictionary surface_data;
+					surface_data["material"] = material;
+					Array arrays;
+					surface_data["arrays"] = arrays;
+					surfaces_by_material_and_attributes[combined_key] = surface_data;
+				}
+				
+				Variant surface_data_variant = surfaces_by_material_and_attributes[combined_key];
+				Dictionary surface_data = surface_data_variant;
+				Array arrays = surface_data["arrays"];
+				arrays.push_back(surface_array);
+				surface_data["arrays"] = arrays;
+				surfaces_by_material_and_attributes[combined_key] = surface_data;
+			}
+		}
+		
+		// Combine surfaces by material and attributes
+		int surface_count = 0;
+		for (const KeyValue<String, Dictionary> &E : surfaces_by_material_and_attributes) {
+			const Dictionary &surface_data = E.value;
+			Ref<Material> material = surface_data["material"];
+			Array arrays_list = surface_data["arrays"];
+			
+			if (arrays_list.is_empty()) continue;
+			
+			// Calculate total vertices
+			int total_vertices = 0;
+			for (int i = 0; i < arrays_list.size(); i++) {
+				Array arrays = arrays_list[i];
+				if (arrays[Mesh::ARRAY_VERTEX].get_type() != Variant::NIL) {
+					PackedVector3Array vertices = arrays[Mesh::ARRAY_VERTEX];
+					total_vertices += vertices.size();
 				}
 			}
-			if (has_replacement_material && replace_material.is_valid() &&  !find_mesh.is_null() && find_mesh.is_valid()) {
-				const int find_mesh_surface_count =  static_cast<int>(find_mesh->get_surface_count());
-				for (int sindex = 0; sindex < find_mesh_surface_count; ++sindex) {
-					// print_line("Surface count ", find_mesh_surface_count," current index ",sindex," replace material ",replace_material);
-					find_mesh->surface_set_material(sindex, replace_material);
+			
+			// Create combined arrays
+			Array combined_arrays;
+			combined_arrays.resize(Mesh::ARRAY_MAX);
+			
+			// Initialize arrays with correct sizes
+			for (int array_type = 0; array_type < Mesh::ARRAY_MAX; array_type++) {
+				if (arrays_list[0].get(array_type).get_type() != Variant::NIL) {
+					if (array_type == Mesh::ARRAY_INDEX) {
+						combined_arrays[array_type] = PackedInt32Array();
+					} else if (array_type == Mesh::ARRAY_VERTEX) {
+						PackedVector3Array vertices;
+						vertices.resize(total_vertices);
+						combined_arrays[array_type] = vertices;
+					} else if (array_type == Mesh::ARRAY_NORMAL) {
+						PackedVector3Array normals;
+						normals.resize(total_vertices);
+						combined_arrays[array_type] = normals;
+					} else if (array_type == Mesh::ARRAY_TANGENT) {
+						PackedFloat32Array tangents;
+						tangents.resize(total_vertices * 4);
+						combined_arrays[array_type] = tangents;
+					} else if (array_type == Mesh::ARRAY_COLOR) {
+						PackedColorArray colors;
+						colors.resize(total_vertices);
+						combined_arrays[array_type] = colors;
+					} else if (array_type == Mesh::ARRAY_TEX_UV) {
+						PackedVector2Array uvs;
+						uvs.resize(total_vertices);
+						combined_arrays[array_type] = uvs;
+					} else if (array_type == Mesh::ARRAY_TEX_UV2) {
+						PackedVector2Array uvs2;
+						uvs2.resize(total_vertices);
+						combined_arrays[array_type] = uvs2;
+					} else if (array_type >= Mesh::ARRAY_CUSTOM0 && array_type <= Mesh::ARRAY_CUSTOM3) {
+						PackedFloat32Array custom;
+						custom.resize(total_vertices * 4);
+						combined_arrays[array_type] = custom;
+					} else if (array_type == Mesh::ARRAY_BONES) {
+						PackedInt32Array bones;
+						bones.resize(total_vertices * 4);
+						combined_arrays[array_type] = bones;
+					} else if (array_type == Mesh::ARRAY_WEIGHTS) {
+						PackedFloat32Array weights;
+						weights.resize(total_vertices * 4);
+						combined_arrays[array_type] = weights;
+					}
 				}
 			}
+			
+			// Combine arrays
+			int vertex_offset = 0;
+			for (int i = 0; i < arrays_list.size(); i++) {
+				Array arrays = arrays_list[i];
+				if (arrays[Mesh::ARRAY_VERTEX].get_type() == Variant::NIL) continue;
+				
+				PackedVector3Array vertices = arrays[Mesh::ARRAY_VERTEX];
+				int vert_count = vertices.size();
+				
+				// Copy vertices
+				PackedVector3Array combined_vertices = combined_arrays[Mesh::ARRAY_VERTEX];
+				for (int v = 0; v < vert_count; v++) {
+					combined_vertices.write[vertex_offset + v] = vertices[v];
+				}
+				combined_arrays[Mesh::ARRAY_VERTEX] = combined_vertices;
+				
+				// Copy other arrays
+				for (int array_type = 0; array_type < Mesh::ARRAY_MAX; array_type++) {
+					if (array_type == Mesh::ARRAY_VERTEX || array_type == Mesh::ARRAY_INDEX) continue;
+					
+					if (arrays[array_type].get_type() == Variant::NIL) continue;
+					
+					if (array_type == Mesh::ARRAY_NORMAL || array_type == Mesh::ARRAY_COLOR || 
+						array_type == Mesh::ARRAY_TEX_UV || array_type == Mesh::ARRAY_TEX_UV2) {
+						// 1:1 mapping arrays
+						PackedVector3Array source_array;
+						int source_size = 0;
+						
+						switch (array_type) {
+							case Mesh::ARRAY_NORMAL: {
+								source_array = arrays[array_type];
+								source_size = source_array.size();
+								if (source_size == vert_count) {
+									PackedVector3Array combined_normals = combined_arrays[array_type];
+									for (int j = 0; j < vert_count; j++) {
+										combined_normals.write[vertex_offset + j] = source_array[j];
+									}
+									combined_arrays[array_type] = combined_normals;
+								}
+							} break;
+							case Mesh::ARRAY_COLOR: {
+								PackedColorArray colors = arrays[array_type];
+								source_size = colors.size();
+								if (source_size == vert_count) {
+									PackedColorArray combined_colors = combined_arrays[array_type];
+									for (int j = 0; j < vert_count; j++) {
+										combined_colors.write[vertex_offset + j] = colors[j];
+									}
+									combined_arrays[array_type] = combined_colors;
+								}
+							} break;
+							case Mesh::ARRAY_TEX_UV:
+							case Mesh::ARRAY_TEX_UV2: {
+								PackedVector2Array uvs = arrays[array_type];
+								source_size = uvs.size();
+								if (source_size == vert_count) {
+									PackedVector2Array combined_uvs = combined_arrays[array_type];
+									for (int j = 0; j < vert_count; j++) {
+										combined_uvs.write[vertex_offset + j] = uvs[j];
+									}
+									combined_arrays[array_type] = combined_uvs;
+								}
+							} break;
+						}
+					} else if (array_type == Mesh::ARRAY_TANGENT || 
+							(array_type >= Mesh::ARRAY_CUSTOM0 && array_type <= Mesh::ARRAY_CUSTOM3) ||
+							array_type == Mesh::ARRAY_BONES || array_type == Mesh::ARRAY_WEIGHTS) {
+						// 4:1 mapping arrays
+						PackedFloat32Array source = arrays[array_type];
+						int source_size = source.size();
+						if (source_size == vert_count * 4) {
+							PackedFloat32Array target = combined_arrays[array_type];
+							for (int j = 0; j < vert_count * 4; j++) {
+								target.write[vertex_offset * 4 + j] = source[j];
+							}
+							combined_arrays[array_type] = target;
+						}
+					}
+				}
+				
+				// Handle indices
+				if (arrays[Mesh::ARRAY_INDEX].get_type() != Variant::NIL) {
+					PackedInt32Array indices = arrays[Mesh::ARRAY_INDEX];
+					PackedInt32Array combined_indices = combined_arrays[Mesh::ARRAY_INDEX];
+					int indices_size = indices.size();
+					for (int j = 0; j < indices_size; j++) {
+						combined_indices.append(indices[j] + vertex_offset);
+					}
+					combined_arrays[Mesh::ARRAY_INDEX] = combined_indices;
+				}
+				
+				vertex_offset += vert_count;
+			}
+			
+			// Add the combined surface
+			combined_mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, combined_arrays);
+			combined_mesh->surface_set_material(surface_count, material);
+			surface_count++;
+		}
+		
+		// Apply replacement material if specified
+		if (has_replacement_material && replace_material.is_valid()) {
+			for (int sindex = 0; sindex < surface_count; ++sindex) {
+				combined_mesh->surface_set_material(sindex, replace_material);
+			}
+		}
+		
+		// Save the combined mesh
+		if (combined_mesh.is_valid()) {
+			combined_mesh->set_name(combined_mesh->get_name().replace("Root Scene_",""));
+			if (should_save_mesh) {
+				String file_path_save = vformat("%s.mesh", p_source_file.replace(".glb","").replace(".gltf",""));
+	#ifdef TOOLS_ENABLED
+					bool file_already_existed = ResourceLoader::exists(file_path_save);
+				ResourceSaver::save(combined_mesh, file_path_save);
+					if (file_already_existed) {
+					combined_mesh->set_path(file_path_save, true);
+						EditorFileSystem::get_singleton()->update_file(file_path_save);
+					}
+	#else
+				ResourceSaver::save(combined_mesh, file_path_save);
+	#endif
+			}
+		}
 
-        	if (!find_mesh.is_null() && find_mesh.is_valid()) {
-        		find_mesh->set_name(find_mesh->get_name().replace("Root Scene_",""));
-        		if (!should_save_mesh) break;
-        		String file_path_save = found_importers.size() == 1 ? vformat("%s.mesh", p_source_file.replace(".glb","").replace(".gltf","")) : vformat("%s_%02d.mesh", p_source_file.replace(".glb","").replace(".gltf",""), overall_i);
-#ifdef TOOLS_ENABLED
-        		bool file_already_existed = ResourceLoader::exists(file_path_save);
-        		ResourceSaver::save(find_mesh, file_path_save);
-        		if (file_already_existed) {
-        			find_mesh->set_path(file_path_save, true);
-        			EditorFileSystem::get_singleton()->update_file(file_path_save);
-        		}
-#else
-        		ResourceSaver::save(find_mesh, file_path_save);
-#endif
-        	}
-			overall_i += 1;
-        }
-    }
-
-	root_node->queue_free();
-	String filename = p_save_path + "." + get_save_extension();
-	if (!find_mesh.is_null() && find_mesh.is_valid()) {
-		return ResourceSaver::save(find_mesh, filename);
+		root_node->queue_free();
+		String filename = p_save_path + "." + get_save_extension();
+		if (combined_mesh.is_valid()) {
+			return ResourceSaver::save(combined_mesh, filename);
+		}
 	}
 
 	return OK;
