@@ -45,6 +45,14 @@ public:
     void set_fsm_machine(const Ref<YStateMachine> &val) {fsm_machine = val;}
     Node* get_node_owner() const;
 
+    Node3D* node_owner_3d;
+    Node3D* get_node_owner_3d() const {return node_owner_3d;}
+    Node2D* node_owner_2d;
+    Node2D* get_node_owner_2d() const {return node_owner_2d;}
+    void set_node_owner_2d(Node2D* val) {node_owner_2d = val;}
+    void set_node_owner_3d(Node3D* val) {node_owner_3d = val;}
+    
+
     virtual bool pass_condition();
     virtual bool fail_condition();
 
@@ -118,6 +126,14 @@ public:
     update_configuration_warnings();}
     String get_autooverride_check_property() const {return autooverride_check_property;}
 
+
+    Variant get_global_position() const;
+    void set_global_position(const Variant &val);
+    
+    Variant get_global_transform() const;
+    void set_global_transform(const Variant &val);
+    
+
     float autooverride_check_value;
     void set_autooverride_check_value(const float val) { autooverride_check_value = val;}
     float get_autooverride_check_value() const {return autooverride_check_value;}
@@ -134,6 +150,13 @@ public:
 @export var prevent_repeat:bool = false
 var last_time_used:float = 0.0
 var last_used_in_count:int = 0*/
+
+    void transition_to_backup_state();
+    void transition_to_default_state();
+
+    void set_as_default_state();
+    void set_as_backup_state();
+
     void ready();
 
     GDVIRTUAL0(_on_enter_state)
@@ -178,7 +201,6 @@ protected:
     virtual void start_state_machine(Node* p_owner);
     virtual void end_state_machine();
     virtual void process(float p_delta);
-    virtual void transition(YState* p_state);
     virtual void finished_navigation();
 
     // GDVIRTUAL0(_end_state_machine)
@@ -215,6 +237,15 @@ public:
     void set_current_state(YState* val)  { transition(val); }
     Node* get_fsm_owner() const {return fsm_owner;}
 
+    YState* backup_state;
+    YState* get_backup_state() const {return backup_state;}
+    void set_backup_state(YState* val) {backup_state = val;}
+
+    YState* default_state;
+    YState* get_default_state() const {return default_state;}
+    void set_default_state(YState* val) {default_state = val;}
+
+
     Node* state_target;
     Node3D* state_target_3d;
     Node2D* state_target_2d;
@@ -236,6 +267,18 @@ public:
     void set_state_target(Node* new_target);
     void set_state_target_position(const Variant &new_target);
 
+    void transition_to_backup_state() {
+        if (backup_state != nullptr) {
+            transition(backup_state);
+        }
+    }
+    void transition_to_default_state() {
+        if (default_state != nullptr) {
+            transition(default_state);
+        }
+    }
+
+    virtual void transition(YState* p_state);
 
     YStateMachine(): state_target(nullptr), state_target_3d(nullptr), state_target_2d(nullptr) {
         transitions_count = 0;

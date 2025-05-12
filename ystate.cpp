@@ -81,6 +81,28 @@ void YState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_print_debugs","print_debugs"), &YState::set_print_debugs);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "print_debugs"), "set_print_debugs", "get_print_debugs");
 
+    ClassDB::bind_method(D_METHOD("transition_to_backup_state"), &YState::transition_to_backup_state);
+    ClassDB::bind_method(D_METHOD("transition_to_default_state"), &YState::transition_to_default_state);
+
+    ClassDB::bind_method(D_METHOD("set_as_default_state"), &YState::set_as_default_state);
+    ClassDB::bind_method(D_METHOD("set_as_backup_state"), &YState::set_as_backup_state);
+
+    ClassDB::bind_method(D_METHOD("get_global_position"), &YState::get_global_position);
+    ClassDB::bind_method(D_METHOD("set_global_position", "global_position"), &YState::set_global_position);
+    ADD_PROPERTY(PropertyInfo(Variant::VARIANT_MAX, "global_position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_global_position", "get_global_position");
+
+    ClassDB::bind_method(D_METHOD("get_global_transform"), &YState::get_global_transform);
+    ClassDB::bind_method(D_METHOD("set_global_transform", "global_transform"), &YState::set_global_transform);
+    ADD_PROPERTY(PropertyInfo(Variant::VARIANT_MAX, "global_transform", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_global_transform", "get_global_transform");
+
+    ClassDB::bind_method(D_METHOD("get_node_owner_3d"), &YState::get_node_owner_3d);    
+    ClassDB::bind_method(D_METHOD("set_node_owner_3d", "node_owner_3d"), &YState::set_node_owner_3d);
+    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "node_owner_3d", PROPERTY_HINT_NODE_TYPE, "Node3D", PROPERTY_USAGE_NO_EDITOR), "set_node_owner_3d", "get_node_owner_3d");
+
+    ClassDB::bind_method(D_METHOD("get_node_owner_2d"), &YState::get_node_owner_2d);
+    ClassDB::bind_method(D_METHOD("set_node_owner_2d", "node_owner_2d"), &YState::set_node_owner_2d);
+    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "node_owner_2d", PROPERTY_HINT_NODE_TYPE, "Node2D", PROPERTY_USAGE_NO_EDITOR), "set_node_owner_2d", "get_node_owner_2d");
+
     GDVIRTUAL_BIND(_on_state_machine_setup,"fsm")
     GDVIRTUAL_BIND(_on_ready,"fsm")
     GDVIRTUAL_BIND(_on_enter_state)
@@ -141,8 +163,65 @@ Node * YState::get_node_owner() const {
     return fsm_machine != nullptr ? fsm_machine->fsm_owner : nullptr;
 }
 
+Variant YState::get_global_transform() const { 
+    if (node_owner_3d != nullptr) {
+        return node_owner_3d->get_global_transform();
+    } else if (node_owner_2d != nullptr) {
+        return node_owner_2d->get_global_transform();
+    }
+    return Variant();
+}
+void YState::set_global_transform(const Variant &val) {
+    if (node_owner_3d != nullptr) {
+        node_owner_3d->set_global_transform(val);
+    } else if (node_owner_2d != nullptr) {
+        node_owner_2d->set_global_transform(val);
+    }
+}
+
+Variant YState::get_global_position() const {
+    if (node_owner_3d != nullptr) {
+        return node_owner_3d->get_global_position();
+    } else if (node_owner_2d != nullptr) {
+        return node_owner_2d->get_global_position();
+    }
+    return Variant();
+}
+
+void YState::set_global_position(const Variant &val) {
+    if (node_owner_3d != nullptr) {
+        node_owner_3d->set_global_position(val);
+    } else if (node_owner_2d != nullptr) {
+        node_owner_2d->set_global_position(val);
+    }
+}
+
+void YState::transition_to_backup_state() {
+    if (fsm_machine == nullptr) return;
+    fsm_machine->transition(fsm_machine->get_backup_state());
+}
+
+void YState::transition_to_default_state() {
+    if (fsm_machine == nullptr) return;
+    fsm_machine->transition(fsm_machine->get_default_state());
+}
+
+void YState::set_as_default_state() {
+    if (fsm_machine == nullptr) return;
+    fsm_machine->default_state = this;
+}
+
+void YState::set_as_backup_state() {
+    if (fsm_machine == nullptr) return;
+    fsm_machine->backup_state = this;
+}
+
 void YState::state_machine_setup(Ref<YStateMachine> fsm) {
     fsm_machine = fsm;
+    if (fsm_machine.is_valid()) {
+        node_owner_3d = Object::cast_to<Node3D>(fsm_machine->fsm_owner);
+        node_owner_2d = Object::cast_to<Node2D>(fsm_machine->fsm_owner);
+    }
     GDVIRTUAL_CALL(_on_state_machine_setup,fsm);
 }
 
@@ -478,6 +557,16 @@ void YStateMachine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_state_target_2d"), &YStateMachine::get_state_target_2d);
     ClassDB::bind_method(D_METHOD("get_state_target_3d"), &YStateMachine::get_state_target_3d);
 
+    ClassDB::bind_method(D_METHOD("get_backup_state"), &YStateMachine::get_backup_state);
+    ClassDB::bind_method(D_METHOD("set_backup_state","new_backup_state"), &YStateMachine::set_backup_state);
+    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "backup_state",  PROPERTY_HINT_NODE_TYPE, "YState",PROPERTY_USAGE_NO_EDITOR), "set_backup_state", "get_backup_state");
+
+    ClassDB::bind_method(D_METHOD("get_default_state"), &YStateMachine::get_default_state);
+    ClassDB::bind_method(D_METHOD("set_default_state","new_default_state"), &YStateMachine::set_default_state);
+    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "default_state",  PROPERTY_HINT_NODE_TYPE, "YState",PROPERTY_USAGE_NO_EDITOR), "set_default_state", "get_default_state");
+
+    ClassDB::bind_method(D_METHOD("transition_to_backup_state"), &YStateMachine::transition_to_backup_state);
+    ClassDB::bind_method(D_METHOD("transition_to_default_state"), &YStateMachine::transition_to_default_state);
 
     ADD_SIGNAL(MethodInfo("attempt_override"));
     ADD_SIGNAL(MethodInfo("state_transitioned"));
@@ -615,6 +704,9 @@ void YStateMachine::process(float p_delta) {
 }
 
 void YStateMachine::transition(YState *p_state) {
+    if (p_state == nullptr) {
+        return;
+    }
     if (run_on_server_only && !YEngine::get_singleton()->get_multiplayer()->is_server())
         return;
     if (current_state != nullptr) {
