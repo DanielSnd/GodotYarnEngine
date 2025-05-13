@@ -4,8 +4,6 @@
 
 #include "yarntime.h"
 
-#include "core/os/os.h"
-
 YTime* YTime::singleton = nullptr;
 
 YTime *YTime::get_singleton() {
@@ -132,8 +130,8 @@ void YTime::register_clock_callback(Node *p_reference, int _clock_time, const Ca
         reg_clock_callbacks[_clock_time] = RegTimeCallback{_clock_time};
     if (!count_node_callbacks.has(_node_id)) {
         count_node_callbacks[_node_id] = 0;
-        if (!p_reference->is_connected("tree_exiting", callable_mp(this, &YTime::clear_clock_callbacks).bind(_node_id, -1)))
-            p_reference->connect("tree_exiting", callable_mp(this, &YTime::clear_clock_callbacks).bind(_node_id, -1), CONNECT_ONE_SHOT);
+        if (!p_reference->is_connected(SceneStringName(tree_exiting), callable_mp(this, &YTime::clear_clock_callbacks).bind(_node_id, -1)))
+            p_reference->connect(SceneStringName(tree_exiting), callable_mp(this, &YTime::clear_clock_callbacks).bind(_node_id, -1), CONNECT_ONE_SHOT);
     }
     count_node_callbacks[_node_id] += 1;
     reg_clock_callbacks[_clock_time].callbacks.append(RegTimeCallback::RegTimeCallbackInstance(_node_id,p_callable));

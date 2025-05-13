@@ -409,7 +409,7 @@ Node3D* YSceneSpawner3D::spawn_single(const Ref<PackedScene> &spawn_scene, Vecto
             spawned_instance->set_scale(current_spawned_scale);
         }
         spawned_nodes.push_back(spawned_instance->get_instance_id());
-        spawned_instance->connect("tree_exiting", callable_mp(this,&YSceneSpawner3D::remove_from_spawned_nodes).bind(spawned_object_id));
+        spawned_instance->connect(SceneStringName(tree_exiting), callable_mp(this,&YSceneSpawner3D::remove_from_spawned_nodes).bind(spawned_object_id));
     }
     return spawned_instance;
 }

@@ -7,6 +7,10 @@
 #include "core/object/object.h"
 #include "core/object/ref_counted.h"
 #include "scene/main/node.h"
+#include "scene/scene_string_names.h"
+#include "core/io/dir_access.h"
+#include "core/io/file_access.h"
+#include "core/io/json.h"
 
 
 class YSave : public RefCounted {

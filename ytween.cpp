@@ -4,7 +4,6 @@
 
 #include "ytween.h"
 
-YTween* YTween::singleton = nullptr;
 double YTween::last_delta_time = 0.0;
 
 
@@ -38,7 +37,7 @@ void YTweenWrap::register_node_kill_when(Node* p_node_owner) {
         return;
     }
 
-    p_node_owner->connect("tree_exiting", callable_mp(this,&YTweenWrap::kill_due_to_node_tree_exiting));
+    p_node_owner->connect(SceneStringName(tree_exiting), callable_mp(this,&YTweenWrap::kill_due_to_node_tree_exiting));
 }
 
 Ref<PropertyTweener> YTweenWrap::set_ytrans(Tween::TransitionType p_trans, real_t p_param1, real_t p_param2) {
@@ -120,10 +119,6 @@ void YTween::_bind_methods() {
     ClassDB::bind_method(D_METHOD("tween_position_unique","owner","position","duration","ease","transition","delay","tag"), &YTween::tween_position_unique,DEFVAL(1.0),DEFVAL(0.22),DEFVAL(Tween::EaseType::EASE_IN_OUT),DEFVAL(Tween::TransitionType::TRANS_QUAD),DEFVAL(0.0),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("tween_position_rotation_unique","owner","position","rotation","duration","ease","transition","delay","tag"), &YTween::tween_position_rotation_unique,DEFVAL(1.0),DEFVAL(0.22),DEFVAL(Tween::EaseType::EASE_IN_OUT),DEFVAL(Tween::TransitionType::TRANS_QUAD),DEFVAL(0.0),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("tween_position_rotation_scale_unique","owner","position","rotation","scale","duration","ease","transition","delay","tag"), &YTween::tween_position_rotation_scale_unique,DEFVAL(1.0),DEFVAL(0.22),DEFVAL(Tween::EaseType::EASE_IN_OUT),DEFVAL(Tween::TransitionType::TRANS_QUAD),DEFVAL(0.0),DEFVAL(0));
-}
-
-YTween * YTween::get_singleton() {
-    return singleton;
 }
 
 void YTween::do_process(double delta) {

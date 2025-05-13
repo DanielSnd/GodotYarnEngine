@@ -431,10 +431,6 @@ public:
 
 /////////////////////////////////////////////////////////////////////////////////
 
-AOBakeEditorPlugin * AOBakeEditorPlugin::get_singleton() {
-	return singleton;
-}
-
 AOBakeEditorPlugin::AOBakeEditorPlugin() {
 	singleton = this;
     Ref<AOBakeInspectorPlugin> plugin;

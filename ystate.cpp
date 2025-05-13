@@ -4,8 +4,6 @@
 
 #include "ystate.h"
 
-#include "yarnengine.h"
-
 void YState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_node_owner"), &YState::get_node_owner);
 
@@ -22,18 +20,8 @@ void YState::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "state_machine",  PROPERTY_HINT_NODE_TYPE, "YState",PROPERTY_USAGE_NO_EDITOR), "set_state_machine", "get_state_machine");
 
     ClassDB::bind_method(D_METHOD("state_machine_setup","fsm"), &YState::state_machine_setup);
-    ClassDB::bind_method(D_METHOD("enter_state"), &YState::enter_state);
-    ClassDB::bind_method(D_METHOD("exit_state"), &YState::exit_state);
-    ClassDB::bind_method(D_METHOD("process_state"), &YState::process_state);
-
-    ClassDB::bind_method(D_METHOD("finished_navigation"), &YState::finished_navigation);
-    ClassDB::bind_method(D_METHOD("get_speed"), &YState::get_speed);
-    ClassDB::bind_method(D_METHOD("can_move"), &YState::can_move);
-    ClassDB::bind_method(D_METHOD("override_animation"), &YState::override_animation);
 
     ClassDB::bind_method(D_METHOD("get_last_transitioned_from_or_null"), &YState::get_last_transitioned_from_or_null);
-
-
 
     ADD_SUBGROUP("Auto Override","");
 
@@ -103,6 +91,15 @@ void YState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_node_owner_2d", "node_owner_2d"), &YState::set_node_owner_2d);
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "node_owner_2d", PROPERTY_HINT_NODE_TYPE, "Node2D", PROPERTY_USAGE_NO_EDITOR), "set_node_owner_2d", "get_node_owner_2d");
 
+    ClassDB::bind_method(D_METHOD("get_last_time_state_started"), &YState::get_last_time_state_started);
+    ClassDB::bind_method(D_METHOD("get_last_time_state_exited"), &YState::get_last_time_state_exited);
+    ClassDB::bind_method(D_METHOD("has_time_passed_since_last_started","amount_passed"), &YState::has_time_passed_since_last_started);
+    ClassDB::bind_method(D_METHOD("has_time_passed_since_last_exited","amount_passed"), &YState::has_time_passed_since_last_exited);
+    ClassDB::bind_method(D_METHOD("set_last_time_state_started","time"), &YState::set_last_time_state_started);
+    ClassDB::bind_method(D_METHOD("set_last_time_state_exited","time"), &YState::set_last_time_state_exited);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "last_time_state_started", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_last_time_state_started", "get_last_time_state_started");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "last_time_state_exited", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_last_time_state_exited", "get_last_time_state_exited");
+
     GDVIRTUAL_BIND(_on_state_machine_setup,"fsm")
     GDVIRTUAL_BIND(_on_ready,"fsm")
     GDVIRTUAL_BIND(_on_enter_state)
@@ -125,8 +122,12 @@ void YState::_bind_methods() {
     BIND_ENUM_CONSTANT(SMALLER_THAN);
     BIND_ENUM_CONSTANT(BIGGER_THAN_OR_EQUAL);
     BIND_ENUM_CONSTANT(SMALLER_THAN_OR_EQUAL);
+
     // ADD_SIGNAL(MethodInfo("attempt_override"));
     // ADD_SIGNAL(MethodInfo("state_transitioned"));
+
+    ADD_SIGNAL(MethodInfo(SNAME("state_entered")));
+    ADD_SIGNAL(MethodInfo(SNAME("state_exited")));
 }
 
 
@@ -147,6 +148,13 @@ void YState::_validate_property(PropertyInfo &p_property) const {
     }
 }
 
+bool YState::has_time_passed_since_last_started(float amount_passed) const {
+    return last_time_state_started > 0 && YTime::get_singleton()->time - last_time_state_started >= amount_passed;
+}
+bool YState::has_time_passed_since_last_exited(float amount_passed) const {
+    return last_time_state_exited > 0 && YTime::get_singleton()->time - last_time_state_exited >= amount_passed;
+}
+
 bool YState::pass_condition() {
     bool ret = false;
     GDVIRTUAL_CALL(_pass_condition,ret);
@@ -159,11 +167,49 @@ bool YState::fail_condition() {
     return ret;
 }
 
-Node * YState::get_node_owner() const {
-    return fsm_machine != nullptr ? fsm_machine->fsm_owner : nullptr;
+Node3D * YState::get_node_owner_3d() const {
+    if (fsm_machine.is_valid()) { return fsm_machine->node_owner_3d; }
+    return nullptr;
+}
+Node2D * YState::get_node_owner_2d() const {
+    if (fsm_machine.is_valid()) { return fsm_machine->node_owner_2d; }
+    return nullptr;
+}
+void YState::set_node_owner_3d(Node3D * val) {
+    if (fsm_machine.is_valid()) { fsm_machine->node_owner_3d = val; }
+}
+void YState::set_node_owner_2d(Node2D * val) {
+    if (fsm_machine.is_valid()) { fsm_machine->node_owner_2d = val; }
 }
 
-Variant YState::get_global_transform() const { 
+Node * YState::get_node_owner() const {
+    return fsm_machine.is_valid() ? fsm_machine->fsm_owner : nullptr;
+}
+
+Variant YState::get_global_transform() const {
+    if (fsm_machine.is_valid()) {
+        return fsm_machine->get_global_transform();
+    }
+    return Variant();
+}
+
+void YState::set_global_transform(const Variant &val) {
+    if (fsm_machine.is_valid()) {
+        fsm_machine->set_global_transform(val);
+    }
+}
+
+Variant YStateMachine::get_global_position() const {
+    if (!has_done_setup) { return Variant(); }
+    if (node_owner_3d != nullptr) {
+        return node_owner_3d->get_global_position();
+    } else if (node_owner_2d != nullptr) {
+        return node_owner_2d->get_global_position();
+    }
+    return Variant();
+}
+Variant YStateMachine::get_global_transform() const {
+    if (!has_done_setup) { return Variant(); }
     if (node_owner_3d != nullptr) {
         return node_owner_3d->get_global_transform();
     } else if (node_owner_2d != nullptr) {
@@ -171,7 +217,17 @@ Variant YState::get_global_transform() const {
     }
     return Variant();
 }
-void YState::set_global_transform(const Variant &val) {
+void YStateMachine::set_global_position(const Variant &val) {
+    if (!has_done_setup) { return; }
+    if (node_owner_3d != nullptr) {
+        node_owner_3d->set_global_position(val);
+    } else if (node_owner_2d != nullptr) {
+        node_owner_2d->set_global_position(val);
+    }
+}
+
+void YStateMachine::set_global_transform(const Variant &val) {
+    if (!has_done_setup) { return; }
     if (node_owner_3d != nullptr) {
         node_owner_3d->set_global_transform(val);
     } else if (node_owner_2d != nullptr) {
@@ -180,19 +236,15 @@ void YState::set_global_transform(const Variant &val) {
 }
 
 Variant YState::get_global_position() const {
-    if (node_owner_3d != nullptr) {
-        return node_owner_3d->get_global_position();
-    } else if (node_owner_2d != nullptr) {
-        return node_owner_2d->get_global_position();
+    if (fsm_machine.is_valid()) {
+    return fsm_machine->get_global_position();
     }
     return Variant();
 }
 
 void YState::set_global_position(const Variant &val) {
-    if (node_owner_3d != nullptr) {
-        node_owner_3d->set_global_position(val);
-    } else if (node_owner_2d != nullptr) {
-        node_owner_2d->set_global_position(val);
+    if (fsm_machine.is_valid()) {
+        fsm_machine->set_global_position(val);
     }
 }
 
@@ -219,18 +271,37 @@ void YState::set_as_backup_state() {
 void YState::state_machine_setup(Ref<YStateMachine> fsm) {
     fsm_machine = fsm;
     if (fsm_machine.is_valid()) {
-        node_owner_3d = Object::cast_to<Node3D>(fsm_machine->fsm_owner);
-        node_owner_2d = Object::cast_to<Node2D>(fsm_machine->fsm_owner);
+        Node3D* _node_owner_3d = Object::cast_to<Node3D>(fsm_machine->fsm_owner);
+        if (_node_owner_3d != nullptr) {
+            set_node_owner_3d(_node_owner_3d);
+        } else {
+            Node2D* _node_owner_2d = Object::cast_to<Node2D>(fsm_machine->fsm_owner);
+            if (_node_owner_2d != nullptr) {
+                set_node_owner_2d(_node_owner_2d);
+            }
+        }
     }
     GDVIRTUAL_CALL(_on_state_machine_setup,fsm);
 }
 
+void YStateMachine::owner_node_exiting_tree() {
+    if (node_owner_2d != nullptr) {
+        node_owner_2d = nullptr;
+    }
+    if (node_owner_3d != nullptr) {
+        node_owner_3d = nullptr;
+    }
+}
+
 void YState::enter_state() {
     last_time_state_started = YTime::get_singleton()->time;
+    emit_signal(SNAME("state_entered"));
     GDVIRTUAL_CALL(_on_enter_state);
 }
 
 void YState::exit_state() {
+    last_time_state_exited = YTime::get_singleton()->time;
+    emit_signal(SNAME("state_exited"));
     GDVIRTUAL_CALL(_on_exit_state);
 }
 
@@ -350,7 +421,7 @@ PackedStringArray YState::get_configuration_warnings() const {
 
 bool YState::has_valid_auto_override() {
     if (print_debugs)
-        print_line("Checking if has valid auto override, is check node null? ",autooverride_check_node == nullptr);
+        print_line(vformat("[YState] [%s] Checking if has valid auto override, is check node null? %s",get_name(),autooverride_check_node == nullptr));
     if (autooverride_check_type == CheckType::NONE)
         return true;
     if (autooverride_check_node == nullptr)
@@ -364,7 +435,7 @@ bool YState::has_valid_auto_override() {
         if (pi.name == autooverride_check_property) {
             if ((autooverride_check_type == CheckType::FALSE || autooverride_check_type == CheckType::TRUE)) {
                 if (pi.type != Variant::BOOL) {
-                    ERR_PRINT(vformat("[YState] Property %s was not a bool. (found in node %s when checking for auto override in %s)", autooverride_check_property, autooverride_check_node->get_name(), get_name()));
+                    ERR_PRINT(vformat("[YState] [%s] Property %s was not a bool. (found in node %s when checking for auto override in %s)", get_name(), autooverride_check_property, autooverride_check_node->get_name(), get_name()));
                     return false;
                 } else {
                     return true;
@@ -373,14 +444,14 @@ bool YState::has_valid_auto_override() {
             if (pi.type == Variant::INT || pi.type == Variant::FLOAT) {
                 p_has_property = true;
             } else {
-                ERR_PRINT(vformat("[YState] Property %s was not a number. (found in node %s when checking for auto override in %s)", autooverride_check_property, autooverride_check_node->get_name(), get_name()));
+                ERR_PRINT(vformat("[YState] [%s] Property %s was not a number. (found in node %s when checking for auto override in %s)", get_name(), autooverride_check_property, autooverride_check_node->get_name(), get_name()));
                 return false;
             }
             break;
         }
     }
     if (!p_has_property) {
-        ERR_PRINT(vformat("[YState] Property %s not found in node %s when checking for auto override in %s", autooverride_check_property, autooverride_check_node->get_name(),get_name()));
+        ERR_PRINT(vformat("[YState] [%s] Property %s not found in node %s when checking for auto override in %s", get_name(), autooverride_check_property, autooverride_check_node->get_name(),get_name()));
         return false;
     }
     return true;
@@ -393,7 +464,7 @@ bool YState::can_auto_override() const {
         && (only_if_objectids.is_empty() || (only_if_objectids.has(fsm_machine->current_state->get_instance_id()))));
 
     if (print_debugs)
-        print_line("can auto override based on ignore and only if? ",can_based_on_ignore_and_only_if);
+        print_line(vformat("[YState] [%s] can auto override based on ignore and only if? %s", get_name(), can_based_on_ignore_and_only_if));
 
     if (!can_based_on_ignore_and_only_if) return false;
 
@@ -444,7 +515,7 @@ bool YState::can_auto_override() const {
         }
 
         if (print_debugs)
-            print_line("Checking can transition, found result ",found_result," current value ",current_value);
+            print_line(vformat("[YState] [%s] Checking can transition, found result %s current value %s", get_name(), found_result, current_value));
         return found_result;
     }
     return false;
@@ -455,11 +526,11 @@ void YState::execute_auto_override() {
         if (!fsm_machine.is_valid()) return;
 
         if (print_debugs)
-            print_line("Attempt override called from",this,", not blocking others? ",!fsm_machine->block_other_overrides, " their override with state null? ",fsm_machine->override_with_state == nullptr);
+            print_line(vformat("[YState] [%s] Attempt override called from %s, not blocking others? %s their override with state null? %s", get_name(), this, !fsm_machine->block_other_overrides, fsm_machine->override_with_state == nullptr));
         if (!fsm_machine->block_other_overrides && fsm_machine != nullptr) {
             if (fsm_machine->current_state != this) {
                 if (print_debugs)
-                    print_line("Set override with state ",this);
+                    print_line(vformat("[YState] [%s] Set override with state %s", get_name(), this));
                 fsm_machine->override_with_state = this;
             }
             fsm_machine->block_other_overrides = true;
@@ -477,7 +548,7 @@ void YState::attempt_override() {
     if (auto_override) {
         if (!fsm_machine.is_valid()) return;
         if (print_debugs)
-            print_line("Attempt override called, not blocking others? ",!fsm_machine->block_other_overrides," my override not null? ", this, " their override with state null? ",fsm_machine->override_with_state == nullptr);
+            print_line(vformat("[YState] [%s] Attempt override called, not blocking others? %s my override not null? %s their override with state null? %s", get_name(), !fsm_machine->block_other_overrides, this, fsm_machine->override_with_state == nullptr));
         if (!fsm_machine->block_other_overrides && fsm_machine != nullptr) {
             // if (print_debugs)
             //     print_line("Getting here? ignore_if_state == nullptr ", ignore_if_state == nullptr, " not current ignoring ",fsm_owner->current_state != ignore_if_state);
@@ -495,6 +566,7 @@ void YState::attempt_override() {
 }
 
 void YState::ready() {
+    has_done_ready = true;
     GDVIRTUAL_CALL(_on_ready,fsm_machine);
     if (auto_override) {
         for (int i = 0; i < static_cast<int>(autooverride_ignore_if_states.size()); ++i) {
@@ -568,9 +640,9 @@ void YStateMachine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("transition_to_backup_state"), &YStateMachine::transition_to_backup_state);
     ClassDB::bind_method(D_METHOD("transition_to_default_state"), &YStateMachine::transition_to_default_state);
 
-    ADD_SIGNAL(MethodInfo("attempt_override"));
-    ADD_SIGNAL(MethodInfo("state_transitioned"));
-    ADD_SIGNAL(MethodInfo("state_target_changed"));
+    ADD_SIGNAL(MethodInfo(SNAME("attempt_override")));
+    ADD_SIGNAL(MethodInfo(SNAME("state_transitioned")));
+    ADD_SIGNAL(MethodInfo(SNAME("state_target_changed")));
 }
 
 void YStateMachine::start_state_machine(Node *p_owner) {
@@ -579,7 +651,18 @@ void YStateMachine::start_state_machine(Node *p_owner) {
     if (print_debugs)
         print_line("Start state machine called");
     if (p_owner != nullptr) {
+        has_done_setup = true;
         fsm_owner = p_owner;
+        node_owner_3d = Object::cast_to<Node3D>(p_owner);
+        if (node_owner_3d != nullptr) {
+            node_owner_3d->connect(SceneStringName(tree_exiting), callable_mp(this, &YStateMachine::owner_node_exiting_tree));
+        }
+        else {
+            node_owner_2d = Object::cast_to<Node2D>(p_owner);
+            if (node_owner_2d != nullptr) {
+                node_owner_2d->connect(SceneStringName(tree_exiting), callable_mp(this, &YStateMachine::owner_node_exiting_tree));
+            }
+        }
 
         TypedArray<Node> children = p_owner->get_children();
         Vector<YState*> found_states;
@@ -680,7 +763,7 @@ void YStateMachine::process(float p_delta) {
             }
         }
         if (has_overriders && !block_other_overrides) {
-            emit_signal("attempt_override");
+            emit_signal(SNAME("attempt_override"));
         }
     }
 
@@ -733,15 +816,23 @@ void YStateMachine::finished_navigation() {
 }
 
 float YStateMachine::get_state_target_distance() const {
-    if (fsm_owner == nullptr || !fsm_owner->has_method("get_global_position"))
+    if (fsm_owner == nullptr || (node_owner_3d == nullptr && node_owner_2d == nullptr))
         return -1.0;
 
     if (state_target == nullptr) {
-        return fsm_owner->call("get_global_position").call("distance_to", state_target_position_only);
+        if (node_owner_3d != nullptr) {
+            return node_owner_3d->get_global_position().distance_to(state_target_position_only);
+        } else if (node_owner_2d != nullptr) {
+            return node_owner_2d->get_global_position().distance_to(state_target_position_only);
+        }
     } else if (state_target_2d != nullptr) {
-        return state_target_2d->get_global_position().distance_to(fsm_owner->call("get_global_position"));
+        if (node_owner_2d != nullptr) {
+            return node_owner_2d->get_global_position().distance_to(state_target_2d->get_global_position());
+        }
     } else if (state_target_3d != nullptr) {
-        return state_target_3d->get_global_position().distance_to(fsm_owner->call("get_global_position"));
+        if (node_owner_3d != nullptr) {
+            return node_owner_3d->get_global_position().distance_to(state_target_3d->get_global_position());
+        }
     }
     return -1.0f;
 }
@@ -755,27 +846,27 @@ void YStateMachine::clear_state_target() {
         state_target = nullptr;
         state_target_3d = nullptr;
         state_target_2d = nullptr;
-        emit_signal("state_target_changed");
+        emit_signal(SNAME("state_target_changed"));
     }
 }
 
 void YStateMachine::set_state_target(Node *new_target) {
     if (new_target != state_target) {
         if (state_target != nullptr) {
-            if (state_target->is_connected("tree_exited", callable_mp(this, &YStateMachine::clear_state_target)))
-                state_target->disconnect("tree_exited", callable_mp(this, &YStateMachine::clear_state_target));
+            if (state_target->is_connected(SceneStringName(tree_exited), callable_mp(this, &YStateMachine::clear_state_target)))
+                state_target->disconnect(SceneStringName(tree_exited), callable_mp(this, &YStateMachine::clear_state_target));
             clear_state_target();
         }
         state_target = new_target;
         GDVIRTUAL_CALL(_on_set_state_target,new_target);
         if (state_target != nullptr) {
-            if (!state_target->is_connected("tree_exited", callable_mp(this, &YStateMachine::clear_state_target)))
-                state_target->connect("tree_exited", callable_mp(this, &YStateMachine::clear_state_target), CONNECT_ONE_SHOT);
+            if (!state_target->is_connected(SceneStringName(tree_exited), callable_mp(this, &YStateMachine::clear_state_target)))
+                state_target->connect(SceneStringName(tree_exited), callable_mp(this, &YStateMachine::clear_state_target), CONNECT_ONE_SHOT);
 
             state_target_3d = Object::cast_to<Node3D>(state_target);
             state_target_2d = Object::cast_to<Node2D>(state_target);
         }
-        emit_signal("state_target_changed");
+        emit_signal(SNAME("state_target_changed"));
     }
 }
 

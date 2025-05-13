@@ -30,10 +30,6 @@ void GSheetImporterEditorPlugin::import_func_end() {
     }
 }
 
-GSheetImporterEditorPlugin * GSheetImporterEditorPlugin::get_singleton() {
-    return singleton;
-}
-
 void GSheetImporterEditorPlugin::FindImporterScripts() {
     if (waitin_for_delayed_add_importers < 300) {
         waitin_for_delayed_add_importers++;

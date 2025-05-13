@@ -11,6 +11,7 @@
 #include "scene/resources/packed_scene.h"
 #include "yarnphysics.h"
 #include "yarntime.h"
+#include "scene/scene_string_names.h"
 
 class YSceneSpawner3D : public Node3D {
     GDCLASS(YSceneSpawner3D , Node3D);

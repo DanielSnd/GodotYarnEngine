@@ -112,7 +112,7 @@ void YEventData::register_listener_with_node(Node *p_node, int p_event_id, const
     ObjectID node_id = p_node->get_instance_id();
     if (!count_node_callbacks.has(node_id)) {
         count_node_callbacks[node_id] = 1;
-        p_node->connect("tree_exiting", callable_mp_static(&YEventData::_node_exiting_tree).bind(p_node));
+        p_node->connect(SceneStringName(tree_exiting), callable_mp_static(&YEventData::_node_exiting_tree).bind(p_node));
     } else {
         count_node_callbacks[node_id]++;
     }
@@ -136,8 +136,8 @@ void YEventData::unregister_listener_with_node(Node *p_node, int p_event_id, con
                 count_node_callbacks[node_id]--;
                 if (count_node_callbacks[node_id] <= 0) {
                     count_node_callbacks.erase(node_id);
-                    if (p_node->is_connected("tree_exiting", callable_mp_static(&YEventData::_node_exiting_tree).bind(p_node))) {
-                        p_node->disconnect("tree_exiting", callable_mp_static(&YEventData::_node_exiting_tree).bind(p_node));
+                    if (p_node->is_connected(SceneStringName(tree_exiting), callable_mp_static(&YEventData::_node_exiting_tree).bind(p_node))) {
+                        p_node->disconnect(SceneStringName(tree_exiting), callable_mp_static(&YEventData::_node_exiting_tree).bind(p_node));
                     }
                 }
             }
@@ -167,8 +167,8 @@ void YEventData::clear_node_callbacks(Node *p_node) {
     }
 
     count_node_callbacks.erase(node_id);
-    if (p_node->is_connected("tree_exiting", callable_mp_static(&YEventData::_node_exiting_tree).bind(p_node))) {
-        p_node->disconnect("tree_exiting", callable_mp_static(&YEventData::_node_exiting_tree).bind(p_node));
+    if (p_node->is_connected(SceneStringName(tree_exiting), callable_mp_static(&YEventData::_node_exiting_tree).bind(p_node))) {
+        p_node->disconnect(SceneStringName(tree_exiting), callable_mp_static(&YEventData::_node_exiting_tree).bind(p_node));
     }
 }
 

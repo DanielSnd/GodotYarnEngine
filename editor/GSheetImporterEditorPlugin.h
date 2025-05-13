@@ -27,7 +27,9 @@ protected:
 public:
     inline static GSheetImporterEditorPlugin* singleton = nullptr;
 
-    static GSheetImporterEditorPlugin* get_singleton();
+    _FORCE_INLINE_ static GSheetImporterEditorPlugin* get_singleton() {
+        return singleton;
+    }
 
     void FindImporterScripts();
 

@@ -12,6 +12,7 @@
 #include "scene/2d/node_2d.h"
 #include "core/os/mutex.h"
 #include "core/os/thread_safe.h"
+#include "scene/scene_string_names.h"
 
 #define Math_PI 3.1415926535897932384626433833
 
@@ -113,13 +114,13 @@ class YTween : public RefCounted {
 	_THREAD_SAFE_CLASS_
     
 protected:
-    static YTween* singleton;
+    inline static YTween* singleton = nullptr;
     static void _bind_methods();
 
 public:
 
     List<Ref<YTweenWrap>> tweens;
-    static YTween *get_singleton();
+    _FORCE_INLINE_ static YTween *get_singleton() {return singleton;}
     HashMap<uint64_t,Vector<Ref<YTweenWrap>>> tween_finder;
     void do_process(double delta);
     void do_physics_process(double delta);

@@ -9,6 +9,9 @@
 #include "ystateoverride.h"
 #include "scene/2d/node_2d.h"
 #include "scene/3d/node_3d.h"
+#include "yarnengine.h"
+#include "yarntime.h"
+#include "scene/scene_string_names.h"
 
 class YStateOverride;
 class YStateMachine;
@@ -45,12 +48,10 @@ public:
     void set_fsm_machine(const Ref<YStateMachine> &val) {fsm_machine = val;}
     Node* get_node_owner() const;
 
-    Node3D* node_owner_3d;
-    Node3D* get_node_owner_3d() const {return node_owner_3d;}
-    Node2D* node_owner_2d;
-    Node2D* get_node_owner_2d() const {return node_owner_2d;}
-    void set_node_owner_2d(Node2D* val) {node_owner_2d = val;}
-    void set_node_owner_3d(Node3D* val) {node_owner_3d = val;}
+    Node3D* get_node_owner_3d() const;
+    Node2D* get_node_owner_2d() const ;
+    void set_node_owner_2d(Node2D* val);
+    void set_node_owner_3d(Node3D* val);
     
 
     virtual bool pass_condition();
@@ -64,6 +65,8 @@ public:
     virtual float get_speed();
     virtual bool can_move();
     virtual bool override_animation();
+
+    bool has_done_ready = false;
 
     bool print_debugs = false;
     bool get_print_debugs() const {return print_debugs;}
@@ -132,14 +135,22 @@ public:
     
     Variant get_global_transform() const;
     void set_global_transform(const Variant &val);
-    
 
     float autooverride_check_value;
     void set_autooverride_check_value(const float val) { autooverride_check_value = val;}
     float get_autooverride_check_value() const {return autooverride_check_value;}
     Vector<ObjectID> ignore_if_objectids;
     Vector<ObjectID> only_if_objectids;
+    
     float last_time_state_started;
+    float last_time_state_exited;
+    float get_last_time_state_started() const {return last_time_state_started;}
+    float get_last_time_state_exited() const {return last_time_state_exited;}
+    void set_last_time_state_started(const float val) {last_time_state_started = val;}
+    void set_last_time_state_exited(const float val) {last_time_state_exited = val;}
+    bool has_time_passed_since_last_started(float amount_passed) const;
+    bool has_time_passed_since_last_exited(float amount_passed) const;
+
     void attempt_override();
     bool wants_to_override = false;
     /*@export var parameter_name:String = ""
@@ -245,15 +256,21 @@ public:
     YState* get_default_state() const {return default_state;}
     void set_default_state(YState* val) {default_state = val;}
 
+    bool has_done_setup = false;
 
     Node* state_target;
+    Node3D* node_owner_3d;
+    Node2D* node_owner_2d;
     Node3D* state_target_3d;
     Node2D* state_target_2d;
     Variant state_target_position_only;
 
     Variant get_state_target_position() const {
-        if (state_target != nullptr && state_target->has_method("get_global_position")) {
-            return state_target->call("get_global_position");
+        if (state_target_3d != nullptr) {
+            return state_target_3d->get_global_position();
+        }
+        if (state_target_2d != nullptr) {
+            return state_target_2d->get_global_position();
         }
         return state_target_position_only;
     }
@@ -278,7 +295,15 @@ public:
         }
     }
 
+    Variant get_global_position() const;
+    void set_global_position(const Variant &val);
+    
+    Variant get_global_transform() const;
+    void set_global_transform(const Variant &val);
+
     virtual void transition(YState* p_state);
+
+    void owner_node_exiting_tree();
 
     YStateMachine(): state_target(nullptr), state_target_3d(nullptr), state_target_2d(nullptr) {
         transitions_count = 0;
@@ -291,6 +316,7 @@ public:
         override_with_state = nullptr;
         attempt_transition_interval = 2;
         _counting = 0;
+        has_done_setup = false;
     }
 
     ~YStateMachine() {
@@ -300,6 +326,7 @@ public:
         current_state = nullptr;
         fsm_owner = nullptr;
         override_with_state = nullptr;
+        has_done_setup = false;
     }
 };
 

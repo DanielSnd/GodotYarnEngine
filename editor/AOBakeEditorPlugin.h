@@ -24,7 +24,9 @@ protected:
 public:
     inline static AOBakeEditorPlugin* singleton = nullptr;
 
-    static AOBakeEditorPlugin* get_singleton();
+    _FORCE_INLINE_ static AOBakeEditorPlugin* get_singleton() {
+        return singleton;
+    }
     AOBakeEditorPlugin();
 
     void CreateBakeableMeshInstance();

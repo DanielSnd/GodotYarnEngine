@@ -5,6 +5,7 @@
 #include "core/templates/hash_map.h"
 #include "core/variant/variant.h"
 #include "scene/main/node.h"
+#include "scene/scene_string_names.h"
 
 class YEventData : public RefCounted {
     GDCLASS(YEventData, RefCounted);

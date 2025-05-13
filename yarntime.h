@@ -9,6 +9,8 @@
 #include "core/object/object.h"
 #include "core/object/ref_counted.h"
 #include "scene/main/node.h"
+#include "scene/scene_string_names.h"
+#include "core/os/os.h"
 
 
 class YTime : public RefCounted {

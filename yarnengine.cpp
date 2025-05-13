@@ -465,8 +465,8 @@ void YEngine::setup_node() {
         }
         DisplayServer::get_singleton()->window_set_title(TranslationServer::get_singleton()->translate(appname));
 
-        SceneTree::get_singleton()->get_root()->connect("tree_exiting", callable_mp(this, &YEngine::cleanup_node));
-        SceneTree::get_singleton()->get_root()->call_deferred("add_child",this);
+        SceneTree::get_singleton()->get_root()->connect(SceneStringName(tree_exiting), callable_mp(this, &YEngine::cleanup_node));
+        SceneTree::get_singleton()->get_root()->call_deferred("add_child", this);
         set_name("YEngine");
         already_setup_in_tree=true;
         ysave->time_started = OS::get_singleton()->get_ticks_msec() * 0.001f;

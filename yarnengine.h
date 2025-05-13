@@ -18,6 +18,7 @@
 #include <core/string/translation_server.h>
 #include "ypersistentid.h"
 #include "scene/3d/camera_3d.h"
+#include "scene/scene_string_names.h"
 
 class YGameState;
 class YTween;
