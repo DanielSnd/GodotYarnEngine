@@ -76,11 +76,11 @@ void YState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_as_backup_state"), &YState::set_as_backup_state);
 
     ClassDB::bind_method(D_METHOD("get_global_position"), &YState::get_global_position);
-    ClassDB::bind_method(D_METHOD("set_global_position", "global_position"), &YState::set_global_position);
+    ClassDB::bind_method(D_METHOD("set_global_position", "global_position"), &YState::set_global_position, DEFVAL(Variant()));
     ADD_PROPERTY(PropertyInfo(Variant::VARIANT_MAX, "global_position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_global_position", "get_global_position");
 
     ClassDB::bind_method(D_METHOD("get_global_transform"), &YState::get_global_transform);
-    ClassDB::bind_method(D_METHOD("set_global_transform", "global_transform"), &YState::set_global_transform);
+    ClassDB::bind_method(D_METHOD("set_global_transform", "global_transform"), &YState::set_global_transform, DEFVAL(Variant()));
     ADD_PROPERTY(PropertyInfo(Variant::VARIANT_MAX, "global_transform", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_global_transform", "get_global_transform");
 
     ClassDB::bind_method(D_METHOD("get_node_owner_3d"), &YState::get_node_owner_3d);    
