@@ -1,15 +1,25 @@
-# SCsub
+#!/usr/bin/env python
+from misc.utility.scons_hints import *
+from misc.utility.color import print_info
+
 
 Import('env')
+Import("env_modules")
 
 if ARGUMENTS.get('fmodgodot', 'yes') == 'no':
     env.Append(CPPDEFINES=["NO_FMOD"])
+    print_info("Yarn Engine building with Dummy FMOD Objects")
 
 if ARGUMENTS.get('ygodot', 'yes') == 'yes':
     env.Append(CPPDEFINES=["YGODOT"])
+    print_info("Yarn Engine building with YGodot flag")
 
-module_env = env.Clone()
-module_env.add_source_files(env.modules_sources, "editor/*.cpp")
+module_env = env_modules.Clone()
+
+if env.editor_build:
+    print_info("Yarn Engine Editor Build")
+    module_env.add_source_files(env.modules_sources, "./editor/*.cpp")
+
 module_env.add_source_files(env.modules_sources, "importers/*.cpp")
 module_env.add_source_files(env.modules_sources, "*.cpp")
 

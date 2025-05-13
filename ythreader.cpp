@@ -12,12 +12,12 @@ void YThreader::_notification(int p_what) {
                 _running = false;
                 run_mutex.unlock();
 
-                for (auto _worker: workers) {
+                for (int i = 0; i < workers.size(); i++) {
                     available.post();
                 }
-                for (auto _worker: workers) {
-                    if (_worker != nullptr)
-                        _worker->wait_to_finish();
+                for (const auto& worker: workers) {
+                    if (worker != nullptr)
+                        worker->wait_to_finish();
                 }
                 break;
             }
@@ -61,8 +61,8 @@ void YThreader::_worker_thread(void *p_threader) {
         const auto& callback = preview->thread_queue[0];
         preview->queue_mutex.unlock();
 
-        if (callback.is_valid()) {
-            bool ret = callback.call();
+        if (callback.is_valid()) {            
+            callback.call();
         }
 
         preview->queue_mutex.lock();

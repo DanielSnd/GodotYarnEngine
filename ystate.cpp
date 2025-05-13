@@ -673,6 +673,9 @@ void YStateMachine::start_state_machine(Node *p_owner) {
                 found_states.append(child);
                 if (current_state == nullptr) {
                     current_state = child;
+                    if (default_state == nullptr) {
+                        default_state = child;
+                    }
                 }
                 if (child->auto_override && child->has_valid_auto_override()) {
                     auto_overridable_states.push_back(child);
