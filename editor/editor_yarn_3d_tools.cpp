@@ -19,10 +19,6 @@ EditorYarn3DTools::EditorYarn3DTools() {
 }
 
 EditorYarn3DTools::~EditorYarn3DTools() {
-    EditorNode* ednsingleton = EditorNode::get_singleton();
-    if (ednsingleton != nullptr) {
-        ednsingleton->remove_tool_menu_item("3D Tools");
-    }
     if (tools_menu) {
         tools_menu->queue_free();
         tools_menu = nullptr;
