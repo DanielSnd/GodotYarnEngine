@@ -163,13 +163,13 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
     Vector3 rotate = p_options.has("rotate_mesh") ? Vector3(p_options["rotate_mesh"]) : Vector3(0,0,0);
     bool has_scale_replacement = !replace_scale.is_zero_approx();
     bool has_rotate_replacement = !rotate.is_zero_approx();
-    bool optimize_color_only = p_options.has("optimize_color_only_materials") ? bool(p_options["optimize_color_only_materials"]) : false;
-    bool auto_smooth = p_options.has("auto_smooth") ? bool(p_options["auto_smooth"]) : true;
-    float auto_smooth_angle = p_options.has("auto_smooth_angle") ? float(p_options["auto_smooth_angle"]) : 30.0f;
+    bool optimize_color_only = p_options.has("optional/optimize_color_only_materials") ? bool(p_options["optional/optimize_color_only_materials"]) : false;
+    bool auto_smooth = p_options.has("optional/auto_smooth") ? bool(p_options["optional/auto_smooth"]) : true;
+    float auto_smooth_angle = p_options.has("optional/auto_smooth_angle") ? float(p_options["optional/auto_smooth_angle"]) : 30.0f;
 
     Ref<Material> replace_material;
-    if (p_options.has(("surface_material"))) {
-        replace_material = p_options["surface_material"];
+    if (p_options.has(("optional/surface_material"))) {
+        replace_material = p_options["optional/surface_material"];
     }
     bool has_replacement_material = !replace_material.is_null() && replace_material.is_valid();
 
