@@ -43,13 +43,16 @@ void ResourceImporterGLBasMesh::get_import_options(const String &p_path, List<Im
     r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "save_to_file"), false));
     r_options->push_back(ImportOption(PropertyInfo(Variant::VECTOR3, "scale_mesh", PROPERTY_HINT_LINK), Vector3(1, 1, 1)));
     r_options->push_back(ImportOption(PropertyInfo(Variant::VECTOR3, "offset_mesh"), Vector3(0, 0, 0)));
-	r_options->push_back(ImportOption(PropertyInfo(Variant::VECTOR3, "rotate_mesh"), Vector3(0, 0, 0)));
-    r_options->push_back(ImportOption(PropertyInfo(Variant::OBJECT, "surface_material", PROPERTY_HINT_RESOURCE_TYPE, "Material"), Variant()));
+    r_options->push_back(ImportOption(PropertyInfo(Variant::VECTOR3, "rotate_mesh"), Vector3(0, 0, 0)));
+    r_options->push_back(ImportOption(PropertyInfo(Variant::OBJECT, "optional/surface_material", PROPERTY_HINT_RESOURCE_TYPE, "Material"), Variant()));
+    r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "optional/auto_smooth"), true));
+    r_options->push_back(ImportOption(PropertyInfo(Variant::FLOAT, "optional/auto_smooth_angle", PROPERTY_HINT_RANGE, "0,180,0.1"), 30.0));
+    r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "optional/optimize_color_only_materials"), false));
 }
 
 bool ResourceImporterGLBasMesh::get_option_visibility(const String &p_path, const String &p_option,
                                                       const HashMap<StringName, Variant> &p_options) const {
-    return true;
+	return true;
 }
 
 TypedArray<ImporterMeshInstance3D> ResourceImporterGLBasMesh::find_first_matched_nodes(const Node *checking_node) {
@@ -72,15 +75,98 @@ TypedArray<ImporterMeshInstance3D> ResourceImporterGLBasMesh::find_first_matched
     return result;
 }
 
+void ResourceImporterGLBasMesh::smooth_normals(Array &p_arrays, float p_angle_threshold, bool p_has_vertex_colors) {
+    if (p_arrays[Mesh::ARRAY_VERTEX].get_type() == Variant::NIL ||
+        p_arrays[Mesh::ARRAY_NORMAL].get_type() == Variant::NIL ||
+        p_arrays[Mesh::ARRAY_INDEX].get_type() == Variant::NIL) {
+        return;
+    }
+
+    PackedVector3Array vertices = p_arrays[Mesh::ARRAY_VERTEX];
+    PackedVector3Array normals = p_arrays[Mesh::ARRAY_NORMAL];
+    PackedInt32Array indices = p_arrays[Mesh::ARRAY_INDEX];
+    PackedColorArray colors;
+    bool has_colors = p_arrays[Mesh::ARRAY_COLOR].get_type() != Variant::NIL;
+    if (has_colors) {
+        colors = p_arrays[Mesh::ARRAY_COLOR];
+    }
+
+    float normal_merge_threshold = Math::cos(Math::deg_to_rad(p_angle_threshold));
+
+    struct VertexKey {
+        Vector3 pos;
+        Color color;
+		bool has_color;
+        bool operator==(const VertexKey &other) const {
+            return pos.is_equal_approx(other.pos) && (!has_color ||color.is_equal_approx(other.color));
+        }
+    };
+
+    struct VertexKeyHasher {
+        static _FORCE_INLINE_ uint32_t hash(const VertexKey &k) {
+			uint32_t h = hash_murmur3_one_real(k.pos.x);
+			h = hash_murmur3_one_real(k.pos.y, h);
+			h = hash_murmur3_one_real(k.pos.z, h);
+			if (k.has_color) {
+				h = hash_murmur3_one_real(k.color.r, h);
+				h = hash_murmur3_one_real(k.color.g, h);
+				h = hash_murmur3_one_real(k.color.b, h);
+				h = hash_murmur3_one_real(k.color.a, h);
+			}
+			return hash_fmix32(h);
+        }
+    };
+
+    HashMap<VertexKey, Vector<int>, VertexKeyHasher> unique_vertices;
+    for (int i = 0; i < vertices.size(); ++i) {
+        VertexKey key;
+        key.pos = vertices[i];
+        key.color = has_colors ? colors[i] : Color();
+		key.has_color = has_colors;
+        unique_vertices[key].push_back(i);
+    }
+
+    PackedVector3Array new_normals;
+    new_normals.resize(vertices.size());
+
+    // For each group of unique vertices
+    for (const KeyValue<VertexKey, Vector<int>> &E : unique_vertices) {
+        const Vector<int> &group = E.value;
+        for (int i = 0; i < group.size(); ++i) {
+            int idx = group[i];
+            Vector3 accum = Vector3();
+            int count = 0;
+            for (int j = 0; j < group.size(); ++j) {
+                int other_idx = group[j];
+                float dot = normals[idx].dot(normals[other_idx]);
+                if (dot >= normal_merge_threshold) {
+                    accum += normals[other_idx];
+                    count++;
+                }
+            }
+            if (count > 0) {
+                new_normals.write[idx] = accum.normalized();
+            } else {
+                new_normals.write[idx] = normals[idx];
+            }
+        }
+    }
+    p_arrays[Mesh::ARRAY_NORMAL] = new_normals;
+}
+
 Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const String &p_source_file, const String &p_save_path,
     const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files,
     Variant *r_metadata) {
     bool should_save_mesh = p_options.has("save_to_file") ? bool(p_options["save_to_file"]) : false;
     Vector3 replace_scale = p_options.has("scale_mesh") ? Vector3(p_options["scale_mesh"]) : Vector3(0.0,0.0,0.0);
     Vector3 offset = p_options.has("offset_mesh") ? Vector3(p_options["offset_mesh"]) : Vector3(0,0,0);
-	Vector3 rotate = p_options.has("rotate_mesh") ? Vector3(p_options["rotate_mesh"]) : Vector3(0,0,0);
+    Vector3 rotate = p_options.has("rotate_mesh") ? Vector3(p_options["rotate_mesh"]) : Vector3(0,0,0);
     bool has_scale_replacement = !replace_scale.is_zero_approx();
-	bool has_rotate_replacement = !rotate.is_zero_approx();
+    bool has_rotate_replacement = !rotate.is_zero_approx();
+    bool optimize_color_only = p_options.has("optimize_color_only_materials") ? bool(p_options["optimize_color_only_materials"]) : false;
+    bool auto_smooth = p_options.has("auto_smooth") ? bool(p_options["auto_smooth"]) : true;
+    float auto_smooth_angle = p_options.has("auto_smooth_angle") ? float(p_options["auto_smooth_angle"]) : 30.0f;
+
     Ref<Material> replace_material;
     if (p_options.has(("surface_material"))) {
         replace_material = p_options["surface_material"];
@@ -107,7 +193,7 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
 
 	TypedArray<ImporterMeshInstance3D> found_importers = find_first_matched_nodes(root_node);
 	
-	if (root_node->get_child_count() == 1) {
+	if (root_node->get_child_count() == 1 && !optimize_color_only) {
 		 Ref<ArrayMesh> find_mesh;
 		int overall_i = 0;
 
@@ -223,6 +309,21 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
 				// Transform vertices using the mesh's transform
 				PackedVector3Array vertices = surface_array[Mesh::ARRAY_VERTEX];
 				if (vertices.is_empty()) continue;
+
+				// Handle color-only material optimization
+				if (optimize_color_only) {
+					Ref<StandardMaterial3D> standard_material = material;
+					
+					if (standard_material.is_valid()) {
+						Color albedo_color = standard_material->get_albedo();
+						PackedColorArray colors;
+						colors.resize(vertices.size());
+						for (int c = 0; c < vertices.size(); c++) {
+							colors.write[c] = albedo_color;
+						}
+						surface_array[Mesh::ARRAY_COLOR] = colors;
+					}
+				}
 				
 				for (int v = 0; v < vertices.size(); v++) {
 					Vector3 vertex = vertices[v];
@@ -258,7 +359,7 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
 				}
 				
 				// Create a key that includes both material and attribute set
-				String material_key = material.is_valid() ? String::num_uint64(material->get_instance_id()) : "null";
+				String material_key = optimize_color_only ? "combined" : (material.is_valid() ? String::num_uint64(material->get_instance_id()) : "null");
 				String attribute_key;
 				for (int array_type = 0; array_type < Mesh::ARRAY_MAX; array_type++) {
 					if (surface_array[array_type].get_type() != Variant::NIL) {
@@ -448,8 +549,13 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
 			}
 			
 			// Add the combined surface
+			if (auto_smooth) {
+				smooth_normals(combined_arrays, auto_smooth_angle, optimize_color_only);
+			}
 			combined_mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, combined_arrays);
-			combined_mesh->surface_set_material(surface_count, material);
+			if (!optimize_color_only) {
+				combined_mesh->surface_set_material(surface_count, material);
+			}
 			surface_count++;
 		}
 		

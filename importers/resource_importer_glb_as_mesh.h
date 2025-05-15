@@ -43,6 +43,8 @@ public:
     // Threaded import can currently cause deadlocks, see GH-48265.
     virtual bool can_import_threaded() const override { return false; }
 
+    void smooth_normals(Array &p_arrays, float p_angle_threshold, bool p_has_vertex_colors);
+
     ResourceImporterGLBasMesh();
     ~ResourceImporterGLBasMesh();
 };
