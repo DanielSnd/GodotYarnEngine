@@ -45,6 +45,8 @@ public:
 
     void smooth_normals(Array &p_arrays, float p_angle_threshold, bool p_has_vertex_colors);
 
+    String sanitize_filename(const String &p_filename);
+
     ResourceImporterGLBasMesh();
     ~ResourceImporterGLBasMesh();
 };

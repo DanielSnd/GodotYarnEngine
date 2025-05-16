@@ -45,7 +45,8 @@ void ResourceImporterGLBasMesh::get_import_options(const String &p_path, List<Im
     r_options->push_back(ImportOption(PropertyInfo(Variant::VECTOR3, "offset_mesh"), Vector3(0, 0, 0)));
     r_options->push_back(ImportOption(PropertyInfo(Variant::VECTOR3, "rotate_mesh"), Vector3(0, 0, 0)));
     r_options->push_back(ImportOption(PropertyInfo(Variant::OBJECT, "optional/surface_material", PROPERTY_HINT_RESOURCE_TYPE, "Material"), Variant()));
-    r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "optional/auto_smooth"), true));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "optional/attempt_to_auto_link_materials"), false));
+    r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "optional/auto_smooth"), false));
     r_options->push_back(ImportOption(PropertyInfo(Variant::FLOAT, "optional/auto_smooth_angle", PROPERTY_HINT_RANGE, "0,180,0.1"), 30.0));
     r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "optional/optimize_color_only_materials"), false));
 }
@@ -166,6 +167,7 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
     bool optimize_color_only = p_options.has("optional/optimize_color_only_materials") ? bool(p_options["optional/optimize_color_only_materials"]) : false;
     bool auto_smooth = p_options.has("optional/auto_smooth") ? bool(p_options["optional/auto_smooth"]) : true;
     float auto_smooth_angle = p_options.has("optional/auto_smooth_angle") ? float(p_options["optional/auto_smooth_angle"]) : 30.0f;
+    bool attempt_auto_link = p_options.has("optional/attempt_to_auto_link_materials") ? bool(p_options["optional/attempt_to_auto_link_materials"]) : false;
 
     Ref<Material> replace_material;
     if (p_options.has(("optional/surface_material"))) {
@@ -193,7 +195,7 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
 
 	TypedArray<ImporterMeshInstance3D> found_importers = find_first_matched_nodes(root_node);
 	
-	if (root_node->get_child_count() == 1 && !optimize_color_only) {
+	if (root_node->get_child_count() == 1 && !optimize_color_only && !auto_smooth) {
 		 Ref<ArrayMesh> find_mesh;
 		int overall_i = 0;
 
@@ -237,8 +239,32 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
 						if (!has_replacement_material || !replace_material.is_valid()) {
 							const int _mesh_surface_count =  static_cast<int>(find_mesh->get_surface_count());
 							for (int _surf_index = 0; _surf_index < _mesh_surface_count; ++_surf_index) {
-								new_mesh->surface_set_material(_surf_index, find_mesh->surface_get_material(_surf_index));
-								new_mesh->surface_set_name(_surf_index, find_mesh->surface_get_name(_surf_index));
+								Ref<Material> surface_material = find_mesh->surface_get_material(_surf_index);
+								
+								bool did_auto_link = false;
+								// Handle auto-linking materials if enabled
+								if (attempt_auto_link && !has_replacement_material && surface_material.is_valid()) {
+									String material_name = surface_material->get_name();
+									if (!material_name.is_empty()) {
+										String sanitized_name = sanitize_filename(material_name);
+										String material_path = vformat("res://materials/%s.tres", sanitized_name);
+										if (ResourceLoader::exists(material_path)) {
+											Ref<Material> linked_material = ResourceLoader::load(material_path, "Material");
+											if (linked_material.is_valid()) {
+												surface_material = linked_material;
+												did_auto_link = true;
+											}
+										}
+										if (!did_auto_link) {
+											new_mesh->surface_set_name(_surf_index, sanitized_name);
+										}
+									}
+								}
+								
+								new_mesh->surface_set_material(_surf_index, surface_material);
+								if (!attempt_auto_link || !did_auto_link) {
+									new_mesh->surface_set_name(_surf_index, find_mesh->surface_get_name(_surf_index));
+								}
 							}
 						}
 						new_mesh->set_name(!find_mesh.is_null() && find_mesh.is_valid() ? find_mesh->get_name() : static_cast<String>(root_node->get_name()));
@@ -251,6 +277,7 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
 						find_mesh->surface_set_material(sindex, replace_material);
 					}
 				}
+				
 				if (!find_mesh.is_null() && find_mesh.is_valid()) {
 					find_mesh->set_name(find_mesh->get_name().replace("Root Scene_",""));
 					if (!should_save_mesh) break;
@@ -360,6 +387,25 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
 				
 				// Create a key that includes both material and attribute set
 				String material_key = optimize_color_only ? "combined" : (material.is_valid() ? String::num_uint64(material->get_instance_id()) : "null");
+				
+				// Handle auto-linking materials if enabled
+				if (attempt_auto_link && !has_replacement_material && material.is_valid()) {
+					String material_name = material->get_name();
+					if (!material_name.is_empty()) {
+						String sanitized_name = sanitize_filename(material_name);
+						String material_path = vformat("res://materials/%s.tres", sanitized_name);
+						if (ResourceLoader::exists(material_path)) {
+							Ref<Material> linked_material = ResourceLoader::load(material_path, "Material");
+							if (linked_material.is_valid()) {
+								material = linked_material;
+								material_key = String::num_uint64(material->get_instance_id());
+							}
+						} else {
+							print_line(vformat("Auto linking failed. Expected material %s not found.",material_path));
+						}
+					}
+				}
+				
 				String attribute_key;
 				for (int array_type = 0; array_type < Mesh::ARRAY_MAX; array_type++) {
 					if (surface_array[array_type].get_type() != Variant::NIL) {
@@ -596,6 +642,14 @@ Error ResourceImporterGLBasMesh::import(ResourceUID::ID p_source_id, const Strin
 
 ResourceImporterGLBasMesh::ResourceImporterGLBasMesh() {
 
+}
+
+String ResourceImporterGLBasMesh::sanitize_filename(const String &p_filename) {
+    String sanitized = p_filename.strip_edges();
+    sanitized = sanitized.replace(" ", "_");
+    sanitized = sanitized.replace("\"", "");
+    sanitized = sanitized.to_lower();
+    return sanitized.validate_filename();
 }
 
 ResourceImporterGLBasMesh::~ResourceImporterGLBasMesh() {
