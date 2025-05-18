@@ -26,8 +26,8 @@ protected:
 public:
     enum CheckType {
         NONE = 0,
-        TRUE = 1,
-        FALSE = 2,
+        CHECK_TRUE = 1,
+        CHECK_FALSE = 2,
         EQUAL = 3,
         NOT_EQUAL = 4,
         BIGGER_THAN = 5,
