@@ -114,8 +114,8 @@ void YState::_bind_methods() {
     GDVIRTUAL_BIND(_pass_condition)
 
     BIND_ENUM_CONSTANT(NONE);
-    BIND_ENUM_CONSTANT(TRUE);
-    BIND_ENUM_CONSTANT(FALSE);
+    BIND_ENUM_CONSTANT(CHECK_TRUE);
+    BIND_ENUM_CONSTANT(CHECK_FALSE);
     BIND_ENUM_CONSTANT(EQUAL);
     BIND_ENUM_CONSTANT(NOT_EQUAL);
     BIND_ENUM_CONSTANT(BIGGER_THAN);
@@ -137,7 +137,7 @@ void YState::_validate_property(PropertyInfo &p_property) const {
             p_property.name.begins_with("check_")) {
             p_property.usage = PROPERTY_USAGE_NO_EDITOR;
         }
-        if ((autooverride_check_type == CheckType::FALSE || autooverride_check_type == CheckType::TRUE) && p_property.name == "check_value") {
+        if ((autooverride_check_type == CheckType::CHECK_FALSE || autooverride_check_type == CheckType::CHECK_TRUE) && p_property.name == "check_value") {
             p_property.usage = PROPERTY_USAGE_NO_EDITOR;
         }
     } else {
@@ -362,7 +362,7 @@ PackedStringArray YState::get_configuration_warnings() const {
             autooverride_check_node->get_property_list(&pinfo);
             for (const PropertyInfo &pi : pinfo) {
                 if (pi.name == autooverride_check_property) {
-                    if ((autooverride_check_type == CheckType::FALSE || autooverride_check_type == CheckType::TRUE)) {
+                    if ((autooverride_check_type == CheckType::CHECK_FALSE || autooverride_check_type == CheckType::CHECK_TRUE)) {
                         if (pi.type != Variant::BOOL) {
                             warnings.push_back(RTR("This YState has an auto override with a check type, a node and a property but the property is not a boolean."));
                         } else {
@@ -389,7 +389,7 @@ PackedStringArray YState::get_configuration_warnings() const {
                             script_found->get_script_property_list(&ppinfo);
                             for (const PropertyInfo &pi : ppinfo) {
                                 if (pi.name == autooverride_check_property) {
-                                    if ((autooverride_check_type == CheckType::FALSE || autooverride_check_type == CheckType::TRUE)) {
+                                    if ((autooverride_check_type == CheckType::CHECK_FALSE || autooverride_check_type == CheckType::CHECK_TRUE)) {
                                         if (pi.type != Variant::BOOL) {
                                             warnings.push_back(RTR("This YState has an auto override with a check type, a node and a property but the property is not a boolean."));
                                         } else {
@@ -433,7 +433,7 @@ bool YState::has_valid_auto_override() {
     autooverride_check_node->get_property_list(&pinfo);
     for (const PropertyInfo &pi : pinfo) {
         if (pi.name == autooverride_check_property) {
-            if ((autooverride_check_type == CheckType::FALSE || autooverride_check_type == CheckType::TRUE)) {
+            if ((autooverride_check_type == CheckType::CHECK_FALSE || autooverride_check_type == CheckType::CHECK_TRUE)) {
                 if (pi.type != Variant::BOOL) {
                     ERR_PRINT(vformat("[YState] [%s] Property %s was not a bool. (found in node %s when checking for auto override in %s)", get_name(), autooverride_check_property, autooverride_check_node->get_name(), get_name()));
                     return false;
@@ -477,9 +477,9 @@ bool YState::can_auto_override() const {
         if (autooverride_cooldown > 0.0001 && !YTime::get_singleton()->has_time_elapsed(last_time_state_started,autooverride_cooldown)) {
             return false;
         }
-        if (autooverride_check_type == CheckType::FALSE || autooverride_check_type == CheckType::TRUE) {
+        if (autooverride_check_type == CheckType::CHECK_FALSE || autooverride_check_type == CheckType::CHECK_TRUE) {
             const bool current_bool_value = static_cast<bool>(autooverride_check_node->get(autooverride_check_property));
-            if ((autooverride_check_type == CheckType::FALSE && !current_bool_value) || (autooverride_check_type == CheckType::TRUE && current_bool_value)) {
+            if ((autooverride_check_type == CheckType::CHECK_FALSE && !current_bool_value) || (autooverride_check_type == CheckType::CHECK_TRUE && current_bool_value)) {
                 return true;
             }
             return false;
