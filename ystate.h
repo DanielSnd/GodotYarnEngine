@@ -81,7 +81,7 @@ public:
     NodePath last_transitioned_from = NodePath();
     Node *get_last_transitioned_from_or_null() const;
 
-#if YGODOT
+#ifdef YGODOT
 	PackedStringArray get_configuration_warnings() const override;
 #endif
 

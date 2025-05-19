@@ -347,7 +347,7 @@ Node * YState::get_last_transitioned_from_or_null() const {
     return get_node_or_null(last_transitioned_from);
 }
 
-#if YGODOT
+#ifdef YGODOT
 PackedStringArray YState::get_configuration_warnings() const {
     PackedStringArray warnings = Node::get_configuration_warnings();
 

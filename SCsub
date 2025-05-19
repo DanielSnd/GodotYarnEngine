@@ -6,6 +6,9 @@ from misc.utility.color import print_info
 Import('env')
 Import("env_modules")
 
+if ARGUMENTS.get('ynet', 'no') == 'yes':
+    env.Append(CPPDEFINES=["YNET"])
+
 if ARGUMENTS.get('fmodgodot', 'yes') == 'no':
     env.Append(CPPDEFINES=["NO_FMOD"])
     print_info("Yarn Engine building with Dummy FMOD Objects")

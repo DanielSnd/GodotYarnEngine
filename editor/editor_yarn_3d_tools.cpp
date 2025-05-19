@@ -12,7 +12,7 @@ void EditorYarn3DTools::_bind_methods() {
 EditorYarn3DTools::EditorYarn3DTools() {
     tools_menu = memnew(PopupMenu);
     tools_menu->add_item("Create Combined Mesh", 0);
-    tools_menu->add_item("Create parent Node3D", 1);
+    tools_menu->add_item("Create Parent Node3D", 1);
     tools_menu->add_item("Export Node3D as GLTF", 2);
     tools_menu->connect("id_pressed", callable_mp(this, &EditorYarn3DTools::_menu_callback));
     _add_menu_item();

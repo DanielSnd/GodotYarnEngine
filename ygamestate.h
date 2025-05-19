@@ -37,9 +37,10 @@ public:
     bool has_started=false;
 
     int next_execution_order_number;
+    int next_player_unique_id;
+    int get_next_player_unique_id() const {return next_player_unique_id;}
     int next_game_action_unique_id;
     int next_visual_action_unique_id;
-    int next_player_unique_id;
     int next_visual_element_unique_id;
     String get_current_game_action_name();
 
@@ -80,9 +81,9 @@ public:
 
     bool showed_out_of_actions_message=false;
 
-    int register_player(YGamePlayer* ygp);
+    int register_player(YGamePlayer* ygp, String rename_to="");
 
-    int register_player_specific_id(YGamePlayer *ygp, int desired_id);
+    int register_player_specific_id(YGamePlayer *ygp, int desired_id, String rename_to="");
 
     bool remove_player_with_id(int ygp_id);
     bool set_player_id(YGamePlayer* ygp,int new_pid);
@@ -145,6 +146,10 @@ public:
     bool end_current_game_action() const;
 
     int last_turn_player_id=-1;
+
+    bool only_server_can_register_steps = false;
+    bool only_server_can_register_actions = false;
+
     bool is_playing_back = false;
     bool stop_playing_back_when_current_action_steps_done = false;
     int stop_playing_back_at_id = -1;

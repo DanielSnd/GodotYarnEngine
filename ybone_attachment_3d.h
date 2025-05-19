@@ -48,6 +48,7 @@ class YBoneAttachment3D : public Node3D {
     bool overriding = false;
 
     bool use_external_skeleton = false;
+    bool ignore_position = false;
     bool ignore_scale = false;
     NodePath external_skeleton_node;
     ObjectID external_skeleton_node_cache;
@@ -87,6 +88,9 @@ public:
 
     void set_ignore_scale(bool p_ignore_scale);
     bool get_ignore_scale() const;
+
+    void set_ignore_position(bool p_ignore_position);
+    bool get_ignore_position() const;
 
     void set_use_external_skeleton(bool p_external_skeleton);
     bool get_use_external_skeleton() const;

@@ -9,8 +9,8 @@
 YGameState* YGameState::singleton = nullptr;
 
 void YGameState::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("register_player", "game_player"), &YGameState::register_player);
-    ClassDB::bind_method(D_METHOD("register_player_specific_id", "game_player","desired_id"), &YGameState::register_player_specific_id);
+    ClassDB::bind_method(D_METHOD("register_player", "game_player","rename_to"), &YGameState::register_player,DEFVAL(""));
+    ClassDB::bind_method(D_METHOD("register_player_specific_id", "game_player","desired_id","rename_to"), &YGameState::register_player_specific_id,DEFVAL(""));
 
     ClassDB::bind_method(D_METHOD("get_all_players"), &YGameState::get_all_players);
     ClassDB::bind_method(D_METHOD("get_game_player", "player_id"), &YGameState::get_game_player);
@@ -18,6 +18,8 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_game_player_by_type", "player_type"), &YGameState::get_game_player_by_type);
     ClassDB::bind_method(D_METHOD("remove_player", "game_player"), &YGameState::remove_player);
     ClassDB::bind_method(D_METHOD("remove_player_with_id", "game_player_id"), &YGameState::remove_player_with_id);
+
+    ClassDB::bind_method(D_METHOD("get_next_player_unique_id"), &YGameState::get_next_player_unique_id);
 
     ClassDB::bind_method(D_METHOD("add_game_action", "game_action","desired_id"), &YGameState::add_game_action,DEFVAL(-1));
     ClassDB::bind_method(D_METHOD("add_override_game_action", "game_action","desired_id"), &YGameState::add_override_game_action,DEFVAL(-1));
@@ -90,6 +92,8 @@ void YGameState::_bind_methods() {
     ADD_SIGNAL(MethodInfo("changed_turn_player_id", PropertyInfo(Variant::INT, "player_turn_id_before"),
                           PropertyInfo(Variant::INT, "player_turn_id_after")));
     ADD_SIGNAL(MethodInfo("ended_all_actions"));
+    ADD_SIGNAL(MethodInfo("player_registered",PropertyInfo(Variant::OBJECT, "new_player", PROPERTY_HINT_RESOURCE_TYPE, "YGamePlayer")));
+    ADD_SIGNAL(MethodInfo("player_removed",PropertyInfo(Variant::INT, "removed_player_id")));
 }
 
 YGameState *YGameState::get_singleton() {
@@ -101,9 +105,15 @@ String YGameState::get_current_game_action_name() {
     return current_game_action->get_name();
 }
 
-int YGameState::register_player(YGamePlayer *ygp) {
+int YGameState::register_player(YGamePlayer *ygp, String rename_to) {
     if (ygp != nullptr) {
        // int started_with = game_players.size();
+        if (!rename_to.is_empty()) {
+            if (rename_to.contains("%d")) {
+                rename_to = vformat(rename_to, next_player_unique_id);
+            }
+            ygp->set_name(rename_to);
+        }
         ygp->player_id = next_player_unique_id;
         next_player_unique_id++;
         if (game_players.has(ygp->player_id)) {
@@ -116,25 +126,35 @@ int YGameState::register_player(YGamePlayer *ygp) {
         }
         game_players[ygp->player_id] = ygp;
         ygp->player_registered();
+        emit_signal("player_registered",ygp);
         //print_line("Called register player started with ",started_with," ended with ",game_players.size());
         return ygp->player_id;
     }
     return -1;
 }
 
-int YGameState::register_player_specific_id(YGamePlayer *ygp,int desired_id) {
+int YGameState::register_player_specific_id(YGamePlayer *ygp,int desired_id, String rename_to) {
     if (ygp != nullptr) {
+        if (!rename_to.is_empty()) {
+            if (rename_to.contains("%d")) {
+                rename_to = vformat(rename_to, desired_id);
+            }
+            ygp->set_name(rename_to);
+        }
         ygp->player_id = desired_id;
-        if (next_player_unique_id < desired_id)
-            next_player_unique_id= desired_id+1;
+        if (next_player_unique_id <= desired_id)
+            next_player_unique_id = desired_id+1;
         game_players[ygp->player_id] = ygp;
         ygp->player_registered();
+        emit_signal("player_registered",ygp);
         return ygp->player_id;
     }
     return -1;
 }
+
 bool YGameState::remove_player_with_id(int ygp_id) {
     if (game_players.has(ygp_id)) {
+        emit_signal("player_removed",ygp_id);
         game_players.erase(ygp_id);
         return true;
     }
@@ -161,6 +181,7 @@ bool YGameState::set_player_id(YGamePlayer *ygp, int new_pid) {
 bool YGameState::remove_player(YGamePlayer *ygp) {
     for (const auto& pl: game_players) {
         if (pl.value != nullptr && ygp == pl.value) {
+            emit_signal("player_removed",ygp->player_id);
             game_players.erase(pl.key);
             ygp->player_id = -1;
             return true;
@@ -665,13 +686,16 @@ Dictionary YGameState::deserialize(const Dictionary dict, bool p_playback_after 
                         player->set_script_instance(temp_script_instance);
                 }
             }
+            player->deserialize(player_dict);
+            game_players[key] = player;
             if (player_dict.has("parent_path") && YEngine::get_singleton()->has_node(NodePath{player_dict["parent_path"]})) {
                 YEngine::get_singleton()->get_node(NodePath{player_dict["parent_path"]})->add_child(player);
             } else {
                 YEngine::get_singleton()->add_child(player);
             }
-            player->deserialize(player_dict);
-            game_players[key] = player;
+            if (next_player_unique_id <= player->player_id) {
+                next_player_unique_id = player->player_id+1;
+            }
         }
     }
 
@@ -694,6 +718,7 @@ Dictionary YGameState::deserialize(const Dictionary dict, bool p_playback_after 
             has_started=true;
         }
     }
+
     return dict;
 }
 

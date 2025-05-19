@@ -239,6 +239,14 @@ bool YBoneAttachment3D::get_ignore_scale() const {
 	return ignore_scale;
 }
 
+void YBoneAttachment3D::set_ignore_position(bool p_ignore_position) {
+	ignore_position = p_ignore_position;
+}
+
+bool YBoneAttachment3D::get_ignore_position() const {
+	return ignore_position;
+}
+
 void YBoneAttachment3D::set_use_external_skeleton(bool p_use_external) {
 	use_external_skeleton = p_use_external;
 
@@ -304,17 +312,29 @@ void YBoneAttachment3D::on_skeleton_update() {
 					if (use_external_skeleton) {
 						const auto found_transform = sk->get_global_transform() * sk->get_bone_global_pose(bone_idx);
 						set_global_basis(found_transform.basis.get_rotation_quaternion());
-						set_global_position(found_transform.get_origin());
+						if (!ignore_position) {
+							set_global_position(found_transform.get_origin());
+						}
 					} else {
 						const auto found_transform = sk->get_bone_global_pose(bone_idx);
 						set_global_basis(found_transform.basis.get_rotation_quaternion());
-						set_global_position(found_transform.get_origin());
+						if (!ignore_position) {
+							set_global_position(found_transform.get_origin());
+						}
 					}
 				} else {
 					if (use_external_skeleton) {
-						set_global_transform(sk->get_global_transform() * sk->get_bone_global_pose(bone_idx));
+						if (!ignore_position) {
+							set_global_transform(sk->get_global_transform() * sk->get_bone_global_pose(bone_idx));
+						} else {
+							set_global_basis(sk->get_global_transform().basis.get_rotation_quaternion());
+						}
 					} else {
-						set_transform(sk->get_bone_global_pose(bone_idx));
+						if (!ignore_position) {
+							set_transform(sk->get_bone_global_pose(bone_idx));
+						} else {
+							set_basis(sk->get_bone_global_pose(bone_idx).basis.get_rotation_quaternion());
+						}
 					}
 				}
 			} else {
