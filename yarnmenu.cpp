@@ -29,10 +29,10 @@ void YMenu::_bind_methods() {
     ClassDB::bind_method(D_METHOD("on_back_to_menu"), &YMenu::_on_back_to_menu);
     ClassDB::bind_method(D_METHOD("on_started_menu"), &YMenu::_on_started_menu);
 
-    ClassDB::bind_method(D_METHOD("add_to_menu_stack"), &YMenu::add_to_menu_stack);
-    ClassDB::bind_method(D_METHOD("remove_from_menu_stack"), &YMenu::remove_from_menu_stack);
-    ClassDB::bind_method(D_METHOD("is_top_of_menu_stack"), &YMenu::is_top_of_menu_stack);
-
+    ClassDB::bind_static_method("YMenu", D_METHOD("add_to_menu_stack", "menu"), &YMenu::add_to_menu_stack);
+    ClassDB::bind_static_method("YMenu", D_METHOD("remove_from_menu_stack", "menu"), &YMenu::remove_from_menu_stack);
+    ClassDB::bind_static_method("YMenu", D_METHOD("is_top_of_menu_stack", "menu"), &YMenu::is_top_of_menu_stack);
+    ClassDB::bind_static_method("YMenu", D_METHOD("make_top_of_menu_stack", "menu"), &YMenu::make_top_of_menu_stack);
     ClassDB::bind_method(D_METHOD("set_back_button","back_button"), &YMenu::set_back_button);
 
     ClassDB::bind_method(D_METHOD("get_can_click_buttons"), &YMenu::get_can_click_buttons);
@@ -72,15 +72,17 @@ void YMenu::_notification(int p_what) {
         } break;
         case NOTIFICATION_EXIT_TREE: {
             if(not_editor) {
-                remove_from_menu_stack();
+                remove_from_menu_stack(this);
             }
         } break;
         case NOTIFICATION_READY: {
             if(not_editor) {
-                set_modulate(Color{1.0,1.0,1.0,0.0});
-                auto tween = create_tween();
-                tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,1.0}, fade_in_time)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);
-                add_to_menu_stack();
+                if (fade_in_time > 0.00001) {
+                    set_modulate(Color{1.0,1.0,1.0,0.0});
+                    auto tween = create_tween();
+                    tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,1.0}, fade_in_time)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);
+                }
+                add_to_menu_stack(this);
                 if (auto_start_menu) {
                     called_start_from_process = true;
                     get_tree()->connect(SNAME("process_frame"),callable_mp(this,&YMenu::_on_started_menu), CONNECT_ONE_SHOT);
@@ -107,7 +109,7 @@ void YMenu::_on_back_button_pressed() {
     bool can_auto_close = can_back_button_auto_close_menu();
     if (can_auto_close) {
         set_process(false);
-        remove_from_menu_stack();
+        remove_from_menu_stack(this);
     }
     on_back_button_pressed();
     GDVIRTUAL_CALL(_on_back_button_pressed);
@@ -209,11 +211,16 @@ Ref<Tween> YMenu::fade_out() {
 }
 
 Ref<Tween> YMenu::fade_out_and_queue_free() {
-    auto tween = YTween::get_singleton()->create_unique_tween(this);
-    tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,0.0}, fade_out_time)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);
+    if (fade_out_time > 0.00001) {
+        auto tween = YTween::get_singleton()->create_unique_tween(this);
+        tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,0.0}, fade_out_time)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);
+        if (tween.is_valid()) tween->tween_callback(callable_mp(this,&YMenu::fade_out_completed));
+        is_fading_out_to_queue_free = true;
+        return tween;
+    }
     is_fading_out_to_queue_free = true;
-    if (tween.is_valid()) tween->tween_callback(callable_mp(this,&YMenu::fade_out_completed));
-    return tween;
+    fade_out_completed();
+    return {};
 }
 
 Callable YMenu::button_click_callable(const Callable &callable) {

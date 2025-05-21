@@ -46,9 +46,11 @@ public:
     void set_fade_out_time(float val) { fade_out_time = val; }
 
     bool is_active = false;
+    
     bool get_is_active() {
         return not_editor && is_inside_tree() && YEngine::get_singleton() != nullptr && YEngine::get_singleton()->is_top_of_menu_stack(this);
     }
+
     void set_is_active(bool val) {
         if (not_editor && val && is_inside_tree() && YEngine::get_singleton() != nullptr) {
             YEngine::get_singleton()->remove_from_menu_stack(this);
@@ -60,11 +62,10 @@ public:
 
     static Vector2 calculate_ideal_control_center(Vector2 size, Control *parent);
 
-    bool is_top_of_menu_stack() { return YEngine::get_singleton()->is_top_of_menu_stack(this); }
-
-    void add_to_menu_stack() { YEngine::get_singleton()->add_to_menu_stack(this); }
-
-    void remove_from_menu_stack() { YEngine::get_singleton()->remove_from_menu_stack(this); }
+    static void add_to_menu_stack(Node* menu) { YEngine::get_singleton()->add_to_menu_stack(menu); }
+    static void remove_from_menu_stack(Node* menu) { YEngine::get_singleton()->remove_from_menu_stack(menu); }
+    static bool is_top_of_menu_stack(Node* menu) { return YEngine::get_singleton()->is_top_of_menu_stack(menu); }
+    static void make_top_of_menu_stack(Node* menu) { YEngine::get_singleton()->make_top_of_menu_stack(menu); }
 
     void set_back_button(Control* button) {
         if (button != nullptr && button->has_signal(SNAME("pressed")))

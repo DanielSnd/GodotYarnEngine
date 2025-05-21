@@ -86,6 +86,7 @@ public:
     }
 
     bool is_top_of_menu_stack(const Node* test_menu) const {
+        if (test_menu == nullptr) return false;
         int iterating_index = 0;
         const int top_of_stack = menu_stack.size()-1;
         for (const auto _node: menu_stack) {
@@ -96,16 +97,34 @@ public:
         return false;
     }
 
+    void make_top_of_menu_stack(Node* test_menu) {
+        if (test_menu == nullptr) return;
+        if (menu_stack.find(test_menu) != nullptr) {
+            remove_from_menu_stack(test_menu);
+            add_to_menu_stack(test_menu);
+        } else {
+            add_to_menu_stack(test_menu);
+        }
+    }
+
     void add_to_menu_stack(Node* adding_menu) {
+        if (adding_menu == nullptr) return;
         for (const auto _node: menu_stack)
             if (_node == adding_menu) return;
         menu_stack.push_back(adding_menu);
+        Callable remove_bind_callable = callable_mp(this, &YEngine::remove_from_menu_stack).bind(adding_menu);
+        if (!adding_menu->is_connected(SceneStringName(tree_exiting), remove_bind_callable))
+            adding_menu->connect(SceneStringName(tree_exiting), remove_bind_callable, CONNECT_ONE_SHOT);
     }
 
     void remove_from_menu_stack(Node* removing_menu) {
+        if (removing_menu == nullptr) return;
         for (const auto _node: menu_stack)
             if (_node == removing_menu) {
                 menu_stack.erase(removing_menu);
+                Callable remove_bind_callable = callable_mp(this, &YEngine::remove_from_menu_stack).bind(removing_menu);
+                if (removing_menu->is_connected(SceneStringName(tree_exiting), remove_bind_callable))
+                    removing_menu->disconnect(SceneStringName(tree_exiting), remove_bind_callable);
                 return;
             }
     }

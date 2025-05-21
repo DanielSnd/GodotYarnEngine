@@ -61,6 +61,8 @@ class YTweenJiggle : public YTweenWrap {
 
 public:
     Node3D* jiggle_node;
+    Node2D* jiggle_node_2d;
+    Control* jiggle_node_control;
 
     // Jiggle state tracking
     bool started_jiggle = false;
@@ -172,6 +174,13 @@ public:
     Ref<YTweenWrap> tween_jiggle(Node *p_owner, float jiggle_power = 1.0f, 
                     float jiggle_tilt = 6.0f, float jiggle_frequency = 16.0f, 
                     Vector3 scale_axes = Vector3(1,1,1), Vector3 rotation_axes = Vector3(1,0,1),
+                    float jiggle_decelerate = 1.5f, float additional_speed = 1.0f,
+                    float constant_jiggle = 0.0f, int random_level = 1,
+                    float rejiggle_power = 2.0f, uint64_t p_tag = 55);
+
+    Ref<YTweenWrap> tween_jiggle_2d(Node *p_owner, float jiggle_power = 1.0f, 
+                    float jiggle_tilt = 6.0f, float jiggle_frequency = 16.0f, 
+                    Vector2 scale_axes = Vector2(1,1),
                     float jiggle_decelerate = 1.5f, float additional_speed = 1.0f,
                     float constant_jiggle = 0.0f, int random_level = 1,
                     float rejiggle_power = 2.0f, uint64_t p_tag = 55);

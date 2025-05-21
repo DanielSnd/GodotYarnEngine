@@ -112,7 +112,6 @@ void YTween::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("tween_jiggle_scale","owner","power","tilt","frequency","scale_axis","rotation_axis","jiggle_deceleration","additional_speed","constant_jiggle","random_level","rejiggle_power","tag"), &YTween::tween_jiggle,DEFVAL(1.0f),DEFVAL(6.0f),DEFVAL(16.0f),DEFVAL(Vector3(1.0,1.0,1.0)),DEFVAL(Vector3(0.0,0.0,0.0)), DEFVAL(1.5f), DEFVAL(1.0f), DEFVAL(0.0f), DEFVAL(1),DEFVAL(2.0f),DEFVAL(55));
 
-
     ClassDB::bind_method(D_METHOD("tween_jiggle_tilt","owner","power","tilt","frequency","scale_axis","rotation_axis","jiggle_deceleration","additional_speed","constant_jiggle","random_level","rejiggle_power","tag"), &YTween::tween_jiggle,DEFVAL(1.0f),DEFVAL(6.0f),DEFVAL(16.0f),DEFVAL(Vector3(0.0,0.0,0.0)),DEFVAL(Vector3(1.0,0.0,1.0)), DEFVAL(1.5f), DEFVAL(1.0f), DEFVAL(0.0f), DEFVAL(1),DEFVAL(2.0f),DEFVAL(55));
 
     ClassDB::bind_method(D_METHOD("tween_global_position_unique","owner","global_position","duration","ease","transition","delay","tag"), &YTween::tween_global_position_unique,DEFVAL(1.0),DEFVAL(0.22),DEFVAL(Tween::EaseType::EASE_IN_OUT),DEFVAL(Tween::TransitionType::TRANS_QUAD),DEFVAL(0.0),DEFVAL(0));
@@ -470,6 +469,9 @@ Ref<YTweenWrap> YTween::tween_jiggle(Node *p_owner, float jiggle_power, float ji
     if (node3d == nullptr && p_owner != nullptr) {
         node3d = Object::cast_to<Node3D>(p_owner->get_parent());
     }
+    if (node3d == nullptr) {
+        return tween_jiggle_2d(p_owner, jiggle_power, jiggle_tilt, jiggle_frequency, Vector2(scale_axes.x, scale_axes.y), jiggle_decelerate, additional_speed, constant_jiggle, random_level, rejiggle_power, p_tag);
+    }
     if (tree == nullptr || node3d == nullptr) {
         Ref<YTweenWrap> new_wrap;
         return new_wrap;
@@ -503,6 +505,76 @@ Ref<YTweenWrap> YTween::tween_jiggle(Node *p_owner, float jiggle_power, float ji
     tween->current_jiggle_power = 1.0f;
     tween->is_jiggling_finished = false;
     tween->jiggle_node = node3d;
+    if (tween->started_jiggle) {
+        tween->eased_power_progress = 1.1f * jiggle_power;
+        tween->rejiggled = true;
+        tween->rejiggle_progress = 1.0f * jiggle_power;
+        tween->randomize_trigs((rejiggle_power * jiggle_power) / 4.0f);
+        tween->stop();
+        tween->play();
+    } else {
+        tween->target_jiggle_power = 1.15f * jiggle_power;
+        tween->eased_power_progress = 1.0f;
+        tween->current_jiggle_power = 0.15f * jiggle_power;
+        tween->rejiggled = false;
+        tween->randomize_trigs();
+        tween->tween_method(tween->get_jiggle_callable(), 0.0, 1.0, 10.0f);
+    }
+
+    tween->eased_power_progress = 1.0f;
+    tween->rejiggle_random_offset = Math::random(-0.2f, 0.2f);
+    // print_line("Created jiggle tween with tag ",p_tag);
+    return tween;
+}
+
+Ref<YTweenWrap> YTween::tween_jiggle_2d(Node *p_owner, float jiggle_power, float jiggle_tilt, float jiggle_frequency,
+    Vector2 scale_axes, float jiggle_decelerate, float additional_speed, float constant_jiggle, int random_level, float rejiggle_power, uint64_t p_tag) {
+    
+    SceneTree *tree = SceneTree::get_singleton();
+    Node2D* node2d = Object::cast_to<Node2D>(p_owner);
+    Control* control = node2d == nullptr ? Object::cast_to<Control>(p_owner) : nullptr;
+    if (control == nullptr && node2d == nullptr && p_owner != nullptr) {
+        node2d = Object::cast_to<Node2D>(p_owner->get_parent());
+    }
+    if (node2d == nullptr && control == nullptr && p_owner != nullptr) {
+        control = Object::cast_to<Control>(p_owner->get_parent());
+    }
+    if (tree == nullptr || (node2d == nullptr && control == nullptr)) {
+        Ref<YTweenWrap> new_wrap;
+        return new_wrap;
+    }
+
+    // Create the tween
+    Ref<YTweenJiggle> created_tween = find_tween(p_owner, p_tag);
+    Ref<YTweenJiggle> tween;
+    if (created_tween.is_null() || !created_tween.is_valid()) {
+        created_tween = memnew(YTweenJiggle(tree));
+        tween = create_tween_from(p_owner, tree, created_tween, p_tag);
+    } else {
+        tween = created_tween;
+    }
+    if (!tween.is_valid()) {
+        return tween;
+    }
+
+    // Store jiggle parameters
+    tween->jiggle_tilt = jiggle_tilt;
+    tween->jiggle_frequency = jiggle_frequency;
+    tween->jiggle_decelerate = jiggle_decelerate;
+    tween->additional_speed = additional_speed;
+    tween->constant_jiggle = constant_jiggle;
+    tween->random_level = random_level;
+    tween->scale_axes = Vector3(scale_axes.x, scale_axes.y, 0);
+    tween->rotation_axes = Vector3(0,0,1);
+    tween->power_multiplier = jiggle_power;
+    tween->rejiggle_power = rejiggle_power;
+    tween->is_jiggling = true;
+    tween->current_jiggle_power = 1.0f;
+    tween->is_jiggling_finished = false;
+    tween->jiggle_node = nullptr;
+    tween->jiggle_node_2d = node2d;
+    tween->jiggle_node_control = control;
+
     if (tween->started_jiggle) {
         tween->eased_power_progress = 1.1f * jiggle_power;
         tween->rejiggled = true;
@@ -564,10 +636,22 @@ void YTweenJiggle::calculate_jiggle(float p_delta)
             randomize_trigs();
             is_jiggling = true;
             started_jiggle = true;
+        } else if (jiggle_node_2d != nullptr && jiggle_node_2d->is_inside_tree()) {
+            initial_rotation = Vector3(0,0,jiggle_node_2d->get_rotation_degrees());
+            initial_scale = Vector3(jiggle_node_2d->get_scale().x, jiggle_node_2d->get_scale().y, 0);
+            randomize_trigs();
+            is_jiggling = true;
+            started_jiggle = true;
+        } else if (jiggle_node_control != nullptr && jiggle_node_control->is_inside_tree()) {
+            initial_rotation = Vector3(0,0,jiggle_node_control->get_rotation_degrees());
+            initial_scale = Vector3(jiggle_node_control->get_scale().x, jiggle_node_control->get_scale().y, 0);
+            randomize_trigs();
+            is_jiggling = true;
+            started_jiggle = true;
         }
     }
     // print_line("Calculating jiggle ",p_delta," last delta time ",YTween::last_delta_time);
-    if (!is_jiggling || jiggle_node == nullptr || !jiggle_node->is_inside_tree()) {
+    if (!is_jiggling || ((jiggle_node == nullptr ||!jiggle_node->is_inside_tree()) && (jiggle_node_2d == nullptr || !jiggle_node_2d->is_inside_tree()) && (jiggle_node_control == nullptr || !jiggle_node_control->is_inside_tree()))) {
         if (YTween::get_singleton() != nullptr) {
             YTween::get_singleton()->kill_specific_tween(this);
         }
@@ -635,11 +719,26 @@ void YTweenJiggle::calculate_jiggle(float p_delta)
         jiggle_node->set_rotation_degrees(Vector3(initial_rotation.x + xAngle, initial_rotation.y + yAngle, initial_rotation.z + zAngle));
         jiggle_node->set_scale(Vector3(initial_scale.x + xScale, initial_scale.y + yScale, initial_scale.z + zScale));
     }
-
+    else if (jiggle_node_2d != nullptr && jiggle_node_2d->is_inside_tree()) {
+        jiggle_node_2d->set_rotation_degrees(initial_rotation.z + zAngle);
+        jiggle_node_2d->set_scale(Vector2(initial_scale.x + xScale, initial_scale.y + yScale));
+    }
+    else if (jiggle_node_control != nullptr && jiggle_node_control->is_inside_tree()) {
+        jiggle_node_control->set_rotation_degrees(initial_rotation.z + zAngle);
+        jiggle_node_control->set_scale(Vector2(initial_scale.x + xScale, initial_scale.y + yScale));
+    }
     if (is_jiggling_finished) {
         if (jiggle_node != nullptr && jiggle_node->is_inside_tree()) {
             jiggle_node->set_rotation_degrees(initial_rotation);
             jiggle_node->set_scale(initial_scale);
+        }
+        else if (jiggle_node_2d != nullptr && jiggle_node_2d->is_inside_tree()) {
+            jiggle_node_2d->set_rotation_degrees(initial_rotation.z);
+            jiggle_node_2d->set_scale(Vector2(initial_scale.x, initial_scale.y));
+        }
+        else if (jiggle_node_control != nullptr && jiggle_node_control->is_inside_tree()) {
+            jiggle_node_control->set_rotation_degrees(initial_rotation.z);
+            jiggle_node_control->set_scale(Vector2(initial_scale.x, initial_scale.y));
         }
         is_jiggling = false;
         if (YTween::get_singleton() != nullptr) {
