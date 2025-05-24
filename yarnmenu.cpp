@@ -33,6 +33,7 @@ void YMenu::_bind_methods() {
     ClassDB::bind_static_method("YMenu", D_METHOD("remove_from_menu_stack", "menu"), &YMenu::remove_from_menu_stack);
     ClassDB::bind_static_method("YMenu", D_METHOD("is_top_of_menu_stack", "menu"), &YMenu::is_top_of_menu_stack);
     ClassDB::bind_static_method("YMenu", D_METHOD("make_top_of_menu_stack", "menu"), &YMenu::make_top_of_menu_stack);
+    ClassDB::bind_static_method("YMenu", D_METHOD("get_top_of_menu_stack"), &YMenu::get_top_of_menu_stack);
     ClassDB::bind_method(D_METHOD("set_back_button","back_button"), &YMenu::set_back_button);
 
     ClassDB::bind_method(D_METHOD("get_can_click_buttons"), &YMenu::get_can_click_buttons);
@@ -52,6 +53,10 @@ void YMenu::_bind_methods() {
     
     ClassDB::bind_static_method("YMenu", D_METHOD("instantiate_menu", "menu_scene", "layer_index", "auto_start"), &YMenu::instantiate_menu, DEFVAL(0), DEFVAL(true));
     ClassDB::bind_static_method("YMenu", D_METHOD("calculate_ideal_control_center","control_size", "control_parent"), &YMenu::calculate_ideal_control_center);
+
+    ClassDB::bind_method(D_METHOD("get_is_fading"), &YMenu::get_is_fading);
+    ClassDB::bind_method(D_METHOD("set_is_fading", "val"), &YMenu::set_is_fading);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "is_fading", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_is_fading", "get_is_fading");
 
     ADD_SIGNAL(MethodInfo("go_back_to_menu"));
     ADD_SIGNAL(MethodInfo("started_menu"));
@@ -173,6 +178,7 @@ Vector2 YMenu::calculate_ideal_control_center(Vector2 size,Control *parent) {
 }
 
 void YMenu::fade_out_completed() {
+    is_fading = false;
     GDVIRTUAL_CALL(_on_fade_out);
     if (is_fading_out_to_queue_free) {
         queue_free();
@@ -203,6 +209,7 @@ Node* YMenu::instantiate_menu(const Ref<PackedScene> menu_scene, int layer_index
 }
 
 Ref<Tween> YMenu::fade_out() {
+    is_fading = true;
     auto tween = YTween::get_singleton()->create_unique_tween(this);
     tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,0.0}, fade_out_time)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);
     is_fading_out_to_queue_free = false;
@@ -211,6 +218,7 @@ Ref<Tween> YMenu::fade_out() {
 }
 
 Ref<Tween> YMenu::fade_out_and_queue_free() {
+    is_fading = true;
     if (fade_out_time > 0.00001) {
         auto tween = YTween::get_singleton()->create_unique_tween(this);
         tween->tween_property(this,NodePath{"modulate"},Color{1.0,1.0,1.0,0.0}, fade_out_time)->set_ease(Tween::EASE_IN_OUT)->set_trans(Tween::TRANS_QUAD);

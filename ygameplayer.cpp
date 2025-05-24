@@ -123,10 +123,10 @@ void YGamePlayer::set_player_id(int v) {
         rpcp(0, rpc_set_property_stringname, argptrs, argcount);
 #endif
     }
-    set_meta("net_id", 100000 + v);
 #ifdef YNET
-    if (YNet::get_singleton() != nullptr)
+    if (YNet::get_singleton() != nullptr) {
         YNet::get_singleton()->register_for_yrpcs(this, 100000 + player_id);
+    }
 #endif
     player_id = v;
 }
@@ -268,10 +268,9 @@ void YGamePlayer::_rpc_set_property(const String& property_name, const Variant& 
 
     if (property_name == "player_id") {
         player_id = value;
-        set_meta("net_id", 100000 + player_id);
 #ifdef YNET
         if (YNet::get_singleton() != nullptr)
-            YNet::get_singleton()->register_for_yrpcs(this, 100000 + player_id);
+            YNet::get_singleton()->register_for_yrpcs(this, player_id);
 #endif
     } else if (property_name == "player_type") {
         player_type = value;

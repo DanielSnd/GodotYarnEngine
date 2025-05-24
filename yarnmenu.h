@@ -66,7 +66,8 @@ public:
     static void remove_from_menu_stack(Node* menu) { YEngine::get_singleton()->remove_from_menu_stack(menu); }
     static bool is_top_of_menu_stack(Node* menu) { return YEngine::get_singleton()->is_top_of_menu_stack(menu); }
     static void make_top_of_menu_stack(Node* menu) { YEngine::get_singleton()->make_top_of_menu_stack(menu); }
-
+    static Node* get_top_of_menu_stack() { return YEngine::get_singleton()->get_top_of_menu_stack(); }
+    
     void set_back_button(Control* button) {
         if (button != nullptr && button->has_signal(SNAME("pressed")))
             button->connect("pressed", callable_mp(this, &YMenu::_on_back_button_pressed));
@@ -92,6 +93,9 @@ public:
     
 
     static Node* instantiate_menu(const Ref<PackedScene> menu_scene, int layer_index = 0, bool auto_start = true);
+    bool is_fading = false;
+    bool get_is_fading() { return is_fading; }
+    void set_is_fading(bool val) {  }
 
     GDVIRTUAL0(_on_back_button_pressed)
     GDVIRTUAL0(_on_started_menu)

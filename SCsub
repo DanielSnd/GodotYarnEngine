@@ -6,18 +6,18 @@ from misc.utility.color import print_info
 Import('env')
 Import("env_modules")
 
+module_env = env_modules.Clone()
+
 if ARGUMENTS.get('ynet', 'no') == 'yes':
-    env.Append(CPPDEFINES=["YNET"])
+    module_env.Append(CPPDEFINES=["YNET"])
 
 if ARGUMENTS.get('fmodgodot', 'yes') == 'no':
-    env.Append(CPPDEFINES=["NO_FMOD"])
+    module_env.Append(CPPDEFINES=["NO_FMOD"])
     print_info("Yarn Engine building with Dummy FMOD Objects")
 
 if ARGUMENTS.get('ygodot', 'yes') == 'yes':
-    env.Append(CPPDEFINES=["YGODOT"])
+    module_env.Append(CPPDEFINES=["YGODOT"])
     print_info("Yarn Engine building with YGodot flag")
-
-module_env = env_modules.Clone()
 
 if env.editor_build:
     print_info("Yarn Engine Editor Build")

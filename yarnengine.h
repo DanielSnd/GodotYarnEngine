@@ -107,6 +107,13 @@ public:
         }
     }
 
+    Node* get_top_of_menu_stack() {
+        if (menu_stack.size() > 0) {
+            return menu_stack.get(menu_stack.size() - 1);
+        }
+        return nullptr;
+    }
+
     void add_to_menu_stack(Node* adding_menu) {
         if (adding_menu == nullptr) return;
         for (const auto _node: menu_stack)
@@ -222,6 +229,22 @@ public:
         return returndict;
     }
 
+    void check_if_ynet_available() {
+        #ifdef YNET
+        print_line("YNet is available");
+        #else
+        print_line("YNet is not available");
+        #endif
+    }
+
+    void check_if_ygodot() {
+        #ifdef YGODOT
+        print_line("Using YGodot");
+        #else
+        print_line("Not using YGodot");
+        #endif
+    }
+    
     Vector2 get_control_pos_for_3d_pos(const Vector3 &p_global_pos, bool sticky = false);
     Dictionary get_script_base_properties(Node* p_node);
     void instant_fade_to_alpha(float alpha);

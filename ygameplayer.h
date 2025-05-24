@@ -12,8 +12,7 @@
 #include "core/object/script_language.h"
 
 #ifdef YNET
-#include "yarnnet.h"
-
+#include "../yarnnet/yarnnet.h"
 class YNet;
 #endif
 
