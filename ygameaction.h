@@ -254,6 +254,7 @@ public:
     bool has_pause_indp_elapsed_since_started(float f) const { return YTime::get_singleton()->has_time_elapsed(pause_independent_time_started,f);}
 
     bool executed_exit_action_call=false;
+
     virtual void end_action();
 
     YGameAction* copy_parameters_from(const Ref<YGameAction> &other_action) {
@@ -275,6 +276,7 @@ public:
         }
         return this;
     }
+    
     virtual void enter_action();
     virtual void step_action(Ref<YActionStep> step_data,bool is_ending);
     virtual void exit_action();
@@ -296,6 +298,12 @@ public:
     GDVIRTUAL1RC(Dictionary,_on_serialize,Dictionary)
     GDVIRTUAL1RC(Dictionary,_on_deserialize,Dictionary)
     GDVIRTUAL0RC(bool, _only_starts_if)
+
+    // Virtual function for step approval
+    GDVIRTUAL2RC(bool, _step_request_approval, int, int)
+
+    // Method to request step approval through YEngine
+    void request_step_approval(int step_identifier, const Variant& step_data);
 
     YGameAction();
     ~YGameAction() {

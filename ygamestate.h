@@ -147,9 +147,6 @@ public:
 
     int last_turn_player_id=-1;
 
-    bool only_server_can_register_steps = false;
-    bool only_server_can_register_actions = false;
-
     bool is_playing_back = false;
     bool stop_playing_back_when_current_action_steps_done = false;
     int stop_playing_back_at_id = -1;

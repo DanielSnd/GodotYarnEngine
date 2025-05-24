@@ -6,27 +6,17 @@
 
 void YGamePlayer::_notification(int p_what) {
     if (p_what == NOTIFICATION_READY) {
-        this->rpc_config(rpc_set_property_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
-        this->rpc_config(rpc_set_player_parameter_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
-        this->rpc_config(rpc_remove_player_parameter_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
-        this->rpc_config(rpc_request_sync_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
-        this->rpc_config(rpc_grant_sync_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+        this->rpc_config(rpc_set_property_stringname,YEngine::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+        this->rpc_config(rpc_set_player_parameter_stringname,YEngine::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+        this->rpc_config(rpc_remove_player_parameter_stringname,YEngine::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+        this->rpc_config(rpc_request_sync_stringname,YEngine::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+        this->rpc_config(rpc_grant_sync_stringname,YEngine::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
         #ifdef YNET
         print_line(vformat("YGamePlayer with YNet spawning %s", get_name()));
         #endif
     }
 }
 
-Dictionary YGamePlayer::create_rpc_dictionary_config(MultiplayerAPI::RPCMode p_rpc_mode,
-                                            MultiplayerPeer::TransferMode p_transfer_mode, bool p_call_local,
-                                            int p_channel) {
-    Dictionary config;
-    config["rpc_mode"] = p_rpc_mode;
-    config["transfer_mode"] = p_transfer_mode;
-    config["call_local"] = p_call_local;
-    config["channel"] = p_channel;
-    return config;
-}
 
 void YGamePlayer::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_player_id", "player_id"), &YGamePlayer::set_player_id);

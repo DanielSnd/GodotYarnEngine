@@ -155,6 +155,13 @@ void YEngine::_bind_methods() {
 
     ADD_SIGNAL(MethodInfo("changed_pause", PropertyInfo(Variant::BOOL, "pause_value")));
     ADD_SIGNAL(MethodInfo("initialized"));
+
+    // Add RPC methods for action steps
+    ClassDB::bind_method(D_METHOD("_rpc_request_action_step_approval", "action_id", "step_identifier", "step_data", "sender_id"), &YEngine::_rpc_request_action_step_approval);
+    ClassDB::bind_method(D_METHOD("_rpc_apply_action_step", "action_id", "step_identifier", "step_data"), &YEngine::_rpc_apply_action_step);
+
+    // Add RPC methods for game actions
+    ClassDB::bind_method(D_METHOD("_rpc_register_game_action", "action_data"), &YEngine::_rpc_register_game_action);
 }
 
 CanvasLayer* YEngine::get_canvas_layer(int layer_index) {
@@ -503,6 +510,9 @@ void YEngine::_notification(int p_what) {
             }
         }
         case NOTIFICATION_READY: {
+            this->rpc_config(rpc_apply_action_step_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_AUTHORITY, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+            this->rpc_config(rpc_register_game_action_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_AUTHORITY, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+            this->rpc_config(rpc_request_action_step_approval_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
             emit_signal("initialized");
             set_process_mode(PROCESS_MODE_ALWAYS);
             set_process(true);
@@ -694,6 +704,9 @@ YEngine::YEngine() {
     ytime=nullptr;
     ygamestate = nullptr;
     current_scene_name = "";
+    rpc_request_action_step_approval_stringname = SNAME("_rpc_request_action_step_approval");
+    rpc_apply_action_step_stringname = SNAME("_rpc_apply_action_step");
+    rpc_register_game_action_stringname = SNAME("_rpc_register_game_action");
     ydir.instantiate();
 }
 
@@ -898,32 +911,144 @@ PackedStringArray YEngine::find_resources_paths_in(const Variant &variant_path, 
     return return_paths;
 }
 
-// func find_unlock_infos():
-//     var upgrades_paths :Array[String] = ["res://hentai_resources/"]
-//     #print(DirAccess.get_files_at(upgrades_paths[0]))
-//     for path in upgrades_paths:
-//         var dir = DirAccess.open(path)
-//         if DirAccess.get_open_error() == OK:
-//             #print(dir.dir_exists("res://hentai_resources/"))
-//             dir.list_dir_begin()
-//             var file_name = dir.get_next()
-//             while (file_name != ""):
-//                 file_name = file_name.trim_suffix(".remap")
-//                 if (file_name.ends_with(".tres")):
-//                     var res = load(path + file_name)
-//                     if res == null:
-//                         print("Error loading ",path,file_name)
-//                     if res is UnlockableSpriteFrames:
-//                         unlock_pool.append(res)
-//                 file_name = dir.get_next()
-//         else:
-//             print("An error occurred when trying to access the ",path," path.")
-//     print("Loaded ", str(unlock_pool.size()), " UnlockInfos.")
-//     if save_data.has("unlocked") or all_unlocked:
-//         for unlockable in unlock_pool.duplicate():
-//             if check_has_unlock(unlockable.unlock_id):
-//                 already_unlocked.append(unlockable)
-//                 #if using_steam and unlockable.has_steam_achievement_id:
-//                     #Steam.setAchievement(unlockable.steam_achievement_id)
-//                     #unlocked_stema_achievement = true
-//                 unlock_pool.erase(unlockable)
+
+void YEngine::request_action_step_approval(YGameAction* action, int step_identifier, const Variant& step_data) {
+    if (!get_multiplayer()->has_multiplayer_peer() || get_multiplayer()->get_unique_id() == 1) {
+        return; // Don't send if we're the server
+    }
+
+    Array p_arguments;
+    p_arguments.push_back(action->get_unique_id());
+    p_arguments.push_back(step_identifier);
+    p_arguments.push_back(step_data);
+    p_arguments.push_back(get_multiplayer()->get_unique_id());
+    int argcount = p_arguments.size();
+    const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+    for (int i = 0; i < argcount; i++) {
+        argptrs[i] = &p_arguments[i];
+    }
+    rpcp(1, "_rpc_request_action_step_approval", argptrs, argcount);
+}
+
+void YEngine::broadcast_action_step(YGameAction* action, int step_identifier, const Variant& step_data) {
+    if (!get_multiplayer()->has_multiplayer_peer() || get_multiplayer()->get_unique_id() != 1) {
+        return; // Only server can broadcast
+    }
+
+    Array p_arguments;
+    p_arguments.push_back(action->get_unique_id());
+    p_arguments.push_back(step_identifier);
+    p_arguments.push_back(step_data);
+    int argcount = p_arguments.size();
+    const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+    for (int i = 0; i < argcount; i++) {
+        argptrs[i] = &p_arguments[i];
+    }
+    rpcp(0, "_rpc_apply_action_step", argptrs, argcount);
+}
+
+void YEngine::_rpc_request_action_step_approval(int action_id, int step_identifier, const Variant& step_data, int sender_id) {
+    if (get_multiplayer()->get_unique_id() != 1) {
+        return; // Only server should handle approval requests
+    }
+
+    // Find the action in the game state
+    if (ygamestate != nullptr) {
+        // Check current action
+        if (ygamestate->has_current_game_action() && ygamestate->get_current_game_action()->get_unique_id() == action_id) {
+            bool approved = true;
+            ygamestate->get_current_game_action()->GDVIRTUAL_CALL(_step_request_approval, step_identifier, sender_id, approved);
+            if (approved) {
+                ygamestate->get_current_game_action()->register_step(step_identifier, step_data);
+            }
+            return;
+        }
+
+        // Check parallel actions
+        for (int i = 0; i < ygamestate->get_parallel_action_count(); i++) {
+            Ref<YGameAction> action = ygamestate->get_parallel_action(i);
+            if (action.is_valid() && action->get_unique_id() == action_id) {
+                bool approved = true;
+                action->GDVIRTUAL_CALL(_step_request_approval, step_identifier, sender_id, approved);
+                if (approved) {
+                    action->register_step(step_identifier, step_data);
+                }
+                return;
+            }
+        }
+    }
+}
+
+void YEngine::_rpc_apply_action_step(int action_id, int step_identifier, const Variant& step_data) {
+    if (get_multiplayer()->get_unique_id() == 1) {
+        return; // Server already applied the step
+    }
+
+    // Find the action in the game state
+    if (ygamestate != nullptr) {
+        // Check current action
+        if (ygamestate->has_current_game_action() && ygamestate->get_current_game_action()->get_unique_id() == action_id) {
+            ygamestate->get_current_game_action()->register_step(step_identifier, step_data);
+            return;
+        }
+
+        // Check parallel actions
+        for (int i = 0; i < ygamestate->get_parallel_action_count(); i++) {
+            Ref<YGameAction> action = ygamestate->get_parallel_action(i);
+            if (action.is_valid() && action->get_unique_id() == action_id) {
+                action->register_step(step_identifier, step_data);
+                return;
+            }
+        }
+    }
+}
+
+void YEngine::broadcast_game_action(const Dictionary& action_data) {
+    if (!get_multiplayer()->has_multiplayer_peer() || get_multiplayer()->get_unique_id() != 1) {
+        return; // Only server can broadcast
+    }
+    
+    // Broadcast to all clients
+    rpc("_rpc_register_game_action", action_data);
+}
+
+void YEngine::_rpc_register_game_action(const Dictionary& action_data) {
+    if (!get_multiplayer()->has_multiplayer_peer() || ygamestate == nullptr) {
+        return;
+    }
+
+    // Only process if we're a client
+    if (get_multiplayer()->get_unique_id() == 1) {
+        return;
+    }
+
+    if (action_data.has("a_list_type")) {
+        int a_list_type = action_data["a_list_type"];
+        Vector<Ref<YGameAction>>* list_to_add_to = nullptr;
+        if (a_list_type == 1) {
+            list_to_add_to = &ygamestate->overriding_game_actions;
+        } else if (a_list_type == 2) {
+            list_to_add_to = &ygamestate->future_game_actions;
+        } else if (a_list_type == 3) {
+            list_to_add_to = &ygamestate->past_game_actions;
+        }else if (a_list_type == 4) {
+            list_to_add_to = &ygamestate->current_parallel_actions;
+        }else if (a_list_type == 5) {
+            list_to_add_to = &ygamestate->future_parallel_actions;
+        }
+        if (list_to_add_to != nullptr) {
+            ygamestate->deserialize_individual_game_action_into(*list_to_add_to, action_data, false);
+        }
+    }
+}
+
+Dictionary YEngine::create_rpc_dictionary_config(MultiplayerAPI::RPCMode p_rpc_mode,
+                                            MultiplayerPeer::TransferMode p_transfer_mode, bool p_call_local,
+                                            int p_channel) {
+    Dictionary config;
+    config["rpc_mode"] = p_rpc_mode;
+    config["transfer_mode"] = p_transfer_mode;
+    config["call_local"] = p_call_local;
+    config["channel"] = p_channel;
+    return config;
+}

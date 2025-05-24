@@ -112,6 +112,8 @@ void YGameAction::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_can_be_serialized"), &YGameAction::get_can_be_serialized);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "can_be_serialized"), "set_can_be_serialized", "get_can_be_serialized");
 
+    ClassDB::bind_method(D_METHOD("request_step_approval", "step_identifier", "step_data"), &YGameAction::request_step_approval);
+
     ADD_SIGNAL(MethodInfo("started_action", PropertyInfo(Variant::STRING, "action_name")));
     ADD_SIGNAL(MethodInfo("registered_step", PropertyInfo(Variant::INT, "step_index")));
     ADD_SIGNAL(MethodInfo("action_stepped", PropertyInfo(Variant::INT, "step_index")));
@@ -132,6 +134,7 @@ void YGameAction::_bind_methods() {
     GDVIRTUAL_BIND(_on_serialize,"dict")
     GDVIRTUAL_BIND(_on_deserialize,"dict")
     GDVIRTUAL_BIND(_only_starts_if)
+    GDVIRTUAL_BIND(_step_request_approval, "step_identifier", "sender_id")
 }
 
 void YGameAction::release_step() {
@@ -166,6 +169,14 @@ Variant YGameAction::get_from_step_data(Array p_step_data, int p_get_index, cons
 void YGameAction::register_step(const int _step_identifier, const Variant v) {
     if (instant_execute) return;
 
+    // If we're not the server and this is a networked action, request approval through YEngine
+    if (YEngine::get_singleton() != nullptr && YEngine::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
+        YEngine::get_singleton()->get_multiplayer()->get_unique_id() != 1) {
+        request_step_approval(_step_identifier, v);
+        return;
+    }
+
+    // Server or non-networked action - register step directly
     Ref<YActionStep> new_step;
     new_step.instantiate();
     new_step->step_index = static_cast<int>(action_steps.size());
@@ -176,6 +187,18 @@ void YGameAction::register_step(const int _step_identifier, const Variant v) {
 
     action_steps.append(new_step);
     emit_signal("registered_step",new_step->step_index);
+
+    // If we're the server, broadcast the step to all clients through YEngine
+    if (YEngine::get_singleton() != nullptr && YEngine::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
+        YEngine::get_singleton()->get_multiplayer()->get_unique_id() == 1) {
+        YEngine::get_singleton()->broadcast_action_step(this, _step_identifier, v);
+    }
+}
+
+void YGameAction::request_step_approval(int step_identifier, const Variant& step_data) {
+    if (YEngine::get_singleton() != nullptr) {
+        YEngine::get_singleton()->request_action_step_approval(this, step_identifier, step_data);
+    }
 }
 
 void YGameAction::wait_for_step(bool prevent_processing) {

@@ -438,11 +438,19 @@ Ref<YGameAction> YGameState::add_game_action_with_param(const Ref<YGameAction> &
     if (is_playing_back) {
         return ygs;
     }
+
+    // Check if we're in multiplayer and if only server can register actions
+    if (YEngine::get_singleton() != nullptr && YEngine::get_singleton()->get_multiplayer()->has_multiplayer_peer()) {
+        if (YEngine::get_singleton()->get_multiplayer()->get_unique_id() != 1) {
+            // Client trying to register action - ignore
+            return ygs;
+        }
+    }
+
     showed_out_of_actions_message=false;
     if (desired_initial_param != -1) {
         ygs->set_action_parameter(desired_initial_param,desired_param_data);
     }
-    //print_line("Adding game action ",ygs," has started? ",has_started);
     if(!has_started) {
         YEngine::get_singleton()->game_state_starting(this);
         has_started=true;
@@ -454,8 +462,17 @@ Ref<YGameAction> YGameState::add_game_action_with_param(const Ref<YGameAction> &
     future_game_actions.push_back(ygs);
     ygs->set_unique_id(desired_game_state_id);
     ygs->created();
+    
+    // If we're the server, broadcast the action to all clients
+    if (YEngine::get_singleton() != nullptr && YEngine::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
+        YEngine::get_singleton()->get_multiplayer()->get_unique_id() == 1) {
+        Dictionary action_data = ygs->serialize();
+        action_data["a_list_type"] = 2;
+        YEngine::get_singleton()->broadcast_game_action(action_data);
+    }
+
     emit_signal("registered_action",ygs);
-    //print_line("Added game action, future game actions now ",future_game_actions.size());
+
     return ygs;
 }
 
@@ -470,6 +487,15 @@ Ref<YGameAction> YGameState::add_override_game_action_with_param(const Ref<YGame
     if (is_playing_back) {
         return ygs;
     }
+
+    // Check if we're in multiplayer and if only server can register actions
+    if (YEngine::get_singleton() != nullptr && YEngine::get_singleton()->get_multiplayer()->has_multiplayer_peer()) {
+        if (YEngine::get_singleton()->get_multiplayer()->get_unique_id() != 1) {
+            // Client trying to register action - ignore
+            return ygs;
+        }
+    }
+
     showed_out_of_actions_message=false;
     if (desired_initial_param != -1) {
         ygs->set_action_parameter(desired_initial_param,desired_param_data);
@@ -493,7 +519,17 @@ Ref<YGameAction> YGameState::add_override_game_action_with_param(const Ref<YGame
         overriding_game_actions.append(ygs);
     ygs->set_unique_id(desired_game_state_id);
     ygs->created();
+
+    // If we're the server, broadcast the action to all clients
+    if (YEngine::get_singleton() != nullptr && YEngine::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
+        YEngine::get_singleton()->get_multiplayer()->get_unique_id() == 1) {
+        Dictionary action_data = ygs->serialize();
+        action_data["a_list_type"] = 1;
+        YEngine::get_singleton()->broadcast_game_action(action_data);
+    }
+
     emit_signal("registered_action",ygs);
+
     return ygs;
 }
 

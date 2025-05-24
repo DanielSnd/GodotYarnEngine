@@ -10,7 +10,8 @@
 #include "scene/main/multiplayer_api.h"
 #include "scene/main/multiplayer_peer.h"
 #include "core/object/script_language.h"
-
+#include "yarnengine.h"
+class YEngine;
 #ifdef YNET
 #include "../yarnnet/yarnnet.h"
 class YNet;
@@ -99,10 +100,6 @@ public:
     void _rpc_set_property(const String& property_name, const Variant& value);
     void _rpc_request_sync();
     void _rpc_grant_sync(Dictionary dict);
-
-    Dictionary create_rpc_dictionary_config(MultiplayerAPI::RPCMode p_rpc_mode,
-                                            MultiplayerPeer::TransferMode p_transfer_mode, bool p_call_local,
-                                            int p_channel);
                                             
     YGamePlayer() {
         is_remote=false;
