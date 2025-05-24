@@ -177,6 +177,19 @@ void YGameAction::register_step(const int _step_identifier, const Variant v) {
     }
 
     // Server or non-networked action - register step directly
+    actually_register_step(_step_identifier, v);
+    
+    // If we're the server, broadcast the step to all clients through YEngine
+    if (YEngine::get_singleton() != nullptr && YEngine::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
+        YEngine::get_singleton()->get_multiplayer()->get_unique_id() == 1) {
+        YEngine::get_singleton()->broadcast_action_step(this, _step_identifier, v);
+    }
+}
+
+void YGameAction::actually_register_step(const int _step_identifier, const Variant v) {
+    if (instant_execute) return;
+
+    // Server or non-networked action - register step directly
     Ref<YActionStep> new_step;
     new_step.instantiate();
     new_step->step_index = static_cast<int>(action_steps.size());
@@ -187,12 +200,6 @@ void YGameAction::register_step(const int _step_identifier, const Variant v) {
 
     action_steps.append(new_step);
     emit_signal("registered_step",new_step->step_index);
-
-    // If we're the server, broadcast the step to all clients through YEngine
-    if (YEngine::get_singleton() != nullptr && YEngine::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
-        YEngine::get_singleton()->get_multiplayer()->get_unique_id() == 1) {
-        YEngine::get_singleton()->broadcast_action_step(this, _step_identifier, v);
-    }
 }
 
 void YGameAction::request_step_approval(int step_identifier, const Variant& step_data) {

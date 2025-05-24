@@ -19,9 +19,15 @@
 #include "ypersistentid.h"
 #include "scene/3d/camera_3d.h"
 #include "scene/scene_string_names.h"
+#include "scene/main/multiplayer_api.h"
+#include "scene/main/multiplayer_peer.h"
+#include "ygameplayer.h"
+#include "ygameaction.h"
 
 class YGameState;
 class YTween;
+class YGamePlayer;
+class YGameAction;
 
 class YEngine : public Node {
     GDCLASS(YEngine, Node);

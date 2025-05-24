@@ -434,6 +434,52 @@ Ref<YGameAction> YGameState::add_game_action(const Ref<YGameAction> &ygs, int de
     return add_game_action_with_param(ygs,-1,Variant{},desired_game_state_id);
 }
 
+void YGameState::set_current_turn_player(YGamePlayer* _new_current_player)
+     {
+        if (current_turn_player != nullptr) {
+            current_turn_player->turn_ended();
+            current_turn_player->owns_current_turn=false;
+            current_turn_player = nullptr;
+        }
+
+        if (_new_current_player != nullptr) {
+            current_turn_player = _new_current_player;
+            current_turn_player->owns_current_turn=true;
+            current_turn_player->turn_started();
+        }
+    }
+void YGameState::clear_all_game_actions()
+    {
+        if (!current_game_action.is_null() && current_game_action.is_valid()) {
+            current_game_action = Ref<YGameAction>();
+        }
+        last_turn_player_id = -1;
+        if (current_turn_player != nullptr) {
+            current_turn_player = nullptr;
+        }
+        overriding_game_actions.clear();
+        future_game_actions.clear();
+        past_game_actions.clear();
+        current_parallel_actions.clear();
+        future_parallel_actions.clear();
+        showed_out_of_actions_message=false;
+    }
+
+void YGameState::clear_all_players()
+     {
+        for (auto gmp: game_players) {
+            if (gmp.value != nullptr) {
+                if (current_turn_player != nullptr && current_turn_player == gmp.value)
+                    current_turn_player = nullptr;
+                gmp.value->queue_free();
+            }
+        }
+        game_players.clear();
+        if (current_turn_player != nullptr) {
+            current_turn_player = nullptr;
+        }
+    }
+
 Ref<YGameAction> YGameState::add_game_action_with_param(const Ref<YGameAction> &ygs, int desired_initial_param, const Variant &desired_param_data, int desired_game_state_id) {
     if (is_playing_back) {
         return ygs;

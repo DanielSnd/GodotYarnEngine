@@ -988,7 +988,7 @@ void YEngine::_rpc_apply_action_step(int action_id, int step_identifier, const V
     if (ygamestate != nullptr) {
         // Check current action
         if (ygamestate->has_current_game_action() && ygamestate->get_current_game_action()->get_unique_id() == action_id) {
-            ygamestate->get_current_game_action()->register_step(step_identifier, step_data);
+            ygamestate->get_current_game_action()->actually_register_step(step_identifier, step_data);
             return;
         }
 
@@ -996,7 +996,7 @@ void YEngine::_rpc_apply_action_step(int action_id, int step_identifier, const V
         for (int i = 0; i < ygamestate->get_parallel_action_count(); i++) {
             Ref<YGameAction> action = ygamestate->get_parallel_action(i);
             if (action.is_valid() && action->get_unique_id() == action_id) {
-                action->register_step(step_identifier, step_data);
+                action->actually_register_step(step_identifier, step_data);
                 return;
             }
         }

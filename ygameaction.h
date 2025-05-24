@@ -162,6 +162,7 @@ public:
     Vector<Ref<YActionStep>> action_steps;
 
     void register_step(int step_identifier, Variant v);
+    void actually_register_step(int step_identifier, Variant v);
 
     bool started=false;
     bool finished=false;
