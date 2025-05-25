@@ -48,7 +48,6 @@
 static Ref<YSave> yarn_save_ref;
 static Ref<YTime> yarn_time_ref;
 static Ref<YPhysics> yarn_physics_ref;
-static Ref<YGameState> yarn_gamestate_ref;
 static Ref<YGameLog> yarn_game_log_ref;
 static Ref<YTween> yarn_tween_ref;
 
@@ -154,8 +153,6 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 
 	yarn_physics_ref.instantiate();
 
-	yarn_gamestate_ref.instantiate();
-
 	yarn_game_log_ref.instantiate();
 
 	yarn_tween_ref.instantiate();
@@ -167,7 +164,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YSave", YSave::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YTime", YTime::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YPhysics", YPhysics::get_singleton()));
-	Engine::get_singleton()->add_singleton(Engine::Singleton("YGameState", YGameState::get_singleton()));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("YGameState", memnew(YGameState)));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YGameLog", YGameLog::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("YTween", YTween::get_singleton()));
 }
@@ -184,12 +181,18 @@ void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 		if (engine != nullptr) {
 			memdelete(engine);
 		}
+		if (Engine::get_singleton()->has_singleton("YGameState")) {
+			YGameState* ygamestate = YGameState::get_singleton();
+			Engine::get_singleton()->remove_singleton("YGameState");
+			if (ygamestate != nullptr) {
+				memdelete(ygamestate);
+			}
+		}
 		
 		// Remove other singletons...
 		Engine::get_singleton()->remove_singleton("YSave");
 		Engine::get_singleton()->remove_singleton("YTime");
 		Engine::get_singleton()->remove_singleton("YPhysics");
-		Engine::get_singleton()->remove_singleton("YGameState");
 		Engine::get_singleton()->remove_singleton("YGameLog");
 		Engine::get_singleton()->remove_singleton("YTween");
 	}
@@ -198,7 +201,6 @@ void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	if (yarn_time_ref.is_valid()) yarn_time_ref.unref();
 	if (yarn_save_ref.is_valid()) yarn_save_ref.unref();
 	if (yarn_physics_ref.is_valid()) yarn_physics_ref.unref();
-	if (yarn_gamestate_ref.is_valid()) yarn_gamestate_ref.unref();
 	if (yarn_game_log_ref.is_valid()) yarn_game_log_ref.unref();
 	if (yarn_tween_ref.is_valid()) yarn_tween_ref.unref();
 }

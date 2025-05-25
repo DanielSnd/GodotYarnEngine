@@ -10,8 +10,8 @@
 #include "scene/main/multiplayer_api.h"
 #include "scene/main/multiplayer_peer.h"
 #include "core/object/script_language.h"
-#include "yarnengine.h"
-class YEngine;
+#include "ygamestate.h"
+class YGameState;
 #ifdef YNET
 #include "../yarnnet/yarnnet.h"
 class YNet;

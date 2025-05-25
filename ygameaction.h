@@ -10,6 +10,8 @@
 #include "ygamestate.h"
 #include "core/variant/variant.h"
 #include "core/object/script_language.h"
+#include "scene/main/multiplayer_api.h"
+#include "scene/main/multiplayer_peer.h"
 
 class YGameState;
 class YGamePlayer;
@@ -256,7 +258,7 @@ public:
 
     bool executed_exit_action_call=false;
 
-    virtual void end_action();
+    virtual void end_action(bool sync_to_others = true);
 
     YGameAction* copy_parameters_from(const Ref<YGameAction> &other_action) {
         if (other_action.is_valid()) {
@@ -301,10 +303,12 @@ public:
     GDVIRTUAL0RC(bool, _only_starts_if)
 
     // Virtual function for step approval
-    GDVIRTUAL2RC(bool, _step_request_approval, int, int)
+    GDVIRTUAL3RC(bool, _step_request_approval, int, Variant, int)
 
     // Method to request step approval through YEngine
     void request_step_approval(int step_identifier, const Variant& step_data);
+
+    bool check_if_has_step_approval(int step_identifier, const Variant& step_data, int sender_id);
 
     YGameAction();
     ~YGameAction() {

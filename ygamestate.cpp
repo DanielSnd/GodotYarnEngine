@@ -4,8 +4,6 @@
 
 #include "ygamestate.h"
 
-#include "core/config/project_settings.h"
-
 YGameState* YGameState::singleton = nullptr;
 
 void YGameState::_bind_methods() {
@@ -26,6 +24,9 @@ void YGameState::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("add_game_action_with", "game_action","initial_parameter","param_value","desired_id"), &YGameState::add_game_action_with_param,DEFVAL(-1),DEFVAL(Variant{}),DEFVAL(-1));
     ClassDB::bind_method(D_METHOD("add_override_game_action_with","initial_parameter","param_value", "game_action","desired_id"), &YGameState::add_override_game_action_with_param,DEFVAL(-1),DEFVAL(Variant{}),DEFVAL(-1));
+
+    ClassDB::bind_method(D_METHOD("has_valid_multiplayer_peer"), &YGameState::has_valid_multiplayer_peer);
+    ClassDB::bind_method(D_METHOD("ensure_has_initialized"), &YGameState::ensure_has_initialized);
 
     ClassDB::bind_method(D_METHOD("clear_all_players"), &YGameState::clear_all_players);
     ClassDB::bind_method(D_METHOD("clear_all_game_actions"), &YGameState::clear_all_game_actions);
@@ -57,6 +58,7 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_is_playing_back"), &YGameState::get_is_playing_back);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "is_playing_back"), "set_is_playing_back", "get_is_playing_back");
 
+    ClassDB::bind_method(D_METHOD("get_game_action", "action_id"), &YGameState::get_game_action);
     ClassDB::bind_method(D_METHOD("get_overriding_game_action_count"), &YGameState::get_overridinge_game_action_count);
     ClassDB::bind_method(D_METHOD("get_future_game_action_count"), &YGameState::get_future_game_action_count);
     ClassDB::bind_method(D_METHOD("get_past_game_action_count"), &YGameState::get_past_game_action_count);
@@ -94,7 +96,65 @@ void YGameState::_bind_methods() {
     ADD_SIGNAL(MethodInfo("ended_all_actions"));
     ADD_SIGNAL(MethodInfo("player_registered",PropertyInfo(Variant::OBJECT, "new_player", PROPERTY_HINT_RESOURCE_TYPE, "YGamePlayer")));
     ADD_SIGNAL(MethodInfo("player_removed",PropertyInfo(Variant::INT, "removed_player_id")));
+
+
+    // Add RPC methods for action steps
+    ClassDB::bind_method(D_METHOD("_rpc_request_action_step_approval", "action_id", "step_identifier", "step_data"), &YGameState::_rpc_request_action_step_approval);
+    ClassDB::bind_method(D_METHOD("_rpc_apply_action_step", "action_id", "step_identifier", "step_data"), &YGameState::_rpc_apply_action_step);
+    // Add RPC methods for game actions
+    ClassDB::bind_method(D_METHOD("_rpc_register_game_action", "action_data"), &YGameState::_rpc_register_game_action);
+    ClassDB::bind_method(D_METHOD("_rpc_end_game_action", "action_id"), &YGameState::_rpc_end_game_action);
+    
+
+
+// broadcast_call_on_game_action
+    {
+        MethodInfo mi;
+        mi.name = "_receive_call_on_game_action";
+        mi.arguments.push_back(PropertyInfo(Variant::CALLABLE, "method"));
+
+        ClassDB::bind_vararg_method(METHOD_FLAGS_DEFAULT, "_receive_call_on_game_action", &YGameState::_receive_call_on_game_action, mi);
+    }
+    {
+        MethodInfo mi;
+        mi.name = "_receive_call_on_game_action_also_local";
+        mi.arguments.push_back(PropertyInfo(Variant::CALLABLE, "method"));
+
+        ClassDB::bind_vararg_method(METHOD_FLAGS_DEFAULT, "_receive_call_on_game_action_also_local", &YGameState::_receive_call_on_game_action, mi);
+    }
+    {
+        MethodInfo mi;
+        mi.name = "broadcast_call_on_game_action";
+        mi.arguments.push_back(PropertyInfo(Variant::CALLABLE, "method"));
+
+        ClassDB::bind_vararg_method(METHOD_FLAGS_DEFAULT, "broadcast_call_on_game_action", &YGameState::broadcast_call_on_game_action, mi);
+    }
+
 }
+
+Ref<YGameAction> YGameState::get_game_action(int netid) const {
+        for (const auto& action : past_game_actions) {
+            if (action.is_valid() && action->get_unique_id() == netid) {
+                return action;
+            }
+        }
+        for (const auto& action : future_game_actions) {
+            if (action.is_valid() && action->get_unique_id() == netid) {
+                return action;
+            }
+        }
+        for (const auto& action : overriding_game_actions) {
+            if (action.is_valid() && action->get_unique_id() == netid) {
+                return action;
+            }
+        }
+        for (const auto& action : current_parallel_actions) {
+            if (action.is_valid() && action->get_unique_id() == netid) {
+                return action;
+            }
+        }
+        return nullptr;
+    }
 
 YGameState *YGameState::get_singleton() {
     return singleton;
@@ -221,6 +281,7 @@ YGamePlayer * YGameState::get_game_player_by_type(int ypg_type) {
     }
     return nullptr;
 }
+
 void YGameState::do_process(double delta) {
     // Check if any future parallel actions can start
     check_future_parallel_actions();
@@ -486,8 +547,8 @@ Ref<YGameAction> YGameState::add_game_action_with_param(const Ref<YGameAction> &
     }
 
     // Check if we're in multiplayer and if only server can register actions
-    if (YEngine::get_singleton() != nullptr && YEngine::get_singleton()->get_multiplayer()->has_multiplayer_peer()) {
-        if (YEngine::get_singleton()->get_multiplayer()->get_unique_id() != 1) {
+    if (has_valid_multiplayer_peer()) {
+        if (scene_multiplayer->get_unique_id() != 1) {
             // Client trying to register action - ignore
             return ygs;
         }
@@ -510,11 +571,11 @@ Ref<YGameAction> YGameState::add_game_action_with_param(const Ref<YGameAction> &
     ygs->created();
     
     // If we're the server, broadcast the action to all clients
-    if (YEngine::get_singleton() != nullptr && YEngine::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
-        YEngine::get_singleton()->get_multiplayer()->get_unique_id() == 1) {
+    if (has_valid_multiplayer_peer() && 
+        scene_multiplayer->get_unique_id() == 1) {
         Dictionary action_data = ygs->serialize();
         action_data["a_list_type"] = 2;
-        YEngine::get_singleton()->broadcast_game_action(action_data);
+        broadcast_game_action(action_data);
     }
 
     emit_signal("registered_action",ygs);
@@ -535,8 +596,8 @@ Ref<YGameAction> YGameState::add_override_game_action_with_param(const Ref<YGame
     }
 
     // Check if we're in multiplayer and if only server can register actions
-    if (YEngine::get_singleton() != nullptr && YEngine::get_singleton()->get_multiplayer()->has_multiplayer_peer()) {
-        if (YEngine::get_singleton()->get_multiplayer()->get_unique_id() != 1) {
+    if (has_valid_multiplayer_peer()) {
+        if (scene_multiplayer->get_unique_id() != 1) {
             // Client trying to register action - ignore
             return ygs;
         }
@@ -567,11 +628,11 @@ Ref<YGameAction> YGameState::add_override_game_action_with_param(const Ref<YGame
     ygs->created();
 
     // If we're the server, broadcast the action to all clients
-    if (YEngine::get_singleton() != nullptr && YEngine::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
-        YEngine::get_singleton()->get_multiplayer()->get_unique_id() == 1) {
+    if (has_valid_multiplayer_peer() && 
+        scene_multiplayer->get_unique_id() == 1) {
         Dictionary action_data = ygs->serialize();
         action_data["a_list_type"] = 1;
-        YEngine::get_singleton()->broadcast_game_action(action_data);
+        broadcast_game_action(action_data);
     }
 
     emit_signal("registered_action",ygs);
@@ -817,6 +878,14 @@ void YGameState::end_parallel_action(int index) {
     }
 }
 
+bool YGameState::ensure_has_initialized() {
+    if(!has_started) {
+        YEngine::get_singleton()->game_state_starting(this);
+        has_started=true;
+    }
+    return has_started;
+}
+
 void YGameState::end_all_parallel_actions() {
     for (int i = current_parallel_actions.size() - 1; i >= 0; i--) {
         end_parallel_action(i);
@@ -850,6 +919,31 @@ void YGameState::check_future_parallel_actions() {
                     future_parallel_actions.remove_at(i);
                 }
             }
+        }
+    }
+}
+
+bool YGameState::has_valid_multiplayer_peer() const {
+    return !scene_multiplayer.is_null() && scene_multiplayer.is_valid() && scene_multiplayer->has_multiplayer_peer();
+}
+
+void YGameState::_notification(int p_what) {
+    switch (p_what) {
+        case NOTIFICATION_ENTER_TREE: {
+        } break;
+        case NOTIFICATION_EXIT_TREE: {
+            this->clear_all_game_actions();
+            this->clear_all_players();
+            break;
+        }
+        case NOTIFICATION_READY: {
+            scene_multiplayer = get_multiplayer();
+            this->rpc_config(rpc_apply_action_step_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_AUTHORITY, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+            this->rpc_config(rpc_register_game_action_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_AUTHORITY, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+            this->rpc_config(rpc_request_action_step_approval_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+            this->rpc_config(rpc_end_game_action_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_AUTHORITY, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+            this->rpc_config(_receive_call_on_game_action_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+            this->rpc_config(_receive_call_on_game_action_also_local_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, true, 0));
         }
     }
 }
@@ -894,3 +988,339 @@ Ref<YGameAction> YGameState::add_parallel_game_action_with_param(const Ref<YGame
     emit_signal("registered_action", ygs);
     return ygs;
 }
+
+
+void YGameState::request_action_step_approval(YGameAction* action, int step_identifier, const Variant& step_data) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() == 1) {
+        return; // Don't send if we're the server
+    }
+
+    Array p_arguments;
+    p_arguments.push_back(action->get_unique_id());
+    p_arguments.push_back(step_identifier);
+    p_arguments.push_back(step_data);
+    int argcount = p_arguments.size();
+    const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+    for (int i = 0; i < argcount; i++) {
+        argptrs[i] = &p_arguments[i];
+    }
+    rpcp(1, "_rpc_request_action_step_approval", argptrs, argcount);
+}
+
+void YGameState::broadcast_action_step(YGameAction* action, int step_identifier, const Variant& step_data) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() != 1) {
+        return; // Only server can broadcast
+    }
+
+    Array p_arguments;
+    p_arguments.push_back(action->get_unique_id());
+    p_arguments.push_back(step_identifier);
+    p_arguments.push_back(step_data);
+    int argcount = p_arguments.size();
+    const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+    for (int i = 0; i < argcount; i++) {
+        argptrs[i] = &p_arguments[i];
+    }
+    rpcp(0, "_rpc_apply_action_step", argptrs, argcount);
+}
+
+void YGameState::_rpc_request_action_step_approval(int action_id, int step_identifier, const Variant& step_data) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() != 1) {
+        return; // Only server should handle approval requests
+    }
+
+    // Check current action
+    if (has_current_game_action() && get_current_game_action()->get_unique_id() == action_id) {
+        if (get_current_game_action()->check_if_has_step_approval(step_identifier, step_data, scene_multiplayer->get_remote_sender_id())) {
+            get_current_game_action()->register_step(step_identifier, step_data);
+        }
+        return;
+    }
+
+    // Check parallel actions
+    for (int i = 0; i < get_parallel_action_count(); i++) {
+        Ref<YGameAction> action = get_parallel_action(i);
+        if (action.is_valid() && action->get_unique_id() == action_id) {
+            if (action->check_if_has_step_approval(step_identifier, step_data, scene_multiplayer->get_remote_sender_id())) {
+                action->register_step(step_identifier, step_data);
+            }
+            return;
+        }
+    }
+}
+
+void YGameState::_rpc_apply_action_step(int action_id, int step_identifier, const Variant& step_data) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() == 1) {
+        return; // Server already applied the step
+    }
+
+    // Check current action
+    if (has_current_game_action() && get_current_game_action()->get_unique_id() == action_id) {
+        get_current_game_action()->actually_register_step(step_identifier, step_data);
+        return;
+    }
+
+    // Check parallel actions
+    for (int i = 0; i < get_parallel_action_count(); i++) {
+        Ref<YGameAction> action = get_parallel_action(i);
+        if (action.is_valid() && action->get_unique_id() == action_id) {
+            action->actually_register_step(step_identifier, step_data);
+            return;
+        }
+    }
+}
+
+void YGameState::broadcast_game_action(const Dictionary& action_data) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() != 1) {
+        return; // Only server can broadcast
+    }
+    
+    // Broadcast to all clients
+    rpc(rpc_register_game_action_stringname, action_data);
+}
+
+void YGameState::_rpc_register_game_action(const Dictionary& action_data) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() == 1) {
+        return;
+    }
+
+    if (action_data.has("a_list_type")) {
+        int a_list_type = action_data["a_list_type"];
+        Vector<Ref<YGameAction>>* list_to_add_to = nullptr;
+        if (a_list_type == 1) {
+            list_to_add_to = &overriding_game_actions;
+        } else if (a_list_type == 2) {
+            list_to_add_to = &future_game_actions;
+        } else if (a_list_type == 3) {
+            list_to_add_to = &past_game_actions;
+        }else if (a_list_type == 4) {
+            list_to_add_to = &current_parallel_actions;
+        }else if (a_list_type == 5) {
+            list_to_add_to = &future_parallel_actions;
+        }
+        if (list_to_add_to != nullptr) {
+            deserialize_individual_game_action_into(*list_to_add_to, action_data, false);
+        }
+    }
+}
+
+Dictionary YGameState::create_rpc_dictionary_config(MultiplayerAPI::RPCMode p_rpc_mode,
+                                            MultiplayerPeer::TransferMode p_transfer_mode, bool p_call_local,
+                                            int p_channel) {
+    Dictionary config;
+    config["rpc_mode"] = p_rpc_mode;
+    config["transfer_mode"] = p_transfer_mode;
+    config["call_local"] = p_call_local;
+    config["channel"] = p_channel;
+    return config;
+}
+
+void YGameState::broadcast_action_end(int action_id) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() != 1) {
+        return; // Only server can broadcast
+    }
+
+    rpc(rpc_end_game_action_stringname, action_id);
+}
+
+void YGameState::_rpc_end_game_action(int action_id) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() == 1 || scene_multiplayer->get_remote_sender_id() != 1) {
+        return; // Server already ended the action or the one sending is not the server
+    }
+
+    // Check current action
+    if (has_current_game_action() && get_current_game_action()->get_unique_id() == action_id) {
+        get_current_game_action()->end_action(false);
+        return;
+    }
+
+    // Check parallel actions
+    for (int i = 0; i < get_parallel_action_count(); i++) {
+        Ref<YGameAction> action = get_parallel_action(i);
+        if (action.is_valid() && action->get_unique_id() == action_id) {
+            action->end_action(false);
+            return;
+        }
+    }
+}
+
+YGameState::YGSRPCConfig YGameState::_get_rpc_config(Object *p_node, const StringName &p_method) {
+    const ObjectID oid = p_node->get_instance_id();
+    // If we don't have a cache for this node yet, create it
+    if (!rpc_config_cache.has(oid)) {
+        YGSRPCConfigCache cache;
+        // Parse script config if it exists
+        if (p_node->get_script_instance()) {
+            Dictionary script_config = p_node->get_script_instance()->get_rpc_config();
+            _parse_rpc_config(script_config, false, cache);
+        }
+        rpc_config_cache[oid] = cache;
+    }
+    // Get the config from cache
+    YGSRPCConfigCache &cache = rpc_config_cache[oid];
+    if (cache.ids.has(p_method)) {
+        uint16_t id = cache.ids[p_method];
+        return cache.configs[id];
+    }
+    // Default config if not found
+    YGSRPCConfig config;
+    config.name = p_method;
+    config.rpc_mode = MultiplayerAPI::RPC_MODE_DISABLED;
+    config.transfer_mode = MultiplayerPeer::TRANSFER_MODE_RELIABLE;
+    config.call_local = false;
+    config.channel = 0;
+    return config;
+}
+
+void YGameState::_parse_rpc_config(const Dictionary &p_config, bool p_for_node, YGSRPCConfigCache &r_cache) {
+    Array names = p_config.keys();
+    names.sort_custom(callable_mp_static(&StringLikeVariantOrder::compare)); // Ensure ID order
+    for (int i = 0; i < names.size(); i++) {
+        ERR_CONTINUE(!names[i].is_string());
+        String name = names[i].operator String();
+        ERR_CONTINUE(p_config[name].get_type() != Variant::DICTIONARY);
+        ERR_CONTINUE(!p_config[name].operator Dictionary().has("rpc_mode"));
+        Dictionary dict = p_config[name];
+        YGSRPCConfig cfg;
+        cfg.name = name;
+        cfg.rpc_mode = ((MultiplayerAPI::RPCMode)dict.get("rpc_mode", MultiplayerAPI::RPC_MODE_AUTHORITY).operator int());
+        cfg.transfer_mode = ((MultiplayerPeer::TransferMode)dict.get("transfer_mode", MultiplayerPeer::TRANSFER_MODE_RELIABLE).operator int());
+        cfg.call_local = dict.get("call_local", false).operator bool();
+        cfg.channel = dict.get("channel", 0).operator int();
+        uint16_t id = ((uint16_t)i);
+        if (p_for_node) {
+            id |= (1 << 15);
+        }
+        r_cache.configs[id] = cfg;
+        r_cache.ids[name] = id;
+    }
+}
+
+Error YGameState::broadcast_call_on_game_action(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+    if (!has_valid_multiplayer_peer()) {
+        return ERR_UNCONFIGURED;
+    }
+    if (p_argcount < 1) {
+        r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
+        r_error.expected = 1;
+        return ERR_INVALID_PARAMETER;
+    }
+
+    Variant::Type type = p_args[0]->get_type();
+    if (type != Variant::CALLABLE) {
+        r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
+        r_error.argument = 0;
+        r_error.expected = Variant::CALLABLE;
+        return ERR_INVALID_PARAMETER;
+    }
+
+    Callable p_callable = p_args[0]->operator Callable();
+    ERR_FAIL_COND_V(!is_inside_tree(), ERR_UNCONFIGURED);
+
+    YGameAction* callable_object = Object::cast_to<YGameAction>(p_callable.get_object());
+    ERR_FAIL_COND_V(callable_object == nullptr, ERR_DOES_NOT_EXIST);
+
+    // Get RPC config for this method
+    YGameState::YGSRPCConfig rpc_config = _get_rpc_config(callable_object, p_callable.get_method());
+    // Check if we can send this RPC
+    bool can_send = false;
+    switch (rpc_config.rpc_mode) {
+        case MultiplayerAPI::RPC_MODE_ANY_PEER:
+            can_send = true;
+            break;
+        case MultiplayerAPI::RPC_MODE_AUTHORITY:
+            if (callable_object->player_turn != -1) {
+                YGamePlayer* ygp = get_game_player(callable_object->player_turn);
+                if (ygp != nullptr) {
+                    can_send = ygp->remote_player_id == scene_multiplayer->get_unique_id() || scene_multiplayer->get_unique_id() == 1;
+                }else{
+                    can_send = scene_multiplayer->get_unique_id() == get_multiplayer_authority();
+                }
+            }else {
+                can_send = scene_multiplayer->get_unique_id() == get_multiplayer_authority();
+            }
+            break;
+        case MultiplayerAPI::RPC_MODE_DISABLED:
+        default:
+            can_send = false;
+            break;
+    }
+
+    if (!can_send) {
+        print_error(vformat("Invalid call for function %s. Doesn't have authority.", p_callable.get_method()));
+        return ERR_UNAUTHORIZED;
+    }
+
+    int net_id = callable_object->get_unique_id();
+    ERR_FAIL_COND_V(net_id == -1, ERR_UNCONFIGURED);
+
+    Array sending_rpc_array;
+    sending_rpc_array.push_back(net_id);
+    sending_rpc_array.push_back(p_callable.get_method());
+    p_args[0] = new Variant(sending_rpc_array);
+    return rpcp(0, !rpc_config.call_local ? _receive_call_on_game_action_stringname : _receive_call_on_game_action_also_local_stringname, p_args, p_argcount);
+}
+
+Variant YGameState::_receive_call_on_game_action(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+    if (p_argcount < 1) {
+        r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
+        r_error.expected = 1;
+        return ERR_INVALID_PARAMETER;
+    }
+    Variant::Type itype = p_args[0]->get_type();
+    if (itype != Variant::ARRAY) {
+        r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
+        r_error.argument = 0;
+        r_error.expected = Variant::ARRAY;
+        return ERR_INVALID_PARAMETER;
+    }
+    Array yrpc_info = p_args[0]->operator Array();
+    uint32_t netid = yrpc_info[0];
+    String method_name = yrpc_info[1];
+
+    Ref<YGameAction> action = get_game_action(netid);
+    if (action.is_valid()) {
+        // Get RPC config for this method
+        YGSRPCConfig rpc_config = _get_rpc_config(action.ptr(), method_name);
+
+        // Check if we should receive this RPC
+        bool can_receive = false;
+        switch (rpc_config.rpc_mode) {
+            case MultiplayerAPI::RPC_MODE_ANY_PEER:
+                can_receive = true;
+                break;
+            case MultiplayerAPI::RPC_MODE_AUTHORITY:
+                if (action->player_turn != -1) {
+                    YGamePlayer* ygp = get_game_player(action->player_turn);
+                    if (ygp != nullptr) {
+                        can_receive = ygp->remote_player_id == scene_multiplayer->get_remote_sender_id() || scene_multiplayer->get_remote_sender_id() == 1;
+                    }else{
+                        can_receive = scene_multiplayer->get_remote_sender_id() == get_multiplayer_authority();
+                    }
+                }else {
+                    can_receive = scene_multiplayer->get_remote_sender_id() == get_multiplayer_authority();
+                }
+                break;
+            case MultiplayerAPI::RPC_MODE_DISABLED:
+            default:
+                can_receive = false;
+                break;
+        }
+
+        if (!can_receive) {
+            return ERR_UNAUTHORIZED;
+        }
+
+        if (action->has_method(method_name)) {
+            action->callp(method_name, &p_args[2], p_argcount - 2, r_error);
+            if (r_error.error != Callable::CallError::CALL_OK) {
+                return r_error.error;
+            }
+        }
+    }
+
+    return 0;
+}
+
+                    
+                    

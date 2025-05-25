@@ -44,7 +44,7 @@ void YGameAction::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_all_action_parameters"), &YGameAction::get_all_action_parameters);
     ClassDB::bind_method(D_METHOD("get_all_action_parameters_named","naming_dictionary"), &YGameAction::get_all_action_parameters_named);
 
-    ClassDB::bind_method(D_METHOD("end_action"), &YGameAction::end_action);
+    ClassDB::bind_method(D_METHOD("end_action", "sync_to_others"), &YGameAction::end_action, DEFVAL(true));
     ClassDB::bind_method(D_METHOD("register_step","step_identifier","step_data"), &YGameAction::register_step);
 
     ClassDB::bind_method(D_METHOD("get_step_by_index","step_index"), &YGameAction::get_step_by_index);
@@ -114,13 +114,13 @@ void YGameAction::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("request_step_approval", "step_identifier", "step_data"), &YGameAction::request_step_approval);
 
-    ADD_SIGNAL(MethodInfo("started_action", PropertyInfo(Variant::STRING, "action_name")));
-    ADD_SIGNAL(MethodInfo("registered_step", PropertyInfo(Variant::INT, "step_index")));
-    ADD_SIGNAL(MethodInfo("action_stepped", PropertyInfo(Variant::INT, "step_index")));
-    ADD_SIGNAL(MethodInfo("waiting_for_step", PropertyInfo(Variant::INT, "step_index")));
-    ADD_SIGNAL(MethodInfo("released_waited_step", PropertyInfo(Variant::INT, "step_index")));
-    ADD_SIGNAL(MethodInfo("ended_action", PropertyInfo(Variant::STRING, "action_name")));
-    ADD_SIGNAL(MethodInfo("on_changed_action_parameter", 
+    ADD_SIGNAL(MethodInfo(SNAME("started_action"), PropertyInfo(Variant::STRING, "action_name")));
+    ADD_SIGNAL(MethodInfo(SNAME("registered_step"), PropertyInfo(Variant::INT, "step_index")));
+    ADD_SIGNAL(MethodInfo(SNAME("action_stepped"), PropertyInfo(Variant::INT, "step_index")));
+    ADD_SIGNAL(MethodInfo(SNAME("waiting_for_step"), PropertyInfo(Variant::INT, "step_index")));
+    ADD_SIGNAL(MethodInfo(SNAME("released_waited_step"), PropertyInfo(Variant::INT, "step_index")));
+    ADD_SIGNAL(MethodInfo(SNAME("ended_action"), PropertyInfo(Variant::STRING, "action_name")));
+    ADD_SIGNAL(MethodInfo(SNAME("on_changed_action_parameter"), 
         PropertyInfo(Variant::INT, "param_id"),
         PropertyInfo(Variant::NIL, "old_value"),
         PropertyInfo(Variant::NIL, "new_value")));
@@ -134,7 +134,7 @@ void YGameAction::_bind_methods() {
     GDVIRTUAL_BIND(_on_serialize,"dict")
     GDVIRTUAL_BIND(_on_deserialize,"dict")
     GDVIRTUAL_BIND(_only_starts_if)
-    GDVIRTUAL_BIND(_step_request_approval, "step_identifier", "sender_id")
+    GDVIRTUAL_BIND(_step_request_approval, "step_identifier", "step_data", "sender_id")
 }
 
 void YGameAction::release_step() {
@@ -170,19 +170,19 @@ void YGameAction::register_step(const int _step_identifier, const Variant v) {
     if (instant_execute) return;
 
     // If we're not the server and this is a networked action, request approval through YEngine
-    if (YEngine::get_singleton() != nullptr && YEngine::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
-        YEngine::get_singleton()->get_multiplayer()->get_unique_id() != 1) {
+    if (YGameState::get_singleton() != nullptr && YGameState::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
+        YGameState::get_singleton()->get_multiplayer()->get_unique_id() != 1) {
         request_step_approval(_step_identifier, v);
         return;
     }
 
     // Server or non-networked action - register step directly
     actually_register_step(_step_identifier, v);
-    
+
     // If we're the server, broadcast the step to all clients through YEngine
-    if (YEngine::get_singleton() != nullptr && YEngine::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
-        YEngine::get_singleton()->get_multiplayer()->get_unique_id() == 1) {
-        YEngine::get_singleton()->broadcast_action_step(this, _step_identifier, v);
+    if (YGameState::get_singleton() != nullptr && YGameState::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
+        YGameState::get_singleton()->get_multiplayer()->get_unique_id() == 1) {
+        YGameState::get_singleton()->broadcast_action_step(this, _step_identifier, v);
     }
 }
 
@@ -199,13 +199,19 @@ void YGameAction::actually_register_step(const int _step_identifier, const Varia
         print_line(vformat("Registered step index %d, identifier %d, data: %s",new_step->step_index,new_step->step_identifier,new_step->step_data));
 
     action_steps.append(new_step);
-    emit_signal("registered_step",new_step->step_index);
+    emit_signal(SNAME("registered_step"),new_step->step_index);
 }
 
 void YGameAction::request_step_approval(int step_identifier, const Variant& step_data) {
-    if (YEngine::get_singleton() != nullptr) {
-        YEngine::get_singleton()->request_action_step_approval(this, step_identifier, step_data);
+    if (YGameState::get_singleton() != nullptr) {
+        YGameState::get_singleton()->request_action_step_approval(this, step_identifier, step_data);
     }
+}
+
+bool YGameAction::check_if_has_step_approval(int step_identifier, const Variant& step_data, int sender_id) {
+    bool approved = true;
+    GDVIRTUAL_CALL(_step_request_approval, step_identifier, step_data, sender_id, approved);
+    return approved;
 }
 
 void YGameAction::wait_for_step(bool prevent_processing) {
@@ -216,13 +222,13 @@ void YGameAction::wait_for_step(bool prevent_processing) {
         if (action_steps[i] != nullptr && action_steps[i].is_valid() && !action_steps[i]->step_taken && action_steps[i]->step_index == last_step_ran) {
             Ref<YActionStep> data = action_steps[i];
             data->set_step_waiting(true);
-            emit_signal("waiting_for_step",data->step_index);
+            emit_signal(SNAME("waiting_for_step"),data->step_index);
             break;
         }
     }
 }
 
-void YGameAction::end_action() {
+void YGameAction::end_action(bool sync_to_others) {
     started=true;
     finished=true;
     if (waiting_for_step) {
@@ -231,13 +237,13 @@ void YGameAction::end_action() {
     if (is_debugging) {
         print_line(vformat("%s is calling end action",get_name()));
     }
+    if (sync_to_others && YGameState::get_singleton() != nullptr && YGameState::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
+        YGameState::get_singleton()->get_multiplayer()->get_unique_id() == 1) {
+        YGameState::get_singleton()->broadcast_action_end(unique_id);
+    }
     exit_action();
     executed_exit_action_call=true;
-    emit_signal("ended_action",get_name());
-    if (player_turn > 0) {
-        // auto ctp = YGameState::get_singleton()->current_turn_player;
-        // if (ctp != nullptr && ctp
-    }
+    emit_signal(SNAME("ended_action"));
 }
 
 void YGameAction::enter_action() {
@@ -262,7 +268,7 @@ void YGameAction::enter_action() {
         print_line(vformat("%s is calling enter action",get_name()));
     }
     GDVIRTUAL_CALL(_on_enter_action);
-    emit_signal("started_action",get_name());
+    emit_signal(SNAME("started_action"),get_name());
     started=true;
 }
 
@@ -275,13 +281,13 @@ void YGameAction::step_action(Ref<YActionStep> data,bool is_ending) {
         last_step_ran = data->get_step_index();
         if (data->get_step_waiting() && !waiting_for_step) {
             waiting_for_step = true;
-            emit_signal("waiting_for_step",data->step_index);
+            emit_signal(SNAME("waiting_for_step"),data->step_index);
         }
         GDVIRTUAL_CALL(_on_stepped_action,data->get_step_index(),data->get_step_identifier(),data->step_data,is_ending);
         data->step_taken=true;
         data->step_taken_as_ending = is_ending;
         if (!waiting_for_step)
-            emit_signal("action_stepped",data->step_index);
+            emit_signal(SNAME("action_stepped"),data->step_index);
         else {
             steps_consumed -= 1;
             data->step_has_to_reconsume = true;
@@ -464,7 +470,7 @@ bool YGameAction::only_starts_if() {
 }
 
 void YGameAction::emit_action_parameter_changed(int param_id, const Variant& old_value, const Variant& new_value) {
-    emit_signal("on_changed_action_parameter", param_id, old_value, new_value);
+    emit_signal(SNAME("on_changed_action_parameter"), param_id, old_value, new_value);
 }
 
 YGameAction* YGameAction::set_action_parameter(int param, const Variant& v) {

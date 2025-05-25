@@ -13,6 +13,8 @@
 #include "yvisualaction.h"
 #include "yvisualelement3d.h"
 #include "yarntime.h"
+#include "core/config/project_settings.h"
+#include "modules/multiplayer/scene_multiplayer.h"
 
 /// Forward Declaring YGameAction for use.
 class YGameAction;
@@ -24,15 +26,41 @@ class YActionStep;
 /// YGAMESTATE
 ///////////////////////////////
 
-class YGameState : public RefCounted {
-    GDCLASS(YGameState, RefCounted);
+class YGameState : public Node {
+    GDCLASS(YGameState, Node);
+
+private:
+    struct YGSRPCConfig {
+		StringName name;
+		MultiplayerAPI::RPCMode rpc_mode = MultiplayerAPI::RPC_MODE_DISABLED;
+		bool call_local = false;
+		MultiplayerPeer::TransferMode transfer_mode = MultiplayerPeer::TRANSFER_MODE_RELIABLE;
+		int channel = 0;
+
+		bool operator==(YGSRPCConfig const &p_other) const {
+			return name == p_other.name;
+		}
+	};
+
+    struct YGSRPCConfigCache {
+        HashMap<uint16_t, YGSRPCConfig> configs;
+        HashMap<StringName, uint16_t> ids;
+    };
+
+    // Cache for RPC configs, keyed by ObjectID
+    HashMap<ObjectID, YGSRPCConfigCache> rpc_config_cache;
 
 protected:
+    void _parse_rpc_config(const Dictionary &p_config, bool p_for_node, YGSRPCConfigCache &r_cache);
+    YGSRPCConfig _get_rpc_config(Object *p_node, const StringName &p_method);
     static YGameState* singleton;
     static void _bind_methods();
 
+    Ref<SceneMultiplayer> scene_multiplayer;
+
 public:
     static YGameState *get_singleton();
+    void _notification(int p_what);
 
     bool has_started=false;
 
@@ -162,6 +190,8 @@ public:
     Ref<YGameAction> add_game_action_with_param(const Ref<YGameAction>& ygs, int desired_initial_param, const Variant &desired_param_data, int desired_game_state_id = -1);
     Ref<YGameAction> add_override_game_action_with_param(const Ref<YGameAction>& ygs, int desired_initial_param, const Variant &desired_param_data, int desired_game_state_id = -1);
 
+    Ref<YGameAction> get_game_action(int netid) const;
+
     bool has_current_turn_player() const {return current_turn_player != nullptr;}
 
     YGamePlayer* get_current_turn_player() const {return current_turn_player;}
@@ -170,6 +200,7 @@ public:
     void clear_all_players();
     void clear_all_game_actions();
 
+    bool ensure_has_initialized();
     
     HashMap<int,Variant> state_parameters;
     void set_state_parameter(int param, Variant v) {state_parameters[param] = v;}
@@ -204,9 +235,16 @@ public:
         stop_playing_back_when_current_action_steps_done = false;
         has_started = false;
         is_playing_back = false;
+        rpc_request_action_step_approval_stringname = SNAME("_rpc_request_action_step_approval");
+        rpc_apply_action_step_stringname = SNAME("_rpc_apply_action_step");
+        rpc_register_game_action_stringname = SNAME("_rpc_register_game_action");
+        _receive_call_on_game_action_also_local_stringname = SNAME("_receive_call_on_game_action_also_local");
+        _receive_call_on_game_action_stringname = SNAME("_receive_call_on_game_action");
+        rpc_end_game_action_stringname = SNAME("_rpc_end_game_action");
     }
 
     ~YGameState() {
+        rpc_config_cache.clear();
         if(singleton != nullptr && singleton == this) {
             singleton = nullptr;
         }
@@ -239,6 +277,34 @@ public:
     void check_future_parallel_actions();
     Ref<YGameAction> add_parallel_game_action(const Ref<YGameAction>& ygs, int desired_game_state_id = -1);
     Ref<YGameAction> add_parallel_game_action_with_param(const Ref<YGameAction>& ygs, int desired_initial_param, const Variant& desired_param_data, int desired_game_state_id = -1);
+
+
+    // Action step RPC methods
+    void request_action_step_approval(YGameAction* action, int step_identifier, const Variant& step_data);
+    void broadcast_action_step(YGameAction* action, int step_identifier, const Variant& step_data);
+    void _rpc_request_action_step_approval(int action_id, int step_identifier, const Variant& step_data);
+    void _rpc_apply_action_step(int action_id, int step_identifier, const Variant& step_data);
+
+    StringName rpc_request_action_step_approval_stringname;
+    StringName rpc_apply_action_step_stringname;
+    StringName rpc_end_game_action_stringname;
+    StringName _receive_call_on_game_action_stringname;
+    StringName _receive_call_on_game_action_also_local_stringname;
+    StringName rpc_register_game_action_stringname;
+
+    static Dictionary create_rpc_dictionary_config(MultiplayerAPI::RPCMode p_rpc_mode,
+                                            MultiplayerPeer::TransferMode p_transfer_mode, bool p_call_local,
+                                            int p_channel);
+
+    // Game action RPC methods
+    void broadcast_game_action(const Dictionary& action_data);
+    void broadcast_action_end(int action_id);
+    Error broadcast_call_on_game_action(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+    void _rpc_end_game_action(int action_id);
+    Variant _receive_call_on_game_action(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+    void _rpc_register_game_action(const Dictionary& action_data);
+
+    bool has_valid_multiplayer_peer() const;
 };
 
 #endif //YGAMESTATE_H

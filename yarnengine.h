@@ -18,11 +18,6 @@
 #include <core/string/translation_server.h>
 #include "ypersistentid.h"
 #include "scene/3d/camera_3d.h"
-#include "scene/scene_string_names.h"
-#include "scene/main/multiplayer_api.h"
-#include "scene/main/multiplayer_peer.h"
-#include "ygameplayer.h"
-#include "ygameaction.h"
 
 class YGameState;
 class YTween;
@@ -73,7 +68,7 @@ public:
     HashMap<StringName,String> class_name_to_script_path;
     HashMap<int, CanvasLayer*> canvas_layers;
 
-    void game_state_starting(const Ref<YGameState> &ygs);
+    void game_state_starting(YGameState* ygs);
     Callable button_click_callable(const Callable &p_callable);
     Callable button_click_callable_if_modulate(const Callable &p_callable, Control* p_control);
 
@@ -224,6 +219,7 @@ public:
         }
         return _return_array;
     }
+
     Dictionary get_all_game_resources_of_type(int resource_type) {
         Dictionary returndict;
         if (game_resources.has(resource_type)) {
@@ -262,23 +258,6 @@ public:
     void hide_fader();
     bool is_fading() const;
 
-    // Action step RPC methods
-    void request_action_step_approval(YGameAction* action, int step_identifier, const Variant& step_data);
-    void broadcast_action_step(YGameAction* action, int step_identifier, const Variant& step_data);
-    void _rpc_request_action_step_approval(int action_id, int step_identifier, const Variant& step_data, int sender_id);
-    void _rpc_apply_action_step(int action_id, int step_identifier, const Variant& step_data);
-
-    StringName rpc_request_action_step_approval_stringname;
-    StringName rpc_apply_action_step_stringname;
-    StringName rpc_register_game_action_stringname;
-
-    static Dictionary create_rpc_dictionary_config(MultiplayerAPI::RPCMode p_rpc_mode,
-                                            MultiplayerPeer::TransferMode p_transfer_mode, bool p_call_local,
-                                            int p_channel);
-
-    // Game action RPC methods
-    void broadcast_game_action(const Dictionary& action_data);
-    void _rpc_register_game_action(const Dictionary& action_data);
 };
 
 #endif

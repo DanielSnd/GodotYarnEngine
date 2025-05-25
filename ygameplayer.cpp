@@ -6,11 +6,11 @@
 
 void YGamePlayer::_notification(int p_what) {
     if (p_what == NOTIFICATION_READY) {
-        this->rpc_config(rpc_set_property_stringname,YEngine::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
-        this->rpc_config(rpc_set_player_parameter_stringname,YEngine::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
-        this->rpc_config(rpc_remove_player_parameter_stringname,YEngine::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
-        this->rpc_config(rpc_request_sync_stringname,YEngine::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
-        this->rpc_config(rpc_grant_sync_stringname,YEngine::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+        this->rpc_config(rpc_set_property_stringname,YGameState::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+        this->rpc_config(rpc_set_player_parameter_stringname,YGameState::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+        this->rpc_config(rpc_remove_player_parameter_stringname,YGameState::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+        this->rpc_config(rpc_request_sync_stringname,YGameState::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+        this->rpc_config(rpc_grant_sync_stringname,YGameState::get_singleton()->create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
         #ifdef YNET
         print_line(vformat("YGamePlayer with YNet spawning %s", get_name()));
         #endif
