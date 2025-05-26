@@ -76,9 +76,9 @@ protected:
     void _notification(int p_what);
     static void _bind_methods();
 
-    void release_step();
 
 public:
+    void release_step();
     bool instant_execute=false;
     bool is_playing_back=false;
     bool has_executed_created_method = false;

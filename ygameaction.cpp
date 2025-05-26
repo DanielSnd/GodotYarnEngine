@@ -231,14 +231,19 @@ bool YGameAction::check_if_has_step_approval(int step_identifier, const Variant&
 }
 
 void YGameAction::wait_for_step(bool prevent_processing) {
-    waiting_for_step=true;
+    // Don't wait for steps if this is a playback action
+    if (is_playing_back) {
+        return;
+    }
+    
+    waiting_for_step = true;
     waiting_for_step_no_processing = prevent_processing;
     int current_action_steps_in_list = static_cast<int>(action_steps.size());
     for (int i = current_action_steps_in_list-1; i >= 0; --i) {
         if (action_steps[i] != nullptr && action_steps[i].is_valid() && !action_steps[i]->step_taken && action_steps[i]->step_index == last_step_ran) {
             Ref<YActionStep> data = action_steps[i];
             data->set_step_waiting(true);
-            emit_signal(SNAME("waiting_for_step"),data->step_index);
+            emit_signal(SNAME("waiting_for_step"), data->step_index);
             break;
         }
     }
@@ -288,22 +293,31 @@ void YGameAction::enter_action() {
     started=true;
 }
 
-void YGameAction::step_action(Ref<YActionStep> data,bool is_ending) {
+void YGameAction::step_action(Ref<YActionStep> data, bool is_ending) {
     if (is_debugging) {
         print_line(vformat("%s is calling step action, current steps %d next step index %d",get_name(),steps_consumed,steps_consumed+1));
     }
     steps_consumed += 1;
     if (data.is_valid()) {
         last_step_ran = data->get_step_index();
+        // If this is a playback action, always mark steps as ending and don't wait
+        if (is_playing_back) {
+            data->step_taken = true;
+            data->step_taken_as_ending = true;
+            GDVIRTUAL_CALL(_on_stepped_action, data->get_step_index(), data->get_step_identifier(), data->step_data, true);
+            emit_signal(SNAME("action_stepped"), data->step_index);
+            return;
+        }
+        
         if (data->get_step_waiting() && !waiting_for_step) {
             waiting_for_step = true;
-            emit_signal(SNAME("waiting_for_step"),data->step_index);
+            emit_signal(SNAME("waiting_for_step"), data->step_index);
         }
-        GDVIRTUAL_CALL(_on_stepped_action,data->get_step_index(),data->get_step_identifier(),data->step_data,is_ending);
-        data->step_taken=true;
+        GDVIRTUAL_CALL(_on_stepped_action, data->get_step_index(), data->get_step_identifier(), data->step_data, is_ending);
+        data->step_taken = true;
         data->step_taken_as_ending = is_ending;
         if (!waiting_for_step)
-            emit_signal(SNAME("action_stepped"),data->step_index);
+            emit_signal(SNAME("action_stepped"), data->step_index);
         else {
             steps_consumed -= 1;
             data->step_has_to_reconsume = true;

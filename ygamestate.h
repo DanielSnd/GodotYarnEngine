@@ -241,6 +241,7 @@ public:
         _receive_call_on_game_action_also_local_stringname = SNAME("_receive_call_on_game_action_also_local");
         _receive_call_on_game_action_stringname = SNAME("_receive_call_on_game_action");
         rpc_end_game_action_stringname = SNAME("_rpc_end_game_action");
+        rpc_mark_action_finished_stringname = SNAME("_rpc_mark_action_finished");
     }
 
     ~YGameState() {
@@ -291,6 +292,7 @@ public:
     StringName _receive_call_on_game_action_stringname;
     StringName _receive_call_on_game_action_also_local_stringname;
     StringName rpc_register_game_action_stringname;
+    StringName rpc_mark_action_finished_stringname;
 
     static Dictionary create_rpc_dictionary_config(MultiplayerAPI::RPCMode p_rpc_mode,
                                             MultiplayerPeer::TransferMode p_transfer_mode, bool p_call_local,
@@ -302,10 +304,13 @@ public:
     Error broadcast_call_on_game_action(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
     Error broadcast_call_on_game_action_and_execute(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
     void _rpc_end_game_action(int action_id);
+    void _rpc_mark_action_finished(int action_id);
     Variant _receive_call_on_game_action(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
     void _rpc_register_game_action(const Dictionary& action_data);
 
     bool has_valid_multiplayer_peer() const;
+
+    void mark_action_finished_and_sync(int action_id);
 };
 
 #endif //YGAMESTATE_H

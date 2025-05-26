@@ -104,6 +104,10 @@ void YGameState::_bind_methods() {
     // Add RPC methods for game actions
     ClassDB::bind_method(D_METHOD("_rpc_register_game_action", "action_data"), &YGameState::_rpc_register_game_action);
     ClassDB::bind_method(D_METHOD("_rpc_end_game_action", "action_id"), &YGameState::_rpc_end_game_action);
+    ClassDB::bind_method(D_METHOD("_rpc_mark_action_finished", "action_id"), &YGameState::_rpc_mark_action_finished);
+
+    ClassDB::bind_method(D_METHOD("mark_action_finished_and_sync", "action_id"), &YGameState::mark_action_finished_and_sync);
+
     
 
 
@@ -953,6 +957,7 @@ void YGameState::_notification(int p_what) {
             this->rpc_config(rpc_register_game_action_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_AUTHORITY, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
             this->rpc_config(rpc_request_action_step_approval_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
             this->rpc_config(rpc_end_game_action_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_AUTHORITY, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+            this->rpc_config(rpc_mark_action_finished_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_AUTHORITY, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
             this->rpc_config(_receive_call_on_game_action_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
             this->rpc_config(_receive_call_on_game_action_also_local_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, true, 0));
         }
@@ -1071,9 +1076,36 @@ void YGameState::_rpc_apply_action_step(int action_id, int step_identifier, cons
         return;
     }
 
+    // Check overriding actions
+    for (int i = 0; i < get_overridinge_game_action_count(); i++) {
+        Ref<YGameAction> action = get_overriding_game_action_by_index(i);
+        if (action.is_valid() && action->get_unique_id() == action_id) {
+            action->actually_register_step(step_identifier, step_data);
+            return;
+        }
+    }
+
+    // Check future actions
+    for (int i = 0; i < get_future_game_action_count(); i++) {
+        Ref<YGameAction> action = get_future_game_action_by_index(i);
+        if (action.is_valid() && action->get_unique_id() == action_id) {
+            action->actually_register_step(step_identifier, step_data);
+            return;
+        }
+    }
+
     // Check parallel actions
     for (int i = 0; i < get_parallel_action_count(); i++) {
         Ref<YGameAction> action = get_parallel_action(i);
+        if (action.is_valid() && action->get_unique_id() == action_id) {
+            action->actually_register_step(step_identifier, step_data);
+            return;
+        }
+    }
+    
+    // Check past actions
+    for (int i = 0; i < get_past_game_action_count(); i++) {
+        Ref<YGameAction> action = get_past_game_action_by_index(i);
         if (action.is_valid() && action->get_unique_id() == action_id) {
             action->actually_register_step(step_identifier, step_data);
             return;
@@ -1374,6 +1406,49 @@ Variant YGameState::_receive_call_on_game_action(const Variant **p_args, int p_a
     }
 
     return 0;
+}
+
+void YGameState::mark_action_finished_and_sync(int action_id) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() != 1) {
+        return; // Only server can mark actions as finished
+    }
+
+    // Find the action in the game state
+    Ref<YGameAction> action = get_game_action(action_id);
+    if (action.is_valid()) {
+        // Mark it as finished and set it for playback
+        action->is_playing_back = true;
+        action->instant_execute = true;
+        action->finished = true;
+        
+        // If it's waiting for a step, release it
+        if (action->waiting_for_step) {
+            action->release_step();
+        }
+
+        // Broadcast to all clients
+        rpc(rpc_mark_action_finished_stringname, action_id);
+    }
+}
+
+void YGameState::_rpc_mark_action_finished(int action_id) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() == 1) {
+        return; // Server already marked it as finished
+    }
+
+    // Find the action in the game state
+    Ref<YGameAction> action = get_game_action(action_id);
+    if (action.is_valid()) {
+        // Mark it as finished and set it for playback
+        action->is_playing_back = true;
+        action->instant_execute = true;
+        action->finished = true;
+        
+        // If it's waiting for a step, release it
+        if (action->waiting_for_step) {
+            action->release_step();
+        }
+    }
 }
 
                     
