@@ -115,7 +115,7 @@ void YGamePlayer::set_player_id(int v) {
     }
 #ifdef YNET
     if (YNet::get_singleton() != nullptr) {
-        YNet::get_singleton()->register_for_yrpcs(this, 100000 + player_id);
+        YNet::get_singleton()->register_for_yrpcs(this, player_id);
     }
 #endif
     player_id = v;

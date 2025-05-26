@@ -258,7 +258,7 @@ public:
 
     bool executed_exit_action_call=false;
 
-    virtual void end_action(bool sync_to_others = true);
+    virtual void end_action(bool sync_to_others = false);
 
     YGameAction* copy_parameters_from(const Ref<YGameAction> &other_action) {
         if (other_action.is_valid()) {
@@ -281,7 +281,7 @@ public:
     }
     
     virtual void enter_action();
-    virtual void step_action(Ref<YActionStep> step_data,bool is_ending);
+    virtual void step_action(Ref<YActionStep> step_data, bool is_ending);
     virtual void exit_action();
     virtual bool process_action(float _delta);
     virtual bool slow_process_action(float _delta);

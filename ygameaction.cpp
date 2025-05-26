@@ -44,7 +44,7 @@ void YGameAction::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_all_action_parameters"), &YGameAction::get_all_action_parameters);
     ClassDB::bind_method(D_METHOD("get_all_action_parameters_named","naming_dictionary"), &YGameAction::get_all_action_parameters_named);
 
-    ClassDB::bind_method(D_METHOD("end_action", "sync_to_others"), &YGameAction::end_action, DEFVAL(true));
+    ClassDB::bind_method(D_METHOD("end_action", "sync_to_others"), &YGameAction::end_action, DEFVAL(false));
     ClassDB::bind_method(D_METHOD("register_step","step_identifier","step_data"), &YGameAction::register_step);
 
     ClassDB::bind_method(D_METHOD("get_step_by_index","step_index"), &YGameAction::get_step_by_index);
@@ -225,7 +225,7 @@ void YGameAction::request_step_approval(int step_identifier, const Variant& step
 }
 
 bool YGameAction::check_if_has_step_approval(int step_identifier, const Variant& step_data, int sender_id) {
-    bool approved = true;
+    bool approved = false;
     GDVIRTUAL_CALL(_step_request_approval, step_identifier, step_data, sender_id, approved);
     return approved;
 }
@@ -320,7 +320,7 @@ void YGameAction::exit_action() {
         }
         auto action_data = action_steps[i];
         if (!action_data->get_step_taken()) {
-            step_action(action_data,true);
+            step_action(action_data, true);
         }
     }
     if (is_debugging) {
