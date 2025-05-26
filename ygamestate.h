@@ -300,6 +300,7 @@ public:
     void broadcast_game_action(const Dictionary& action_data);
     void broadcast_action_end(int action_id);
     Error broadcast_call_on_game_action(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+    Error broadcast_call_on_game_action_and_execute(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
     void _rpc_end_game_action(int action_id);
     Variant _receive_call_on_game_action(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
     void _rpc_register_game_action(const Dictionary& action_data);

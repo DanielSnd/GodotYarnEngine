@@ -219,8 +219,7 @@ YGamePlayer* YGamePlayer::remove_player_parameter(int param) {
 void YGamePlayer::_rpc_set_player_parameter(int param, Variant v) {
     // Verify that the sender is authorized to modify this player
     if (is_inside_tree() && get_multiplayer()->has_multiplayer_peer()
-        && get_multiplayer()->get_remote_sender_id() != 1
-        && (remote_player_id != get_multiplayer()->get_remote_sender_id())) {
+         && (remote_player_id != get_multiplayer()->get_remote_sender_id() && get_multiplayer()->get_remote_sender_id() != 1)) {
         return; // Ignore RPC if sender is not authorized
     }
 

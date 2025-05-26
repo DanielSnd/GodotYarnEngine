@@ -310,6 +310,9 @@ public:
 
     bool check_if_has_step_approval(int step_identifier, const Variant& step_data, int sender_id);
 
+    Error broadcast_call(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+    Error broadcast_call_and_execute(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+
     YGameAction();
     ~YGameAction() {
         

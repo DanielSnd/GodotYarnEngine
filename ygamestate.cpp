@@ -130,9 +130,20 @@ void YGameState::_bind_methods() {
         ClassDB::bind_vararg_method(METHOD_FLAGS_DEFAULT, "broadcast_call_on_game_action", &YGameState::broadcast_call_on_game_action, mi);
     }
 
+    {
+        MethodInfo mi;
+        mi.name = "broadcast_call_on_game_action_and_execute";
+        mi.arguments.push_back(PropertyInfo(Variant::CALLABLE, "method"));
+
+        ClassDB::bind_vararg_method(METHOD_FLAGS_DEFAULT, "broadcast_call_on_game_action_and_execute", &YGameState::broadcast_call_on_game_action_and_execute, mi);
+    }
+
 }
 
 Ref<YGameAction> YGameState::get_game_action(int netid) const {
+        if (current_game_action.is_valid() && current_game_action->get_unique_id() == netid) {
+            return current_game_action;
+        }
         for (const auto& action : past_game_actions) {
             if (action.is_valid() && action->get_unique_id() == netid) {
                 return action;
@@ -1220,30 +1231,22 @@ Error YGameState::broadcast_call_on_game_action(const Variant **p_args, int p_ar
     YGameAction* callable_object = Object::cast_to<YGameAction>(p_callable.get_object());
     ERR_FAIL_COND_V(callable_object == nullptr, ERR_DOES_NOT_EXIST);
 
+    String method_name = p_callable.get_method();
     // Get RPC config for this method
-    YGameState::YGSRPCConfig rpc_config = _get_rpc_config(callable_object, p_callable.get_method());
+    bool any_peer = method_name.begins_with("_any_");
     // Check if we can send this RPC
-    bool can_send = false;
-    switch (rpc_config.rpc_mode) {
-        case MultiplayerAPI::RPC_MODE_ANY_PEER:
-            can_send = true;
-            break;
-        case MultiplayerAPI::RPC_MODE_AUTHORITY:
-            if (callable_object->player_turn != -1) {
-                YGamePlayer* ygp = get_game_player(callable_object->player_turn);
-                if (ygp != nullptr) {
-                    can_send = ygp->remote_player_id == scene_multiplayer->get_unique_id() || scene_multiplayer->get_unique_id() == 1;
-                }else{
-                    can_send = scene_multiplayer->get_unique_id() == get_multiplayer_authority();
-                }
-            }else {
+    bool can_send = any_peer;
+    if (!any_peer) {
+        if (callable_object->player_turn != -1) {
+            YGamePlayer* ygp = get_game_player(callable_object->player_turn);
+            if (ygp != nullptr) {
+                can_send = ygp->remote_player_id == scene_multiplayer->get_unique_id() || scene_multiplayer->get_unique_id() == 1;
+            }else{
                 can_send = scene_multiplayer->get_unique_id() == get_multiplayer_authority();
             }
-            break;
-        case MultiplayerAPI::RPC_MODE_DISABLED:
-        default:
-            can_send = false;
-            break;
+        }else {
+            can_send = scene_multiplayer->get_unique_id() == get_multiplayer_authority();
+        }
     }
 
     if (!can_send) {
@@ -1258,13 +1261,71 @@ Error YGameState::broadcast_call_on_game_action(const Variant **p_args, int p_ar
     sending_rpc_array.push_back(net_id);
     sending_rpc_array.push_back(p_callable.get_method());
     p_args[0] = new Variant(sending_rpc_array);
-    return rpcp(0, !rpc_config.call_local ? _receive_call_on_game_action_stringname : _receive_call_on_game_action_also_local_stringname, p_args, p_argcount);
+    return rpcp(0, _receive_call_on_game_action_stringname, p_args, p_argcount);
+}
+
+Error YGameState::broadcast_call_on_game_action_and_execute(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+    if (!has_valid_multiplayer_peer()) {
+        return ERR_UNCONFIGURED;
+    }
+    if (p_argcount < 1) {
+        r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
+        r_error.expected = 1;
+        return ERR_INVALID_PARAMETER;
+    }
+
+    Variant::Type type = p_args[0]->get_type();
+    if (type != Variant::CALLABLE) {
+        r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
+        r_error.argument = 0;
+        r_error.expected = Variant::CALLABLE;
+        return ERR_INVALID_PARAMETER;
+    }
+
+    Callable p_callable = p_args[0]->operator Callable();
+    ERR_FAIL_COND_V(!is_inside_tree(), ERR_UNCONFIGURED);
+
+    YGameAction* callable_object = Object::cast_to<YGameAction>(p_callable.get_object());
+    ERR_FAIL_COND_V(callable_object == nullptr, ERR_DOES_NOT_EXIST);
+
+    String method_name = p_callable.get_method();
+    // Get RPC config for this method
+    bool any_peer = method_name.begins_with("_any_");
+    // Check if we can send this RPC
+    bool can_send = any_peer;
+    if (!any_peer) {
+        if (callable_object->player_turn != -1) {
+            YGamePlayer* ygp = get_game_player(callable_object->player_turn);
+            if (ygp != nullptr) {
+                can_send = ygp->remote_player_id == scene_multiplayer->get_unique_id() || scene_multiplayer->get_unique_id() == 1;
+            }else{
+                can_send = scene_multiplayer->get_unique_id() == get_multiplayer_authority();
+            }
+        }else {
+            can_send = scene_multiplayer->get_unique_id() == get_multiplayer_authority();
+        }
+    }
+
+    if (!can_send) {
+        print_error(vformat("Invalid call for function %s. Doesn't have authority.", p_callable.get_method()));
+        return ERR_UNAUTHORIZED;
+    }
+
+    int net_id = callable_object->get_unique_id();
+    ERR_FAIL_COND_V(net_id == -1, ERR_UNCONFIGURED);
+
+    Array sending_rpc_array;
+    sending_rpc_array.push_back(net_id);
+    sending_rpc_array.push_back(p_callable.get_method());
+    p_args[0] = new Variant(sending_rpc_array);
+    return rpcp(0, _receive_call_on_game_action_also_local_stringname,p_args, p_argcount);
 }
 
 Variant YGameState::_receive_call_on_game_action(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
     if (p_argcount < 1) {
         r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
         r_error.expected = 1;
+        print_line("Received call on game action with too few arguments");
         return ERR_INVALID_PARAMETER;
     }
     Variant::Type itype = p_args[0]->get_type();
@@ -1272,6 +1333,7 @@ Variant YGameState::_receive_call_on_game_action(const Variant **p_args, int p_a
         r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
         r_error.argument = 0;
         r_error.expected = Variant::ARRAY;
+        print_line("Received call on game action with invalid argument");
         return ERR_INVALID_PARAMETER;
     }
     Array yrpc_info = p_args[0]->operator Array();
@@ -1279,43 +1341,35 @@ Variant YGameState::_receive_call_on_game_action(const Variant **p_args, int p_a
     String method_name = yrpc_info[1];
 
     Ref<YGameAction> action = get_game_action(netid);
+    print_line(vformat("Received call on game action with unique action id %d and method name %s. Is valid? %s", netid, method_name, action.is_valid() ? "true" : "false"));
     if (action.is_valid()) {
-        // Get RPC config for this method
-        YGSRPCConfig rpc_config = _get_rpc_config(action.ptr(), method_name);
-
-        // Check if we should receive this RPC
-        bool can_receive = false;
-        switch (rpc_config.rpc_mode) {
-            case MultiplayerAPI::RPC_MODE_ANY_PEER:
-                can_receive = true;
-                break;
-            case MultiplayerAPI::RPC_MODE_AUTHORITY:
-                if (action->player_turn != -1) {
-                    YGamePlayer* ygp = get_game_player(action->player_turn);
-                    if (ygp != nullptr) {
-                        can_receive = ygp->remote_player_id == scene_multiplayer->get_remote_sender_id() || scene_multiplayer->get_remote_sender_id() == 1;
-                    }else{
-                        can_receive = scene_multiplayer->get_remote_sender_id() == get_multiplayer_authority();
-                    }
-                }else {
+        bool can_receive = method_name.begins_with("_any_");
+        if (!can_receive) {
+            if (action->player_turn != -1) {
+                YGamePlayer* ygp = get_game_player(action->player_turn);
+                if (ygp != nullptr) {
+                    can_receive = ygp->remote_player_id == scene_multiplayer->get_remote_sender_id() || scene_multiplayer->get_remote_sender_id() == 1;
+                }else{
                     can_receive = scene_multiplayer->get_remote_sender_id() == get_multiplayer_authority();
                 }
-                break;
-            case MultiplayerAPI::RPC_MODE_DISABLED:
-            default:
-                can_receive = false;
-                break;
+            }else {
+                can_receive = scene_multiplayer->get_remote_sender_id() == get_multiplayer_authority();
+            }
         }
 
         if (!can_receive) {
+            print_line("Received call on game action but can't receive");
             return ERR_UNAUTHORIZED;
         }
 
         if (action->has_method(method_name)) {
-            action->callp(method_name, &p_args[2], p_argcount - 2, r_error);
+            action->callp(method_name, &p_args[1], p_argcount - 1, r_error);
             if (r_error.error != Callable::CallError::CALL_OK) {
+                print_line("Received call on game action: Error calling method", r_error.error);
                 return r_error.error;
             }
+        }else{
+            print_line("Received call on game action: Action does not have method", method_name);
         }
     }
 

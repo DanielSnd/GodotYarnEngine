@@ -114,12 +114,28 @@ void YGameAction::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("request_step_approval", "step_identifier", "step_data"), &YGameAction::request_step_approval);
 
-    ADD_SIGNAL(MethodInfo(SNAME("started_action"), PropertyInfo(Variant::STRING, "action_name")));
+    {
+        MethodInfo mi;
+        mi.name = "broadcast_call";
+        mi.arguments.push_back(PropertyInfo(Variant::CALLABLE, "method"));
+
+        ClassDB::bind_vararg_method(METHOD_FLAGS_DEFAULT, "broadcast_call", &YGameAction::broadcast_call, mi);
+    }
+
+    {
+        MethodInfo mi;
+        mi.name = "broadcast_call_and_execute";
+        mi.arguments.push_back(PropertyInfo(Variant::CALLABLE, "method"));
+
+        ClassDB::bind_vararg_method(METHOD_FLAGS_DEFAULT, "broadcast_call_and_execute", &YGameAction::broadcast_call_and_execute, mi);
+    }
+
+    ADD_SIGNAL(MethodInfo(SNAME("started_action")));
     ADD_SIGNAL(MethodInfo(SNAME("registered_step"), PropertyInfo(Variant::INT, "step_index")));
     ADD_SIGNAL(MethodInfo(SNAME("action_stepped"), PropertyInfo(Variant::INT, "step_index")));
     ADD_SIGNAL(MethodInfo(SNAME("waiting_for_step"), PropertyInfo(Variant::INT, "step_index")));
     ADD_SIGNAL(MethodInfo(SNAME("released_waited_step"), PropertyInfo(Variant::INT, "step_index")));
-    ADD_SIGNAL(MethodInfo(SNAME("ended_action"), PropertyInfo(Variant::STRING, "action_name")));
+    ADD_SIGNAL(MethodInfo(SNAME("ended_action")));
     ADD_SIGNAL(MethodInfo(SNAME("on_changed_action_parameter"), 
         PropertyInfo(Variant::INT, "param_id"),
         PropertyInfo(Variant::NIL, "old_value"),
@@ -268,7 +284,7 @@ void YGameAction::enter_action() {
         print_line(vformat("%s is calling enter action",get_name()));
     }
     GDVIRTUAL_CALL(_on_enter_action);
-    emit_signal(SNAME("started_action"),get_name());
+    emit_signal(SNAME("started_action"));
     started=true;
 }
 
@@ -483,4 +499,12 @@ YGameAction* YGameAction::set_action_parameter(int param, const Variant& v) {
     }
     action_parameters[param] = v;
     return this;
+}
+
+Error YGameAction::broadcast_call(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+    return YGameState::get_singleton()->broadcast_call_on_game_action(p_args, p_argcount, r_error);
+}
+
+Error YGameAction::broadcast_call_and_execute(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+    return YGameState::get_singleton()->broadcast_call_on_game_action_and_execute(p_args, p_argcount, r_error);
 }
