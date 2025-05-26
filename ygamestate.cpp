@@ -336,7 +336,7 @@ void YGameState::do_process(double delta) {
                 wait_before_going_to_next_action-=delta;
                 return;
             }
-            current_game_action->end_action();
+            current_game_action->end_action(false);
             game_actions_done_since_started_counting+=1;
             if (current_game_action->can_be_serialized) {
                 past_game_actions.push_back(current_game_action);
@@ -384,7 +384,7 @@ void YGameState::do_process(double delta) {
         //IF WAITING FOR STEP AND NOT PROCESSING DON'T DO PROCESSING
         if (!current_game_action->waiting_for_step_no_processing) {
             if(!current_game_action->process_action(static_cast<float>(delta)) && !current_game_action->waiting_for_step) {
-                current_game_action->end_action();
+                current_game_action->end_action(false);
                 game_actions_done_since_started_counting+=1;
                 if (current_game_action->can_be_serialized) {
                     past_game_actions.push_back(current_game_action);
@@ -398,7 +398,7 @@ void YGameState::do_process(double delta) {
             if (frame_count_before_doing_slow_process > 0.5) {
                 frame_count_before_doing_slow_process=0;
                 if(!current_game_action->slow_process_action(static_cast<float>(delta)) && !current_game_action->waiting_for_step) {
-                    current_game_action->end_action();
+                    current_game_action->end_action(false);
                     game_actions_done_since_started_counting+=1;
                     if (current_game_action->can_be_serialized) {
                         past_game_actions.push_back(current_game_action);
@@ -493,7 +493,7 @@ void YGameState::do_process(double delta) {
 
 bool YGameState::end_current_game_action() const {
         if (has_current_game_action()) {
-            current_game_action->end_action();
+            current_game_action->end_action(false);
             return true;
         }
         return false;
@@ -879,7 +879,7 @@ Dictionary YGameState::deserialize(const Dictionary dict, bool p_playback_after 
 void YGameState::end_parallel_action(int index) {
     if (index >= 0 && index < current_parallel_actions.size()) {
         if (current_parallel_actions[index].is_valid()) {
-            current_parallel_actions[index]->end_action();
+            current_parallel_actions[index]->end_action(false);
             game_actions_done_since_started_counting += 1;
             if (current_parallel_actions[index]->can_be_serialized) {
                 past_game_actions.push_back(current_parallel_actions[index]);
