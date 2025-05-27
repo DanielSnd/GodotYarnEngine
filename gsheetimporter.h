@@ -7,6 +7,9 @@
 #include "core/object/ref_counted.h"
 #include "scene/main/http_request.h"
 #include "core/variant/callable.h"
+#ifdef TOOLS_ENABLED
+#include "editor/editor_file_system.h"
+#endif
 
 class GSheetImporter : public RefCounted {
     GDCLASS(GSheetImporter, RefCounted);
@@ -50,6 +53,8 @@ public:
     void delayed_initialize() const;
 
     bool save_new_or_update_resource(const String &resource_path, const Ref<Resource> &resource_saving);
+
+    void rescan_file_system_in_editor();
 
     String sanitize_filename(const String &p_filename);
 

@@ -28,13 +28,13 @@ private:
     void clear_spawned_objects() const;
 
 protected:
-#ifdef TOOLS_ENABLED
-    bool _set(const StringName &p_name, const Variant &p_value);
-    bool _get(const StringName &p_name, Variant &r_ret) const;
-    void _get_property_list(List<PropertyInfo> *p_list) const;
-#endif
+// #ifdef TOOLS_ENABLED
+//     bool _set(const StringName &p_name, const Variant &p_value);
+//     bool _get(const StringName &p_name, Variant &r_ret) const;
+//     void _get_property_list(List<PropertyInfo> *p_list) const;
+// #endif
 
-    void add_spawnable_scene(const String &p_path);
+    void add_spawnable_scene(const String &p_path, float p_weight = 1.0);
 
     int get_spawnable_scene_count() const;
 
@@ -46,9 +46,20 @@ protected:
 
     void _set_spawnable_scenes(const TypedArray<String> &p_scenes);
 
+    // Weight methods
+    void set_spawnable_scene_weight(int p_idx, float p_weight);
+    float get_spawnable_scene_weight(int p_idx) const;
+
+    // Weight array methods for GDScript
+    TypedArray<float> _get_spawnable_scene_weights() const;
+    void _set_spawnable_scene_weights(const TypedArray<float> &p_weights);
+
 public:
+    
+
     struct SpawnableScene {
         String path;
+        float weight = 1.0;
         Ref<PackedScene> cache;
     };
 
@@ -139,12 +150,12 @@ public:
     void set_random_z_rotate(bool b) { random_z_rotate = b; }
 
     // lock_to_layer
-    int get_lock_to_layer() const { return lock_to_layer; }
-    void set_lock_to_layer(int i) { lock_to_layer = i; }
+    uint32_t get_lock_to_layer() const { return lock_to_layer; }
+    void set_lock_to_layer(uint32_t i) { lock_to_layer = i; }
 
     // prevent_stacking_layer
-    int get_prevent_stacking_layer() const { return prevent_stacking_layer; }
-    void set_prevent_stacking_layer(int i) { prevent_stacking_layer = i; }
+    uint32_t get_prevent_stacking_layer() const { return prevent_stacking_layer; }
+    void set_prevent_stacking_layer(uint32_t i) { prevent_stacking_layer = i; }
 
     // random_y_scale
     bool get_random_y_scale() const { return random_y_scale; }
@@ -159,12 +170,16 @@ public:
     void set_min_max_random_scale(Vector2 v) { min_max_random_scale = v; }
 
     Ref<RandomNumberGenerator> spawning_rng;
-    Node3D* spawn_single(const Ref<PackedScene> &spawn_scene,Vector3 spawn_pos, Vector3 spawn_normal = Vector3{0.0,0.0,0.0});
-
     void remove_from_spawned_nodes(ObjectID removing_id);
 
-    void do_spawn(const Vector<Ref<PackedScene>> &spawn_list);
-    Node3D* add_object_random_position(const Ref<PackedScene> &p_packed_scene);
+    struct SpawnInfo {
+        Ref<PackedScene> scene;
+        int index;
+    };
+
+    void do_spawn(const Vector<SpawnInfo> &spawn_list);
+    Node3D* add_object_random_position(const Ref<PackedScene> &p_packed_scene, int spawnable_index);
+    Node3D* spawn_single(const Ref<PackedScene> &spawn_scene, Vector3 spawn_pos, Vector3 spawn_normal = Vector3{0.0,0.0,0.0}, int spawnable_index = -1);
     Dictionary random_position_on_registred_surface() const;
 
     bool registered_next_spawn_time = false;

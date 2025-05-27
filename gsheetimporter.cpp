@@ -22,7 +22,7 @@ void GSheetImporter::_bind_methods() {
     ClassDB::bind_method(D_METHOD("end_import_progress_bar"), &GSheetImporter::end_import_progress_bar);
     ClassDB::bind_method(D_METHOD("save_new_or_update_resource","resource_path","resource_saving"), &GSheetImporter::save_new_or_update_resource);
     ClassDB::bind_method(D_METHOD("sanitize_filename","filename"), &GSheetImporter::sanitize_filename);
-
+    ClassDB::bind_method(D_METHOD("rescan_file_system_in_editor"), &GSheetImporter::rescan_file_system_in_editor);
     GDVIRTUAL_BIND(get_sheet_id)
     GDVIRTUAL_BIND(get_sheet_name)
     GDVIRTUAL_BIND(on_imported_data,"import_type","data")
@@ -234,6 +234,12 @@ void GSheetImporter::ensure_http_request_is_child() {
 #endif
         }
     }
+}
+
+void GSheetImporter::rescan_file_system_in_editor() {
+#if TOOLS_ENABLED
+    EditorFileSystem::get_singleton()->scan();
+#endif
 }
 
 void GSheetImporter::start_import_progress_bar(int p_steps, const String &p_task_name, const String &p_task_description) {
