@@ -58,6 +58,14 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_is_playing_back"), &YGameState::get_is_playing_back);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "is_playing_back"), "set_is_playing_back", "get_is_playing_back");
 
+    ClassDB::bind_method(D_METHOD("set_debugging_level", "debugging_level"), &YGameState::set_debugging_level, DEFVAL(0));
+    ClassDB::bind_method(D_METHOD("get_debugging_level"), &YGameState::get_debugging_level);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "debugging_level"), "set_debugging_level", "get_debugging_level");
+
+    ClassDB::bind_method(D_METHOD("set_last_action_was_denied", "last_action_was_denied"), &YGameState::set_last_action_was_denied, DEFVAL(false));
+    ClassDB::bind_method(D_METHOD("get_last_action_was_denied"), &YGameState::get_last_action_was_denied);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "last_action_was_denied"), "set_last_action_was_denied", "get_last_action_was_denied");
+
     ClassDB::bind_method(D_METHOD("get_game_action", "action_id"), &YGameState::get_game_action);
     ClassDB::bind_method(D_METHOD("get_overriding_game_action_count"), &YGameState::get_overridinge_game_action_count);
     ClassDB::bind_method(D_METHOD("get_future_game_action_count"), &YGameState::get_future_game_action_count);
@@ -105,6 +113,9 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("_rpc_register_game_action", "action_data"), &YGameState::_rpc_register_game_action);
     ClassDB::bind_method(D_METHOD("_rpc_end_game_action", "action_id"), &YGameState::_rpc_end_game_action);
     ClassDB::bind_method(D_METHOD("_rpc_mark_action_finished", "action_id"), &YGameState::_rpc_mark_action_finished);
+    // Add new RPC methods for action approval
+    ClassDB::bind_method(D_METHOD("_rpc_request_start_action_approval", "action_id"), &YGameState::_rpc_request_start_action_approval);
+    ClassDB::bind_method(D_METHOD("_rpc_response_start_action_approval", "action_id", "desired_action_id", "approved"), &YGameState::_rpc_response_start_action_approval);
 
     ClassDB::bind_method(D_METHOD("mark_action_finished_and_sync", "action_id"), &YGameState::mark_action_finished_and_sync);
 
@@ -330,7 +341,6 @@ void YGameState::do_process(double delta) {
         }
     }
 
-    //print_line("do process, is current valid? ",current_game_action.is_valid()," future actions size ",future_game_actions.size());
     if (current_game_action.is_valid()) {
         //HAS A CURRENT GAMEACTION!!
         //Has it ended?
@@ -430,9 +440,40 @@ void YGameState::do_process(double delta) {
 
         if (overriding_game_actions_remaining > 0 && !is_playing_back) {
             Ref<YGameAction> next_action = overriding_game_actions[0];
-            overriding_game_actions.remove_at(0);
             
             if (next_action.is_valid()) {
+                if (has_valid_multiplayer_peer() && scene_multiplayer->get_unique_id() != 1) {
+                    if (debugging_level >= 2) {
+                        print_line(vformat("[YGameState %d] Checking override action %d approval state: %d", scene_multiplayer->get_unique_id(), next_action->get_unique_id(), next_action->remote_start_approval));
+                    }
+                    switch (next_action->remote_start_approval) {
+                        case YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_PENDING:
+                            if (debugging_level >= 2) {
+                                print_line(vformat("[YGameState %d] Action approval still pending, waiting...", scene_multiplayer->get_unique_id()));
+                            }
+                            return;
+                        case YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_APPROVED:
+                            if (debugging_level >= 2) {
+                                print_line(vformat("[YGameState %d] Action approved, proceeding", scene_multiplayer->get_unique_id()));
+                            }
+                            break;
+                        case YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_DENIED:
+                            if (debugging_level >= 2) {
+                                print_line(vformat("[YGameState %d] Action denied, will retry", scene_multiplayer->get_unique_id()));
+                            }
+                            next_action->remote_start_approval = YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_NOT_REQUESTED;
+                            return;
+                        default:
+                            if (debugging_level >= 2) {
+                                print_line(vformat("[YGameState %d] Requesting approval for action", scene_multiplayer->get_unique_id()));
+                            }
+                            request_action_approval(next_action.ptr());
+                            return;
+                    }
+                }
+
+                overriding_game_actions.remove_at(0);
+                
                 if (next_action->runs_parallel) {
                     current_parallel_actions.push_back(next_action);
                     next_action->enter_action();
@@ -448,14 +489,48 @@ void YGameState::do_process(double delta) {
                     }
                     return;
                 }
+            } else {
+                overriding_game_actions.remove_at(0);
             }
         }
 
         if (future_game_actions_remaining > 0) {
             Ref<YGameAction> next_action = future_game_actions[0];
-            future_game_actions.remove_at(0);
             
             if (next_action.is_valid()) {
+                // Check if this is a remote player's action that needs approval
+                if (has_valid_multiplayer_peer() && scene_multiplayer->get_unique_id() != 1 && !is_playing_back) {
+                    if (debugging_level >= 2) {
+                        print_line(vformat("[YGameState %d] Checking future action %d approval state: %d", scene_multiplayer->get_unique_id(), next_action->get_unique_id(), next_action->remote_start_approval));
+                    }
+                    switch (next_action->remote_start_approval) {
+                        case YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_PENDING:
+                            if (debugging_level >= 2) {
+                                print_line(vformat("[YGameState %d] Action %d approval still pending, waiting...", scene_multiplayer->get_unique_id(), next_action->get_unique_id()));
+                            }
+                            return;
+                        case YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_APPROVED:
+                            if (debugging_level >= 2) {
+                                print_line(vformat("[YGameState %d] Action %d approved, proceeding", scene_multiplayer->get_unique_id(), next_action->get_unique_id()));
+                            }
+                            break;
+                        case YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_DENIED:
+                            if (debugging_level >= 2) {
+                                print_line(vformat("[YGameState %d] Action %d denied, will retry", scene_multiplayer->get_unique_id(), next_action->get_unique_id()));
+                            }
+                            next_action->remote_start_approval = YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_NOT_REQUESTED;
+                            return;
+                        default:
+                            if (debugging_level >= 2) {
+                                print_line(vformat("[YGameState %d] Requesting approval for action %d", scene_multiplayer->get_unique_id(), next_action->get_unique_id()));
+                            }
+                            request_action_approval(next_action.ptr());
+                            return;
+                    }
+                }
+
+                future_game_actions.remove_at(0);
+
                 if (next_action->runs_parallel) {
                     current_parallel_actions.push_back(next_action);
                     next_action->enter_action();
@@ -486,6 +561,8 @@ void YGameState::do_process(double delta) {
                         return;
                     }
                 }
+            } else {
+                future_game_actions.remove_at(0);
             }
         }
         if (!showed_out_of_actions_message) {
@@ -744,8 +821,17 @@ void YGameState::deserialize_individual_game_action_into(Vector<Ref<YGameAction>
         }
     }
     action->deserialize(action_dict);
-    if (p_front_instead)
-        list_into.insert(0,action);
+    if (p_front_instead){
+        if (action->has_priority >= 0) {
+            if (list_into[0]->has_priority >= 0 && action->has_priority < list_into[0]->has_priority) {
+                list_into.insert(1,action);
+            } else {
+                list_into.insert(0,action);
+            }
+        } else {
+            list_into.insert(0,action);
+        }
+    }
     else
         list_into.push_back(action);
 }
@@ -960,6 +1046,8 @@ void YGameState::_notification(int p_what) {
             this->rpc_config(rpc_mark_action_finished_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_AUTHORITY, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
             this->rpc_config(_receive_call_on_game_action_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
             this->rpc_config(_receive_call_on_game_action_also_local_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, true, 0));
+            this->rpc_config(rpc_request_start_action_approval_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+            this->rpc_config(rpc_response_start_action_approval_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
         }
     }
 }
@@ -1167,7 +1255,7 @@ void YGameState::broadcast_action_end(int action_id) {
 }
 
 void YGameState::_rpc_end_game_action(int action_id) {
-    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() == 1 || scene_multiplayer->get_remote_sender_id() != 1) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() == 1) {
         return; // Server already ended the action or the one sending is not the server
     }
 
@@ -1373,7 +1461,7 @@ Variant YGameState::_receive_call_on_game_action(const Variant **p_args, int p_a
     String method_name = yrpc_info[1];
 
     Ref<YGameAction> action = get_game_action(netid);
-    print_line(vformat("Received call on game action with unique action id %d and method name %s. Is valid? %s", netid, method_name, action.is_valid() ? "true" : "false"));
+    // print_line(vformat("Received call on game action with unique action id %d and method name %s. Is valid? %s", netid, method_name, action.is_valid() ? "true" : "false"));
     if (action.is_valid()) {
         bool can_receive = method_name.begins_with("_any_");
         if (!can_receive) {
@@ -1449,6 +1537,171 @@ void YGameState::_rpc_mark_action_finished(int action_id) {
             action->release_step();
         }
     }
+}
+
+void YGameState::_rpc_request_start_action_approval(int action_id) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() != 1) {
+        if (debugging_level >= 2) {
+            print_line("[YGameState] Ignoring approval request - not server");
+        }
+        return; // Only server should handle approval requests
+    }
+    if (debugging_level >= 2) {
+        print_line(vformat("[YGameState] Server received approval request for action %d from %d", action_id, scene_multiplayer->get_remote_sender_id()));
+    }
+    int desired_action_id = 0;
+
+    bool approved = false;
+    
+    // Check if action is in past actions
+    for (const auto& action : past_game_actions) {
+        if (action.is_valid() && action->get_unique_id() == action_id) {
+            approved = true;
+            desired_action_id = action_id;
+            print_line("[YGameState] Action found in past actions");
+            break;
+        }
+    }
+
+    // Check if action is current action
+    if (!approved) {
+        if (has_current_game_action() && get_current_game_action()->get_unique_id() == action_id) {
+            approved = true;
+            desired_action_id = action_id;
+            print_line("[YGameState] Action is current action");
+        } else if (has_current_game_action()) {
+            desired_action_id = get_current_game_action()->get_unique_id();
+            print_line(vformat("[YGameState] Current action is different: %d", desired_action_id));
+        }
+    }
+
+    // Check if action is next override action
+    if (!approved && !overriding_game_actions.is_empty()) {
+        if (overriding_game_actions[0]->get_unique_id() == action_id) {
+            approved = true;
+            desired_action_id = action_id;
+            print_line("[YGameState] Action is next override action");
+        } else {
+            desired_action_id = overriding_game_actions[0]->get_unique_id();
+            print_line(vformat("[YGameState] Next override action is different: %d", desired_action_id));
+        }
+    }
+
+    // Check if action is next future action (only if no override actions)
+    if (!approved && overriding_game_actions.is_empty() && !future_game_actions.is_empty()) {
+        if (future_game_actions[0]->get_unique_id() == action_id) {
+            approved = true;
+            desired_action_id = action_id;
+            print_line("[YGameState] Action is next future action");
+        } else {
+            desired_action_id = future_game_actions[0]->get_unique_id();
+            print_line(vformat("[YGameState] Next future action is different: %d", desired_action_id));
+        }
+    }
+
+    if (approved) {
+        desired_action_id = action_id;
+    }
+
+    if (debugging_level >= 2) {
+        print_line(vformat("[YGameState] Sending approval response - Action: %d, Desired: %d, Approved: %s", 
+            action_id, desired_action_id, approved ? "true" : "false"));
+    }
+
+    Array sending_rpc_array;
+    sending_rpc_array.push_back(action_id);
+    sending_rpc_array.push_back(desired_action_id);
+    sending_rpc_array.push_back(approved);
+    int argcount = sending_rpc_array.size();
+    const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+    for (int i = 0; i < argcount; i++) {
+        argptrs[i] = &sending_rpc_array[i];
+    }
+    rpcp(scene_multiplayer->get_remote_sender_id(), rpc_response_start_action_approval_stringname, argptrs, argcount);
+}
+
+void YGameState::_rpc_response_start_action_approval(int action_id, int desired_action_id, bool approved) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() == 1) {
+        if (debugging_level >= 2) {
+            print_line("[YGameState] Ignoring approval response - not client");
+        }
+        return; // Only clients should handle approval responses
+    }
+
+    if (debugging_level >= 2) {
+        print_line(vformat("[YGameState %d] Client received approval response - Action: %d, Desired: %d, Approved: %s", 
+            scene_multiplayer->get_unique_id(),
+            action_id, desired_action_id, approved ? "true" : "false"));
+    }
+
+    // Find the action in the game state
+    Ref<YGameAction> action = get_game_action(action_id);
+    if (action.is_valid()) {
+        if (approved) {
+            if (debugging_level >= 2) {
+                print_line(vformat("[YGameState %d] Marking action as approved", scene_multiplayer->get_unique_id()));
+            }
+            action->remote_start_approval = YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_APPROVED;
+            last_action_was_denied = false;
+        } else {
+            if (debugging_level >= 2) {
+                print_line(vformat("[YGameState %d] Marking action as denied", scene_multiplayer->get_unique_id()));
+            }
+            action->remote_start_approval = YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_DENIED;
+            last_action_was_denied = true;
+        }
+    } else {
+        if (debugging_level >= 2) {
+            print_line(vformat("[YGameState %d] Could not find action to update approval state", scene_multiplayer->get_unique_id()));
+        }
+    }
+
+    if (!approved && desired_action_id != action_id) {
+        Ref<YGameAction> desired_action = get_game_action(desired_action_id);
+        if (desired_action.is_valid()) {
+            if(!desired_action->started) {
+                if (debugging_level >= 2) {
+                    print_line(vformat("[YGameState %d] Marking the server's desired action as approved", scene_multiplayer->get_unique_id()));
+                }
+                desired_action->remote_start_approval = YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_APPROVED;
+            } else {
+                if (debugging_level >= 2) {
+                    print_line(vformat("[YGameState %d] The server's desired action has already started.", scene_multiplayer->get_unique_id()));
+                }
+            }
+        } else {
+            if (debugging_level >= 2) {
+                print_line(vformat("[YGameState %d] The server's desired action %d does not exist.", scene_multiplayer->get_unique_id(), desired_action_id));
+            }
+        }
+    }
+}
+
+void YGameState::request_action_approval(YGameAction* action) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() == 1) {
+        if (debugging_level >= 2) {
+            print_line(vformat("[YGameState %d] Ignoring approval request - not client", scene_multiplayer->get_unique_id()));
+        }
+        return; // Don't send if we're the server
+    }
+    if (action == nullptr) {
+        if (debugging_level >= 2) {
+            print_line(vformat("[YGameState %d] Cannot request approval for null action", scene_multiplayer->get_unique_id()));
+        }
+        return;
+    }
+    if (debugging_level >= 2) {
+        print_line(vformat("[YGameState %d] Requesting approval for action %d", scene_multiplayer->get_unique_id(), action->unique_id));
+    }
+    action->remote_start_approval = YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_PENDING;
+    Array sending_rpc_array;
+    sending_rpc_array.push_back(action->unique_id);
+    int argcount = sending_rpc_array.size();
+    const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+    for (int i = 0; i < argcount; i++) {
+        argptrs[i] = &sending_rpc_array[i];
+    }
+    rpcp(1, rpc_request_start_action_approval_stringname, argptrs, argcount);
 }
 
                     

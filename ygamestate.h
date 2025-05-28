@@ -70,7 +70,16 @@ public:
     int next_game_action_unique_id;
     int next_visual_action_unique_id;
     int next_visual_element_unique_id;
+    
     String get_current_game_action_name();
+
+    int debugging_level = 0;
+    void set_debugging_level(int f) {debugging_level = f;}
+    int get_debugging_level() const {return debugging_level;}
+
+    bool last_action_was_denied = false;
+    void set_last_action_was_denied(bool f) {last_action_was_denied = f;}
+    bool get_last_action_was_denied() const {return last_action_was_denied;}
 
     double wait_before_going_to_next_action =0.0;
     void set_wait_before_going_to_next_action(double f) {wait_before_going_to_next_action = f;}
@@ -242,6 +251,8 @@ public:
         _receive_call_on_game_action_stringname = SNAME("_receive_call_on_game_action");
         rpc_end_game_action_stringname = SNAME("_rpc_end_game_action");
         rpc_mark_action_finished_stringname = SNAME("_rpc_mark_action_finished");
+        rpc_request_start_action_approval_stringname = SNAME("_rpc_request_start_action_approval");
+        rpc_response_start_action_approval_stringname = SNAME("_rpc_response_start_action_approval");
     }
 
     ~YGameState() {
@@ -293,6 +304,8 @@ public:
     StringName _receive_call_on_game_action_also_local_stringname;
     StringName rpc_register_game_action_stringname;
     StringName rpc_mark_action_finished_stringname;
+    StringName rpc_response_start_action_approval_stringname;
+    StringName rpc_request_start_action_approval_stringname;
 
     static Dictionary create_rpc_dictionary_config(MultiplayerAPI::RPCMode p_rpc_mode,
                                             MultiplayerPeer::TransferMode p_transfer_mode, bool p_call_local,
@@ -311,6 +324,11 @@ public:
     bool has_valid_multiplayer_peer() const;
 
     void mark_action_finished_and_sync(int action_id);
+
+    // Add new RPC method declarations
+    void _rpc_request_start_action_approval(int action_id);
+    void _rpc_response_start_action_approval(int action_id, int desired_action_id, bool approved);
+    void request_action_approval(YGameAction* action);
 };
 
 #endif //YGAMESTATE_H

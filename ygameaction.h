@@ -78,6 +78,17 @@ protected:
 
 
 public:
+    enum RemoteStartApproval {
+        REMOTE_START_APPROVAL_NOT_REQUESTED,
+        REMOTE_START_APPROVAL_PENDING,
+        REMOTE_START_APPROVAL_APPROVED,
+        REMOTE_START_APPROVAL_DENIED
+    };
+    RemoteStartApproval remote_start_approval=REMOTE_START_APPROVAL_NOT_REQUESTED;
+    void set_remote_start_approval(RemoteStartApproval approval) { remote_start_approval = approval; }
+    RemoteStartApproval get_remote_start_approval() const { return remote_start_approval; }
+    
+
     void release_step();
     bool instant_execute=false;
     bool is_playing_back=false;
@@ -120,6 +131,7 @@ public:
         }
         return this;
     }
+
     YGameAction* increment_action_parameter(int param, const Variant &v) {
         if (action_parameters.has(param)) {
             Variant current_value = action_parameters[param];

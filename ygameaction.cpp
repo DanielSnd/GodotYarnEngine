@@ -372,6 +372,9 @@ Dictionary YGameAction::serialize() {
     if (player_turn != -1)
         dict["pturn"] = player_turn;
 
+    if (has_priority != -1)
+        dict["prty"] = has_priority;
+
     if (!action_parameters.is_empty()) {
         Dictionary serialize_action_parameters;
         Dictionary serialize_start_action_parameters;
@@ -411,6 +414,9 @@ Dictionary YGameAction::deserialize(Dictionary dict) {
 
     runs_parallel = dict.get("prll", false);
     max_in_parallel = dict.get("max_prll", -1);
+
+    if (dict.has("prt"))
+        has_priority = dict["prt"];
 
     if (dict.has("params")) {
         Dictionary serialized_action_parameters = dict["params"];
