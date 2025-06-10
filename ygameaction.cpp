@@ -88,8 +88,12 @@ void YGameAction::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("check_is_last_step","step_index"), &YGameAction::get_is_last_step);
     ClassDB::bind_method(D_METHOD("check_waiting_for_step"), &YGameAction::get_waiting_for_step);
-    ClassDB::bind_method(D_METHOD("wait_for_step","prevent_processing"), &YGameAction::wait_for_step);
+    ClassDB::bind_method(D_METHOD("wait_for_step","prevent_processing", DEFVAL(true)), &YGameAction::wait_for_step);
     ClassDB::bind_method(D_METHOD("release_step"), &YGameAction::release_step);
+
+    ClassDB::bind_method(D_METHOD("set_auto_release_step_on_register", "auto_release_step_on_register"), &YGameAction::set_auto_release_step_on_register);
+    ClassDB::bind_method(D_METHOD("get_auto_release_step_on_register"), &YGameAction::get_auto_release_step_on_register);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "auto_release_step_on_register"), "set_auto_release_step_on_register", "get_auto_release_step_on_register");
 
     ClassDB::bind_method(D_METHOD("get_from_step_data", "step_data", "get_index", "get_default"), &YGameAction::get_from_step_data);
 
@@ -194,6 +198,10 @@ void YGameAction::register_step(const int _step_identifier, const Variant v) {
 
     // Server or non-networked action - register step directly
     actually_register_step(_step_identifier, v);
+
+    if (auto_release_step_on_register && get_waiting_for_step()) {
+        release_step();
+    }
 
     // If we're the server, broadcast the step to all clients through YEngine
     if (YGameState::get_singleton() != nullptr && YGameState::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 

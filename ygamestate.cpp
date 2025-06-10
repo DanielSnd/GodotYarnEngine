@@ -448,8 +448,17 @@ void YGameState::do_process(double delta) {
                     }
                     switch (next_action->remote_start_approval) {
                         case YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_PENDING:
-                            if (debugging_level >= 2) {
-                                print_line(vformat("[YGameState %d] Action approval still pending, waiting...", scene_multiplayer->get_unique_id()));
+                            pending_waiting_for_start_approval_attempts++;
+                            if (pending_waiting_for_start_approval_attempts > 20) {
+                                if (debugging_level >= 2) {
+                                    print_line(vformat("[YGameState %d] Too many pending waiting for start approval attempts, requesting again.", scene_multiplayer->get_unique_id()));
+                                }
+                                next_action->remote_start_approval = YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_NOT_REQUESTED;
+                                pending_waiting_for_start_approval_attempts = 0;
+                            } else {
+                                if (debugging_level >= 2 && pending_waiting_for_start_approval_attempts == 1) {
+                                    print_line(vformat("[YGameState %d] Action %d approval still pending, waiting...", scene_multiplayer->get_unique_id(), next_action->get_unique_id()));
+                                }
                             }
                             return;
                         case YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_APPROVED:
@@ -464,9 +473,7 @@ void YGameState::do_process(double delta) {
                             next_action->remote_start_approval = YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_NOT_REQUESTED;
                             return;
                         default:
-                            if (debugging_level >= 2) {
-                                print_line(vformat("[YGameState %d] Requesting approval for action", scene_multiplayer->get_unique_id()));
-                            }
+                            // REQUEST ACTION APPROVAL
                             request_action_approval(next_action.ptr());
                             return;
                     }
@@ -505,8 +512,17 @@ void YGameState::do_process(double delta) {
                     }
                     switch (next_action->remote_start_approval) {
                         case YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_PENDING:
-                            if (debugging_level >= 2) {
-                                print_line(vformat("[YGameState %d] Action %d approval still pending, waiting...", scene_multiplayer->get_unique_id(), next_action->get_unique_id()));
+                            pending_waiting_for_start_approval_attempts++;
+                            if (pending_waiting_for_start_approval_attempts > 20) {
+                                if (debugging_level >= 2) {
+                                    print_line(vformat("[YGameState %d] Too many pending waiting for start approval attempts, requesting again.", scene_multiplayer->get_unique_id()));
+                                }
+                                next_action->remote_start_approval = YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_NOT_REQUESTED;
+                                pending_waiting_for_start_approval_attempts = 0;
+                            } else {
+                                if (debugging_level >= 2 && pending_waiting_for_start_approval_attempts == 1) {
+                                    print_line(vformat("[YGameState %d] Action %d approval still pending, waiting...", scene_multiplayer->get_unique_id(), next_action->get_unique_id()));
+                                }
                             }
                             return;
                         case YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_APPROVED:
@@ -521,9 +537,7 @@ void YGameState::do_process(double delta) {
                             next_action->remote_start_approval = YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_NOT_REQUESTED;
                             return;
                         default:
-                            if (debugging_level >= 2) {
-                                print_line(vformat("[YGameState %d] Requesting approval for action %d", scene_multiplayer->get_unique_id(), next_action->get_unique_id()));
-                            }
+                            // REQUEST ACTION APPROVAL IF NOT APPROVED OR DENIED
                             request_action_approval(next_action.ptr());
                             return;
                     }
@@ -601,8 +615,10 @@ void YGameState::set_current_turn_player(YGamePlayer* _new_current_player)
             current_turn_player->turn_started();
         }
     }
-void YGameState::clear_all_game_actions()
+
+    void YGameState::clear_all_game_actions()
     {
+        pending_waiting_for_start_approval_attempts = 0;
         if (!current_game_action.is_null() && current_game_action.is_valid()) {
             current_game_action = Ref<YGameAction>();
         }
@@ -1675,6 +1691,8 @@ void YGameState::_rpc_response_start_action_approval(int action_id, int desired_
             }
         }
     }
+
+    pending_waiting_for_start_approval_attempts = 0;
 }
 
 void YGameState::request_action_approval(YGameAction* action) {

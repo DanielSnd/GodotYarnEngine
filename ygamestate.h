@@ -107,6 +107,8 @@ public:
     HashMap<int,YGamePlayer*> game_players;
     HashMap<int,YVisualElement3D*> visual_elements_3d;
 
+    int pending_waiting_for_start_approval_attempts = 0;
+
     int game_actions_done_since_started_counting = 0;
     int get_game_actions_counted() const {return game_actions_done_since_started_counting;}
     void restart_action_counting() {

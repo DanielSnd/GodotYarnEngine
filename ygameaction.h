@@ -87,7 +87,6 @@ public:
     RemoteStartApproval remote_start_approval=REMOTE_START_APPROVAL_NOT_REQUESTED;
     void set_remote_start_approval(RemoteStartApproval approval) { remote_start_approval = approval; }
     RemoteStartApproval get_remote_start_approval() const { return remote_start_approval; }
-    
 
     void release_step();
     bool instant_execute=false;
@@ -205,7 +204,11 @@ public:
     
     bool get_is_last_step(int step_index) const {return step_index == action_steps.size()-1;}
     bool get_waiting_for_step() const {return waiting_for_step;}
-    void wait_for_step(bool prevent_processing = false) ;
+    void wait_for_step(bool prevent_processing = false);
+
+    bool auto_release_step_on_register = false;
+    void set_auto_release_step_on_register(bool f) {auto_release_step_on_register = f;}
+    bool get_auto_release_step_on_register() const {return auto_release_step_on_register;}
 
     bool is_debugging = false;
     void set_is_debugging(bool f) {is_debugging = f;}
