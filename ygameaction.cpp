@@ -88,7 +88,7 @@ void YGameAction::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("check_is_last_step","step_index"), &YGameAction::get_is_last_step);
     ClassDB::bind_method(D_METHOD("check_waiting_for_step"), &YGameAction::get_waiting_for_step);
-    ClassDB::bind_method(D_METHOD("wait_for_step","prevent_processing", DEFVAL(true)), &YGameAction::wait_for_step);
+    ClassDB::bind_method(D_METHOD("wait_for_step","prevent_processing"), &YGameAction::wait_for_step, DEFVAL(true));
     ClassDB::bind_method(D_METHOD("release_step"), &YGameAction::release_step);
 
     ClassDB::bind_method(D_METHOD("set_auto_release_step_on_register", "auto_release_step_on_register"), &YGameAction::set_auto_release_step_on_register);
