@@ -189,14 +189,29 @@ Variant YGameAction::get_from_step_data(Array p_step_data, int p_get_index, cons
 void YGameAction::register_step(const int _step_identifier, const Variant v) {
     if (instant_execute) return;
 
-    // If we're not the server and this is a networked action, request approval through YEngine
-    if (YGameState::get_singleton() != nullptr && YGameState::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
-        YGameState::get_singleton()->get_multiplayer()->get_unique_id() != 1) {
-        request_step_approval(_step_identifier, v);
-        return;
+    // If this is a networked game, we need to handle the step approval
+    if (YGameState::get_singleton() != nullptr && YGameState::get_singleton()->get_multiplayer()->has_multiplayer_peer()) {
+        // If we're not the server and this is a networked action, request approval through YEngine
+        if (YGameState::get_singleton()->get_multiplayer()->get_unique_id() != 1) 
+        {
+            request_step_approval(_step_identifier, v);
+            return;
+        }
+        else {
+            // If we're the server, we still need to check if we own the action before registering the step.
+            // If we're not the owner and the step is coming form a peer, it'll go into register_step_received_from_peer
+            if (!check_if_has_step_approval(_step_identifier, v, 1)) {
+                return;
+            }
+        }
     }
 
-    // Server or non-networked action - register step directly
+    register_step_received_from_peer(_step_identifier, v, 1);
+}
+
+void YGameAction::register_step_received_from_peer(const int _step_identifier, const Variant v, const int sender_id) {
+    if (instant_execute) return;
+
     actually_register_step(_step_identifier, v);
 
     if (auto_release_step_on_register && get_waiting_for_step()) {
@@ -233,7 +248,13 @@ void YGameAction::request_step_approval(int step_identifier, const Variant& step
 }
 
 bool YGameAction::check_if_has_step_approval(int step_identifier, const Variant& step_data, int sender_id) {
-    bool approved = false;
+    bool approved = sender_id == 1;
+    if (player_turn > 0 && YGameState::get_singleton() != nullptr) {
+        auto ctp = YGameState::get_singleton()->get_game_player(player_turn);
+        if (ctp->remote_player_id == sender_id) {
+            approved = true;
+        }
+    }
     GDVIRTUAL_CALL(_step_request_approval, step_identifier, step_data, sender_id, approved);
     return approved;
 }

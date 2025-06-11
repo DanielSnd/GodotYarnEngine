@@ -1152,7 +1152,7 @@ void YGameState::_rpc_request_action_step_approval(int action_id, int step_ident
     // Check current action
     if (has_current_game_action() && get_current_game_action()->get_unique_id() == action_id) {
         if (get_current_game_action()->check_if_has_step_approval(step_identifier, step_data, scene_multiplayer->get_remote_sender_id())) {
-            get_current_game_action()->register_step(step_identifier, step_data);
+            get_current_game_action()->register_step_received_from_peer(step_identifier, step_data, scene_multiplayer->get_remote_sender_id());
         }
         return;
     }
@@ -1162,7 +1162,7 @@ void YGameState::_rpc_request_action_step_approval(int action_id, int step_ident
         Ref<YGameAction> action = get_parallel_action(i);
         if (action.is_valid() && action->get_unique_id() == action_id) {
             if (action->check_if_has_step_approval(step_identifier, step_data, scene_multiplayer->get_remote_sender_id())) {
-                action->register_step(step_identifier, step_data);
+                action->register_step_received_from_peer(step_identifier, step_data, scene_multiplayer->get_remote_sender_id());
             }
             return;
         }
@@ -1574,7 +1574,9 @@ void YGameState::_rpc_request_start_action_approval(int action_id) {
         if (action.is_valid() && action->get_unique_id() == action_id) {
             approved = true;
             desired_action_id = action_id;
-            print_line("[YGameState] Action found in past actions");
+            if (debugging_level >= 2) {
+                print_line(vformat("[YGameState] Action found in past actions: %d", action_id));
+            }
             break;
         }
     }
@@ -1584,7 +1586,9 @@ void YGameState::_rpc_request_start_action_approval(int action_id) {
         if (has_current_game_action() && get_current_game_action()->get_unique_id() == action_id) {
             approved = true;
             desired_action_id = action_id;
-            print_line("[YGameState] Action is current action");
+            if (debugging_level >= 2) {
+                print_line(vformat("[YGameState] Action is current action: %d", action_id));
+            }
         } else if (has_current_game_action()) {
             desired_action_id = get_current_game_action()->get_unique_id();
             print_line(vformat("[YGameState] Current action is different: %d", desired_action_id));
@@ -1596,10 +1600,14 @@ void YGameState::_rpc_request_start_action_approval(int action_id) {
         if (overriding_game_actions[0]->get_unique_id() == action_id) {
             approved = true;
             desired_action_id = action_id;
-            print_line("[YGameState] Action is next override action");
+            if (debugging_level >= 2) {
+                print_line(vformat("[YGameState] Action is next override action: %d", action_id));
+            }
         } else {
             desired_action_id = overriding_game_actions[0]->get_unique_id();
-            print_line(vformat("[YGameState] Next override action is different: %d", desired_action_id));
+            if (debugging_level >= 2) {
+                print_line(vformat("[YGameState] Next override action is different: %d", desired_action_id));
+            }
         }
     }
 
@@ -1608,10 +1616,14 @@ void YGameState::_rpc_request_start_action_approval(int action_id) {
         if (future_game_actions[0]->get_unique_id() == action_id) {
             approved = true;
             desired_action_id = action_id;
-            print_line("[YGameState] Action is next future action");
+            if (debugging_level >= 2) {
+                print_line(vformat("[YGameState] Action is next future action: %d", action_id));
+            }
         } else {
             desired_action_id = future_game_actions[0]->get_unique_id();
-            print_line(vformat("[YGameState] Next future action is different: %d", desired_action_id));
+            if (debugging_level >= 2) {
+                print_line(vformat("[YGameState] Next future action is different: %d", desired_action_id));
+            }
         }
     }
 
