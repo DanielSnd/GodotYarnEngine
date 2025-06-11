@@ -49,6 +49,7 @@ private:
 
     // Cache for RPC configs, keyed by ObjectID
     HashMap<ObjectID, YGSRPCConfigCache> rpc_config_cache;
+    
 
 protected:
     void _parse_rpc_config(const Dictionary &p_config, bool p_for_node, YGSRPCConfigCache &r_cache);
@@ -63,6 +64,8 @@ public:
     void _notification(int p_what);
 
     bool has_started=false;
+
+    HashSet<Vector2i> state_parameter_authorities;
 
     int next_execution_order_number;
     int next_player_unique_id;
@@ -214,8 +217,16 @@ public:
     bool ensure_has_initialized();
     
     HashMap<int,Variant> state_parameters;
-    void set_state_parameter(int param, Variant v) {state_parameters[param] = v;}
-    void remove_state_parameter(int param) {state_parameters.erase(param);}
+
+    void add_state_parameter_authority(int param, int network_id_authority);
+    void remove_state_parameter_authority(int param, int network_id_authority);
+    bool has_state_parameter_authority(int param, int network_id_authority) const;
+    void clear_state_parameter_authorities() {state_parameter_authorities.clear();}
+
+    void actually_set_state_parameter(int param, Variant v) {state_parameters[param] = v;}
+    void set_state_parameter(int param, Variant v);
+    void remove_state_parameter(int param);
+    void actually_remove_state_parameter(int param) {state_parameters.erase(param);}
     Variant get_state_parameter(int param,const Variant& def) {
         if (state_parameters.has(param))
             return state_parameters[param];
@@ -255,9 +266,12 @@ public:
         rpc_mark_action_finished_stringname = SNAME("_rpc_mark_action_finished");
         rpc_request_start_action_approval_stringname = SNAME("_rpc_request_start_action_approval");
         rpc_response_start_action_approval_stringname = SNAME("_rpc_response_start_action_approval");
+        rpc_set_state_parameter_stringname = SNAME("_rpc_set_state_parameter");
+        rpc_remove_state_parameter_stringname = SNAME("_rpc_remove_state_parameter");
     }
 
     ~YGameState() {
+        clear_state_parameter_authorities();
         rpc_config_cache.clear();
         if(singleton != nullptr && singleton == this) {
             singleton = nullptr;
@@ -299,6 +313,10 @@ public:
     void _rpc_request_action_step_approval(int action_id, int step_identifier, const Variant& step_data);
     void _rpc_apply_action_step(int action_id, int step_identifier, const Variant& step_data);
 
+    // State parameter RPC methods
+    void _rpc_set_state_parameter(int param_id, const Variant& param_value);
+    void _rpc_remove_state_parameter(int param_id);
+
     StringName rpc_request_action_step_approval_stringname;
     StringName rpc_apply_action_step_stringname;
     StringName rpc_end_game_action_stringname;
@@ -308,6 +326,8 @@ public:
     StringName rpc_mark_action_finished_stringname;
     StringName rpc_response_start_action_approval_stringname;
     StringName rpc_request_start_action_approval_stringname;
+    StringName rpc_set_state_parameter_stringname;
+    StringName rpc_remove_state_parameter_stringname;
 
     static Dictionary create_rpc_dictionary_config(MultiplayerAPI::RPCMode p_rpc_mode,
                                             MultiplayerPeer::TransferMode p_transfer_mode, bool p_call_local,

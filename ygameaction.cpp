@@ -88,10 +88,11 @@ void YGameAction::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("check_is_last_step","step_index"), &YGameAction::get_is_last_step);
     ClassDB::bind_method(D_METHOD("check_waiting_for_step"), &YGameAction::get_waiting_for_step);
+    ClassDB::bind_method(D_METHOD("get_current_step_index"), &YGameAction::get_current_step_index);
     ClassDB::bind_method(D_METHOD("wait_for_step","prevent_processing"), &YGameAction::wait_for_step, DEFVAL(true));
     ClassDB::bind_method(D_METHOD("release_step"), &YGameAction::release_step);
 
-    ClassDB::bind_method(D_METHOD("set_auto_release_step_on_register", "auto_release_step_on_register"), &YGameAction::set_auto_release_step_on_register);
+    ClassDB::bind_method(D_METHOD("set_auto_release_step_on_register", "auto_release_step_on_register"), &YGameAction::set_auto_release_step_on_register, DEFVAL(false));
     ClassDB::bind_method(D_METHOD("get_auto_release_step_on_register"), &YGameAction::get_auto_release_step_on_register);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "auto_release_step_on_register"), "set_auto_release_step_on_register", "get_auto_release_step_on_register");
 
@@ -194,6 +195,9 @@ void YGameAction::register_step(const int _step_identifier, const Variant v) {
         // If we're not the server and this is a networked action, request approval through YEngine
         if (YGameState::get_singleton()->get_multiplayer()->get_unique_id() != 1) 
         {
+            if (is_debugging) {
+                print_line(vformat("Step %d for action %d being requested for approval on server.", _step_identifier, unique_id));
+            }
             request_step_approval(_step_identifier, v);
             return;
         }
@@ -201,31 +205,27 @@ void YGameAction::register_step(const int _step_identifier, const Variant v) {
             // If we're the server, we still need to check if we own the action before registering the step.
             // If we're not the owner and the step is coming form a peer, it'll go into register_step_received_from_peer
             if (!check_if_has_step_approval(_step_identifier, v, 1)) {
+                if (is_debugging) {
+                    print_line(vformat("Step %d for action %d was not approved by the server", _step_identifier, unique_id));
+                }
                 return;
+            } else {
+                if (is_debugging) {
+                    print_line(vformat("Step %d for action %d was approved by the server", _step_identifier, unique_id));
+                }
             }
         }
     }
 
-    register_step_received_from_peer(_step_identifier, v, 1);
-}
-
-void YGameAction::register_step_received_from_peer(const int _step_identifier, const Variant v, const int sender_id) {
-    if (instant_execute) return;
-
-    actually_register_step(_step_identifier, v);
-
-    if (auto_release_step_on_register && get_waiting_for_step()) {
-        release_step();
-    }
-
-    // If we're the server, broadcast the step to all clients through YEngine
+    // If we're online and we're the server.
     if (YGameState::get_singleton() != nullptr && YGameState::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
         YGameState::get_singleton()->get_multiplayer()->get_unique_id() == 1) {
         YGameState::get_singleton()->broadcast_action_step(this, _step_identifier, v);
     }
+    actually_register_step(_step_identifier, v, false);
 }
 
-void YGameAction::actually_register_step(const int _step_identifier, const Variant v) {
+void YGameAction::actually_register_step(const int _step_identifier, const Variant v, bool remotely_requested) {
     if (instant_execute) return;
 
     // Server or non-networked action - register step directly
@@ -235,10 +235,15 @@ void YGameAction::actually_register_step(const int _step_identifier, const Varia
     new_step->step_identifier = _step_identifier;
     new_step->step_data = v;
     if (is_debugging)
-        print_line(vformat("Registered step index %d, identifier %d, data: %s",new_step->step_index,new_step->step_identifier,new_step->step_data));
+        print_line(vformat("Registered step index %d, identifier %d, data: %s. Remotely requested: %s",new_step->step_index,new_step->step_identifier,new_step->step_data, remotely_requested));
 
     action_steps.append(new_step);
+
     emit_signal(SNAME("registered_step"),new_step->step_index);
+
+    if (auto_release_step_on_register && get_waiting_for_step()) {
+        release_step();
+    }
 }
 
 void YGameAction::request_step_approval(int step_identifier, const Variant& step_data) {
@@ -249,13 +254,18 @@ void YGameAction::request_step_approval(int step_identifier, const Variant& step
 
 bool YGameAction::check_if_has_step_approval(int step_identifier, const Variant& step_data, int sender_id) {
     bool approved = sender_id == 1;
-    if (player_turn > 0 && YGameState::get_singleton() != nullptr) {
+    if (player_turn >= 0 && YGameState::get_singleton() != nullptr) {
         auto ctp = YGameState::get_singleton()->get_game_player(player_turn);
         if (ctp->remote_player_id == sender_id) {
             approved = true;
         }
     }
     GDVIRTUAL_CALL(_step_request_approval, step_identifier, step_data, sender_id, approved);
+    if (is_debugging) {
+        bool is_client = YGameState::get_singleton() != nullptr && YGameState::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
+            YGameState::get_singleton()->get_multiplayer()->get_unique_id() != 1;
+        print_line(vformat("%s checking if step has approval. Step %d for action %d was %s approved. Is client: %s",  is_client ? "Client" : "Server", step_identifier, unique_id, approved ? "successfully" : "not", is_client));
+    }
     return approved;
 }
 
@@ -317,6 +327,8 @@ void YGameAction::enter_action() {
     if (is_debugging) {
         print_line(vformat("%s is calling enter action",get_name()));
     }
+    set_pause_indp_time_started(YTime::get_singleton()->get_pause_independent_time());
+    set_time_started(YTime::get_singleton()->get_time());
     GDVIRTUAL_CALL(_on_enter_action);
     emit_signal(SNAME("started_action"));
     started=true;
@@ -352,6 +364,10 @@ void YGameAction::step_action(Ref<YActionStep> data, bool is_ending) {
             data->step_has_to_reconsume = true;
         }
     }
+}
+
+int YGameAction::get_current_step_index() const {
+    return last_step_ran;
 }
 
 void YGameAction::exit_action() {
@@ -515,7 +531,7 @@ void YGameAction::created() {
 YGameAction::YGameAction() {
     is_playing_back = false;
     has_executed_created_method = false;
-    player_turn=-1;
+    player_turn = -1;
     instant_execute = false;
     time_started = 0.0;
     steps_consumed = 0;

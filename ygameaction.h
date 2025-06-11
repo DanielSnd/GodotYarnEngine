@@ -174,9 +174,10 @@ public:
 
     Vector<Ref<YActionStep>> action_steps;
 
+    int get_current_step_index() const;
+
     void register_step(int step_identifier, Variant v);
-    void register_step_received_from_peer(int step_identifier, Variant v, int sender_id);
-    void actually_register_step(int step_identifier, Variant v);
+    void actually_register_step(int step_identifier, Variant v, bool remotely_requested = false);
 
     bool started=false;
     bool finished=false;

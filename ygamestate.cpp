@@ -30,6 +30,7 @@ void YGameState::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("clear_all_players"), &YGameState::clear_all_players);
     ClassDB::bind_method(D_METHOD("clear_all_game_actions"), &YGameState::clear_all_game_actions);
+    ClassDB::bind_method(D_METHOD("clear_state_parameter_authorities"), &YGameState::clear_state_parameter_authorities);
 
     ClassDB::bind_method(D_METHOD("get_current_game_action"), &YGameState::get_current_game_action);
     ClassDB::bind_method(D_METHOD("get_current_game_action_name"), &YGameState::get_current_game_action_name);
@@ -82,6 +83,10 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("remove_state_parameter","param_id"), &YGameState::remove_state_parameter);
     ClassDB::bind_method(D_METHOD("get_all_state_parameters"), &YGameState::get_all_state_parameters);
 
+    ClassDB::bind_method(D_METHOD("add_state_parameter_authority","param_id","network_id_authority"), &YGameState::add_state_parameter_authority);
+    ClassDB::bind_method(D_METHOD("remove_state_parameter_authority","param_id","network_id_authority"), &YGameState::remove_state_parameter_authority);
+    ClassDB::bind_method(D_METHOD("has_state_parameter_authority","param_id","network_id_authority"), &YGameState::has_state_parameter_authority);
+
     ClassDB::bind_method(D_METHOD("restart_action_counting"), &YGameState::restart_action_counting);
     ClassDB::bind_method(D_METHOD("get_game_actions_counted"), &YGameState::get_game_actions_counted);
 
@@ -101,6 +106,8 @@ void YGameState::_bind_methods() {
     ADD_SIGNAL(MethodInfo("changed_current_action",PropertyInfo(Variant::OBJECT, "new_action", PROPERTY_HINT_RESOURCE_TYPE, "YGameAction")));
     ADD_SIGNAL(MethodInfo("changed_turn_player_id", PropertyInfo(Variant::INT, "player_turn_id_before"),
                           PropertyInfo(Variant::INT, "player_turn_id_after")));
+    ADD_SIGNAL(MethodInfo("state_parameter_changed", PropertyInfo(Variant::INT, "param_id"), PropertyInfo(Variant::VARIANT_MAX, "old_value"), PropertyInfo(Variant::VARIANT_MAX, "new_value")));
+    ADD_SIGNAL(MethodInfo("state_parameter_removed", PropertyInfo(Variant::INT, "param_id")));
     ADD_SIGNAL(MethodInfo("ended_all_actions"));
     ADD_SIGNAL(MethodInfo("player_registered",PropertyInfo(Variant::OBJECT, "new_player", PROPERTY_HINT_RESOURCE_TYPE, "YGamePlayer")));
     ADD_SIGNAL(MethodInfo("player_removed",PropertyInfo(Variant::INT, "removed_player_id")));
@@ -116,6 +123,9 @@ void YGameState::_bind_methods() {
     // Add new RPC methods for action approval
     ClassDB::bind_method(D_METHOD("_rpc_request_start_action_approval", "action_id"), &YGameState::_rpc_request_start_action_approval);
     ClassDB::bind_method(D_METHOD("_rpc_response_start_action_approval", "action_id", "desired_action_id", "approved"), &YGameState::_rpc_response_start_action_approval);
+    // Add new RPC methods for state parameters
+    ClassDB::bind_method(D_METHOD("_rpc_set_state_parameter", "param_id", "param_value"), &YGameState::_rpc_set_state_parameter);
+    ClassDB::bind_method(D_METHOD("_rpc_remove_state_parameter", "param_id"), &YGameState::_rpc_remove_state_parameter);
 
     ClassDB::bind_method(D_METHOD("mark_action_finished_and_sync", "action_id"), &YGameState::mark_action_finished_and_sync);
 
@@ -1064,6 +1074,8 @@ void YGameState::_notification(int p_what) {
             this->rpc_config(_receive_call_on_game_action_also_local_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, true, 0));
             this->rpc_config(rpc_request_start_action_approval_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
             this->rpc_config(rpc_response_start_action_approval_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+            this->rpc_config(rpc_set_state_parameter_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+            this->rpc_config(rpc_remove_state_parameter_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
         }
     }
 }
@@ -1149,24 +1161,28 @@ void YGameState::_rpc_request_action_step_approval(int action_id, int step_ident
         return; // Only server should handle approval requests
     }
 
-    // Check current action
-    if (has_current_game_action() && get_current_game_action()->get_unique_id() == action_id) {
-        if (get_current_game_action()->check_if_has_step_approval(step_identifier, step_data, scene_multiplayer->get_remote_sender_id())) {
-            get_current_game_action()->register_step_received_from_peer(step_identifier, step_data, scene_multiplayer->get_remote_sender_id());
+    Ref<YGameAction> action = get_game_action(action_id);
+    if (action.is_valid()) {
+        if (action->finished && past_game_actions.has(action)) {
+            if (action->is_debugging) {
+                print_line(vformat("Step %d for action %d was already finished and in the past, so we don't need to do anything.", step_identifier, action_id));
+            }
+            // In this case the action is already finished and in the past, so we don't need to do anything.
+            return;
+        }
+
+        if (action->check_if_has_step_approval(step_identifier, step_data, scene_multiplayer->get_remote_sender_id())) {
+            action->actually_register_step(step_identifier, step_data, true);
+            // If we're online and we're the server.
+            if (YGameState::get_singleton() != nullptr && YGameState::get_singleton()->get_multiplayer()->has_multiplayer_peer() && 
+                YGameState::get_singleton()->get_multiplayer()->get_unique_id() == 1) {
+                YGameState::get_singleton()->broadcast_action_step(action.ptr(), step_identifier, step_data);
+            }
         }
         return;
     }
 
-    // Check parallel actions
-    for (int i = 0; i < get_parallel_action_count(); i++) {
-        Ref<YGameAction> action = get_parallel_action(i);
-        if (action.is_valid() && action->get_unique_id() == action_id) {
-            if (action->check_if_has_step_approval(step_identifier, step_data, scene_multiplayer->get_remote_sender_id())) {
-                action->register_step_received_from_peer(step_identifier, step_data, scene_multiplayer->get_remote_sender_id());
-            }
-            return;
-        }
-    }
+    print_error(vformat("Received requested step approval for step %d for action %d, but action not found", step_identifier, action_id));
 }
 
 void YGameState::_rpc_apply_action_step(int action_id, int step_identifier, const Variant& step_data) {
@@ -1174,47 +1190,13 @@ void YGameState::_rpc_apply_action_step(int action_id, int step_identifier, cons
         return; // Server already applied the step
     }
 
-    // Check current action
-    if (has_current_game_action() && get_current_game_action()->get_unique_id() == action_id) {
-        get_current_game_action()->actually_register_step(step_identifier, step_data);
+    Ref<YGameAction> action = get_game_action(action_id);
+    if (action.is_valid()) {
+        action->actually_register_step(step_identifier, step_data, true);
         return;
     }
 
-    // Check overriding actions
-    for (int i = 0; i < get_overridinge_game_action_count(); i++) {
-        Ref<YGameAction> action = get_overriding_game_action_by_index(i);
-        if (action.is_valid() && action->get_unique_id() == action_id) {
-            action->actually_register_step(step_identifier, step_data);
-            return;
-        }
-    }
-
-    // Check future actions
-    for (int i = 0; i < get_future_game_action_count(); i++) {
-        Ref<YGameAction> action = get_future_game_action_by_index(i);
-        if (action.is_valid() && action->get_unique_id() == action_id) {
-            action->actually_register_step(step_identifier, step_data);
-            return;
-        }
-    }
-
-    // Check parallel actions
-    for (int i = 0; i < get_parallel_action_count(); i++) {
-        Ref<YGameAction> action = get_parallel_action(i);
-        if (action.is_valid() && action->get_unique_id() == action_id) {
-            action->actually_register_step(step_identifier, step_data);
-            return;
-        }
-    }
-    
-    // Check past actions
-    for (int i = 0; i < get_past_game_action_count(); i++) {
-        Ref<YGameAction> action = get_past_game_action_by_index(i);
-        if (action.is_valid() && action->get_unique_id() == action_id) {
-            action->actually_register_step(step_identifier, step_data);
-            return;
-        }
-    }
+    print_error(vformat("Received step %d for action %d, but action not found", step_identifier, action_id));
 }
 
 void YGameState::broadcast_game_action(const Dictionary& action_data) {
@@ -1318,6 +1300,139 @@ YGameState::YGSRPCConfig YGameState::_get_rpc_config(Object *p_node, const Strin
     config.channel = 0;
     return config;
 }
+
+void YGameState::add_state_parameter_authority(int param, int network_id_authority) {
+    state_parameter_authorities.insert(Vector2i(param, network_id_authority));
+}
+
+void YGameState::remove_state_parameter_authority(int param, int network_id_authority) {
+    state_parameter_authorities.erase(Vector2i(param, network_id_authority));
+}
+
+bool YGameState::has_state_parameter_authority(int param, int network_id_authority) const {
+    return state_parameter_authorities.has(Vector2i(param, network_id_authority));
+}
+
+// Either called this from server or from a client.
+void YGameState::set_state_parameter(int param, Variant v) {
+    if (has_valid_multiplayer_peer()) {
+        Array sending_rpc_array;
+        sending_rpc_array.push_back(param);
+        sending_rpc_array.push_back(v);
+        int argcount = sending_rpc_array.size();
+        const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+        for (int i = 0; i < argcount; i++) {
+            argptrs[i] = &sending_rpc_array[i];
+        }
+        // If we're online, we're either sending this as a request to the server, or if we're calling this in the server we're sending it to all clients.
+        if (scene_multiplayer->get_unique_id() == 1) {
+            // If we're the server, we should do it now if we're alowed and send it to others.
+            if (has_state_parameter_authority(param, 1)) {
+                rpcp(0, rpc_set_state_parameter_stringname, argptrs, argcount);
+                actually_set_state_parameter(param, v);
+                emit_signal("state_parameter_changed", param, Variant{}, v);
+            }
+        }else{
+            // If we're a client, we're sending it to the server.
+            rpcp(1, rpc_set_state_parameter_stringname, argptrs, argcount);
+        }
+        return;
+    }
+    actually_set_state_parameter(param, v);
+    emit_signal("state_parameter_changed", param, Variant{}, v);
+}
+
+// Either called this from server or from a client.
+void YGameState::remove_state_parameter(int param) {
+    if (has_valid_multiplayer_peer()) {
+        Array sending_rpc_array;
+        sending_rpc_array.push_back(param);
+        int argcount = sending_rpc_array.size();
+        const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+        for (int i = 0; i < argcount; i++) {
+            argptrs[i] = &sending_rpc_array[i];
+        }
+        // If we're online, we're either sending this as a request to the server, or if we're calling this in the server we're sending it to all clients.
+        if (scene_multiplayer->get_unique_id() == 1) {
+            // If we're the server, we should do it now if we're alowed.
+            if (has_state_parameter_authority(param, 1)) {
+                rpcp(0, rpc_remove_state_parameter_stringname, argptrs, argcount);
+                actually_remove_state_parameter(param);
+                emit_signal("state_parameter_removed", param);
+            }
+        }else{
+            // If we're a client, we're sending it to the server.
+            rpcp(1, rpc_remove_state_parameter_stringname, argptrs, argcount);
+        }
+        return;
+    } 
+
+    // If we're not online, we're just doing it locally.
+    actually_remove_state_parameter(param);
+    emit_signal("state_parameter_removed", param);
+}
+
+
+void YGameState::_rpc_set_state_parameter(int param_id, const Variant& param_value) {
+    if (!has_valid_multiplayer_peer()) {
+        return;
+    }
+    if (scene_multiplayer->get_unique_id() == 1) {
+        // Check if the sender has authority to set this parameter.
+        if (has_state_parameter_authority(param_id, scene_multiplayer->get_remote_sender_id())) {
+            actually_set_state_parameter(param_id, param_value);
+            if (state_parameters.has(param_id)) {
+                emit_signal("state_parameter_changed", param_id, state_parameters[param_id], param_value);
+            }else{
+                emit_signal("state_parameter_changed", param_id, Variant{}, param_value);
+            }
+            Array sending_rpc_array;
+            sending_rpc_array.push_back(param_id);
+            sending_rpc_array.push_back(param_value);
+            int argcount = sending_rpc_array.size();
+            const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+            for (int i = 0; i < argcount; i++) {
+                argptrs[i] = &sending_rpc_array[i];
+            }
+            // Send to others
+            rpcp(0, rpc_set_state_parameter_stringname, argptrs, argcount);
+        }
+    } else{
+        if (scene_multiplayer->get_remote_sender_id() == 1) {
+            // If we're not the server, and the sender is the server, just do it.
+            actually_set_state_parameter(param_id, param_value);
+            if (state_parameters.has(param_id)) {
+                emit_signal("state_parameter_changed", param_id, state_parameters[param_id], param_value);
+            }else{
+                emit_signal("state_parameter_changed", param_id, Variant{}, param_value);
+            }
+        }
+    }
+}
+
+void YGameState::_rpc_remove_state_parameter(int param_id) {
+    if (!has_valid_multiplayer_peer()) {
+        return;
+    }
+    if (scene_multiplayer->get_unique_id() == 1) {
+        // Check if the sender has authority to remove this parameter.
+        if (has_state_parameter_authority(param_id, scene_multiplayer->get_remote_sender_id())) {
+            if (state_parameters.has(param_id)) {
+                actually_remove_state_parameter(param_id);
+                emit_signal("state_parameter_removed", param_id);
+            }
+        }
+    } else{
+        if (scene_multiplayer->get_remote_sender_id() == 1) {
+            // If we're not the server, and the sender is the server, just do it.
+            if (state_parameters.has(param_id)) {
+                actually_remove_state_parameter(param_id);
+                emit_signal("state_parameter_removed", param_id);
+            }
+        }
+    }
+}
+
 
 void YGameState::_parse_rpc_config(const Dictionary &p_config, bool p_for_node, YGSRPCConfigCache &r_cache) {
     Array names = p_config.keys();
