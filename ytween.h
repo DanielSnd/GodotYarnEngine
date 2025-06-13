@@ -29,7 +29,7 @@ protected:
 public:
     uint64_t tween_list_id;
     bool emitted_finished_or_killed = false;
-
+    
     // TweenProcessMode ytween_process_mode = TweenProcessMode::TWEEN_PROCESS_IDLE;
     Ref<PropertyTweener> set_ytrans(Tween::TransitionType p_trans, real_t p_param1 = INFINITY, real_t p_param2 = INFINITY);
 
@@ -56,10 +56,18 @@ public:
     }
 };
 
-class YTweenJiggle : public YTweenWrap {
-    GDCLASS(YTweenJiggle, YTweenWrap);
+class JiggleTweener : public Tweener {
+    GDCLASS(JiggleTweener, Tweener);
 
 public:
+#ifdef YGODOT
+    Ref<JiggleTweener> set_trans(Tween::TransitionType p_trans, real_t p_param1 = INFINITY, real_t p_param2 = INFINITY);
+#else
+    Ref<JiggleTweener> set_trans(Tween::TransitionType p_trans);
+#endif
+    Ref<JiggleTweener> set_ease(Tween::EaseType p_ease);
+    Ref<JiggleTweener> set_delay(double p_delay);
+
     Node3D* jiggle_node;
     Node2D* jiggle_node_2d;
     Control* jiggle_node_control;
@@ -93,12 +101,41 @@ public:
     TypedArray<Vector4> trig_values;
     Vector4 get_random_trig_value();
 
-    void calculate_jiggle(float p_delta);
-    void emitted_finished();
     float ease_in_out_cubic(float start, float end, float t);
 
     void randomize_trigs(float p_trans = 1.0);
-    void calculate_trig_values(float timeMultiplier = 1.0f);
+    void calculate_trig_values(float p_delta_time, float timeMultiplier = 1.0f);
+
+    void set_tween(const Ref<Tween> &p_tween) override;
+    bool step(double &r_delta) override;
+	void start() override;
+
+    JiggleTweener(Node *p_owner, float jiggle_power = 1.0f, 
+                    float jiggle_tilt = 6.0f, float jiggle_frequency = 16.0f, 
+                    Vector3 scale_axes = Vector3(1,1,1), Vector3 rotation_axes = Vector3(1,0,1),
+                    float jiggle_decelerate = 1.5f, float additional_speed = 1.0f,
+                    float constant_jiggle = 0.0f, int random_level = 1,
+                    float rejiggle_power = 2.0f, uint64_t p_tag = 55);
+    JiggleTweener();
+
+protected:
+    static void _bind_methods();
+
+private:
+    double duration = 0;
+    double delay = 0;
+    Tween::TransitionType trans_type = Tween::TRANS_MAX;
+    Tween::EaseType ease_type = Tween::EASE_MAX;
+    real_t trans_params[Tween::PARAM_COUNT] = { INFINITY, INFINITY };
+
+    Ref<RefCounted> ref_copy;
+};
+
+class YTweenJiggle : public YTweenWrap {
+    GDCLASS(YTweenJiggle, YTweenWrap);
+
+public:
+    Ref<JiggleTweener> jiggle_tweener;
 
     YTweenJiggle() : YTweenWrap() {
         tween_list_id = 0;
@@ -106,8 +143,6 @@ public:
     explicit YTweenJiggle(SceneTree *p_parent_tree) : YTweenWrap(p_parent_tree) {
         tween_list_id = 0;
     }
-    Callable get_jiggle_callable();
-
 };
 
 class YTween : public RefCounted {
@@ -136,6 +171,9 @@ public:
 
     Ref<YTweenWrap> tween_scale(Node *p_owner, float desired_size = 1.0, float desired_duration = 0.25, Tween::EaseType ease_type = Tween::EASE_IN_OUT, Tween::TransitionType trans_type = Tween::TRANS_QUAD, float
                            desired_delay = 0.0, uint64_t p_tag = 0);
+
+    Ref<YTweenWrap> tween_scale_to_and_then(Node *p_owner, float desired_to_size = 1.0, float desired_then_size = 1.0, float desired_duration_to = 0.65, float desired_duration_then = 0.25, Tween::EaseType ease_type_to = Tween::EASE_IN, Tween::EaseType ease_type_then = Tween::EASE_OUT, Tween::TransitionType trans_type = Tween::TRANS_QUAD, float trans_amount = 1.68, float
+                           desired_delay_to = 0.0, float desired_delay_then = 0.0, uint64_t p_tag = 0);
 
     Ref<YTweenWrap> tween_alpha_unique(Node *p_owner, float desired_alpha = 1.0, float desired_duration = 0.25, Tween::EaseType ease_type = Tween::EASE_IN_OUT, Tween::TransitionType trans_type = Tween::TRANS_QUAD, float
                            desired_delay = 0.0, uint64_t p_tag = 0);

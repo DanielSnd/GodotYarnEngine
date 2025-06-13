@@ -6,6 +6,11 @@
 
 double YTween::last_delta_time = 0.0;
 
+void JiggleTweener::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("set_trans", "trans", "param1", "param2"), &JiggleTweener::set_trans, DEFVAL(INFINITY), DEFVAL(INFINITY));
+    ClassDB::bind_method(D_METHOD("set_ease", "ease"), &JiggleTweener::set_ease);
+    ClassDB::bind_method(D_METHOD("set_delay", "delay"), &JiggleTweener::set_delay);
+}
 
 void YTweenWrap::_bind_methods() {
     
@@ -101,6 +106,8 @@ void YTween::_bind_methods() {
     ClassDB::bind_method(D_METHOD("create_unique_tween","owner","tag"), &YTween::create_unique_tween,DEFVAL(0));
     ClassDB::bind_method(D_METHOD("create_tween","owner","tag"), &YTween::create_tween,DEFVAL(0));
 
+    ClassDB::bind_method(D_METHOD("tween_scale_to_and_then","owner","to_scale","then_scale","duration_to","duration_then","ease_type_to","ease_type_then","transition","trans_amount","delay_to","delay_then","tag"), &YTween::tween_scale_to_and_then,DEFVAL(1.25),DEFVAL(1.0),DEFVAL(0.65),DEFVAL(0.25),DEFVAL(Tween::EaseType::EASE_IN),DEFVAL(Tween::EaseType::EASE_OUT),DEFVAL(Tween::TransitionType::TRANS_QUAD),DEFVAL(1.68),DEFVAL(0.0),DEFVAL(0.0),DEFVAL(0));
+    
     ClassDB::bind_method(D_METHOD("tween_scale_unique","owner","scale","duration","ease","transition","delay","tag"), &YTween::tween_scale_unique,DEFVAL(1.0),DEFVAL(0.22),DEFVAL(Tween::EaseType::EASE_IN_OUT),DEFVAL(Tween::TransitionType::TRANS_QUAD),DEFVAL(0.0),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("tween_scale","owner","scale","duration","ease","transition","delay","tag"), &YTween::tween_scale,DEFVAL(1.0),DEFVAL(0.22),DEFVAL(Tween::EaseType::EASE_IN_OUT),DEFVAL(Tween::TransitionType::TRANS_QUAD),DEFVAL(0.0),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("tween_alpha_unique","owner","alpha","duration","ease","transition","delay","tag"), &YTween::tween_alpha_unique,DEFVAL(1.0),DEFVAL(0.22),DEFVAL(Tween::EaseType::EASE_IN_OUT),DEFVAL(Tween::TransitionType::TRANS_QUAD),DEFVAL(0.0),DEFVAL(0));
@@ -136,6 +143,7 @@ void YTween::kill_specific_tween(Ref<YTweenWrap> specific_tween) {
     
     // Use local copy to avoid potential reference issues
     uint64_t desired_list_id = specific_tween->tween_list_id;
+    
     // First remove from tween_finder to prevent reentrance issues
     if (tween_finder.has(desired_list_id)) {
         if (tween_finder[desired_list_id].size() <= 1) {
@@ -152,16 +160,22 @@ void YTween::kill_specific_tween(Ref<YTweenWrap> specific_tween) {
     
     // Now handle the tween itself
     if (specific_tween.is_valid()) {
-        specific_tween->kill();
+        // Remove from main list first to prevent any further processing
+        tweens.erase(specific_tween);
+        
+        if (specific_tween->is_running()) {
+            specific_tween->stop();
+            // Then kill and clear the tween
+            specific_tween->kill();
+        }
+        
         specific_tween->clear();
         
+        // Finally emit the finished signal if not already emitted
         if (!specific_tween->emitted_finished_or_killed && specific_tween.is_valid()) {
             specific_tween->emitted_finished();
         }
     }
-    
-    // Finally remove from the main list
-    tweens.erase(specific_tween);
 }
 
 
@@ -183,7 +197,7 @@ Ref<YTweenWrap> YTween::find_tween(Node *p_owner, uint64_t p_tag) {
     // Return the first valid tween found
     for (int i = 0; i < tweens_list.size(); i++) {
         Ref<YTweenWrap> tween_wrap = tweens_list[i];
-        if (!tween_wrap.is_null() && tween_wrap.is_valid()) {
+        if (!tween_wrap.is_null() && tween_wrap.is_valid() && tween_wrap->is_running() && !tween_wrap->emitted_finished_or_killed) {
             return tween_wrap;
         }
     }
@@ -226,6 +240,20 @@ void YTween::kill_tweens(Node *p_owner, uint64_t p_tag) {
         tweens.erase(tween_wrap);
         tween_wrap->clear();
     }
+}
+
+
+Ref<YTweenWrap> YTween::tween_scale_to_and_then(Node *p_owner, float desired_to_size, float desired_then_size, float desired_duration_to, float desired_duration_then, Tween::EaseType ease_type_to, Tween::EaseType ease_type_then, Tween::TransitionType trans_type, float trans_amount, float desired_delay_to, float desired_delay_then, uint64_t p_tag) {
+    auto created_tween = create_unique_tween(p_owner,p_tag);
+    auto *item3d = Object::cast_to<Node3D>(p_owner);
+    if (item3d != nullptr) {
+        created_tween->tween_property(p_owner,NodePath("scale"),Vector3(1.0,1.0,1.0) * desired_to_size,desired_duration_to)->set_ease(ease_type_to)->set_trans(trans_type)->set_delay(desired_delay_to);
+        created_tween->tween_property(p_owner,NodePath("scale"),Vector3(1.0,1.0,1.0) * desired_then_size,desired_duration_then)->set_ease(ease_type_then)->set_trans(trans_type)->set_delay(desired_delay_then);
+    } else {
+        created_tween->tween_property(p_owner,NodePath("scale"),Vector2(1.0,1.0) * desired_to_size ,desired_duration_to)->set_ease(ease_type_to)->set_trans(trans_type)->set_delay(desired_delay_to);
+        created_tween->tween_property(p_owner,NodePath("scale"),Vector2(1.0,1.0) * desired_then_size,desired_duration_then)->set_ease(ease_type_then)->set_trans(trans_type)->set_delay(desired_delay_then);
+    }
+    return created_tween;
 }
 
 Ref<YTweenWrap> YTween::tween_scale_unique(Node *p_owner, float desired_size,float desired_duration,Tween::EaseType ease_type,Tween::TransitionType trans_type,float desired_delay, uint64_t p_tag) {
@@ -331,7 +359,8 @@ Ref<YTweenWrap> YTween::create_tween(Node* node_owner, uint64_t tag) {
     }
 
     // Create the tween
-    Ref<YTweenWrap> tween = memnew(YTweenWrap(tree));
+    Ref<YTweenWrap> tween;
+    tween.instantiate(tree);
     
     return create_tween_from(node_owner, tree, tween, tag);
 }
@@ -389,7 +418,7 @@ void YTween::process_tweens(double p_delta, bool p_physics) {
 		Ref<YTweenWrap> &tween = E->get();
 
         // Skip invalid tweens
-        if (tween.is_null() || !tween.is_valid()) {
+        if (tween.is_null() || !tween.is_valid() || !tween->is_valid()) {
             tweens_to_remove.push_back(tween);
             if (E == L) {
                 break;
@@ -460,6 +489,30 @@ YTween::~YTween() {
     }
 }
 
+JiggleTweener::JiggleTweener(Node *p_owner, float p_jiggle_power, float p_jiggle_tilt, float p_jiggle_frequency,
+    Vector3 p_scale_axes, Vector3 p_rotation_axes, float p_jiggle_decelerate, float p_additional_speed, float p_constant_jiggle, int p_random_level, float p_rejiggle_power, uint64_t p_tag) {
+    jiggle_tilt = p_jiggle_tilt;
+    jiggle_frequency = p_jiggle_frequency;
+    jiggle_decelerate = p_jiggle_decelerate;
+    additional_speed = p_additional_speed;
+    constant_jiggle = p_constant_jiggle;
+    random_level = p_random_level;
+    scale_axes = p_scale_axes;
+    rotation_axes = p_rotation_axes;
+    power_multiplier = p_jiggle_power;
+    rejiggle_power = p_rejiggle_power;
+    current_jiggle_power = 1.0f;
+    is_jiggling_finished = false;
+    jiggle_node = Object::cast_to<Node3D>(p_owner);
+    jiggle_node_2d = Object::cast_to<Node2D>(p_owner);
+    jiggle_node_control = Object::cast_to<Control>(p_owner);
+}
+
+JiggleTweener::JiggleTweener() {
+    jiggle_node = nullptr;
+    jiggle_node_2d = nullptr;
+    jiggle_node_control = nullptr;
+}
 // Helper function to create jiggle animation
 Ref<YTweenWrap> YTween::tween_jiggle(Node *p_owner, float jiggle_power, float jiggle_tilt, float jiggle_frequency,
     Vector3 scale_axes, Vector3 rotation_axes, float jiggle_decelerate, float additional_speed, float constant_jiggle, int random_level, float rejiggle_power, uint64_t p_tag) {
@@ -477,53 +530,68 @@ Ref<YTweenWrap> YTween::tween_jiggle(Node *p_owner, float jiggle_power, float ji
         return new_wrap;
     }
 
-    // Create the tween
-    Ref<YTweenJiggle> created_tween = find_tween(p_owner, p_tag);
-    Ref<YTweenJiggle> tween;
-    if (created_tween.is_null() || !created_tween.is_valid()) {
-        created_tween = memnew(YTweenJiggle(tree));
-        tween = create_tween_from(p_owner, tree, created_tween, p_tag);
-    } else {
-        tween = created_tween;
+    // Check for existing tween and get its state if it exists
+    Ref<YTweenJiggle> existing_tween = find_tween(p_owner, p_tag);
+    bool was_jiggling = false;
+    float existing_jiggle_time = 0.0f;
+    Vector3 existing_initial_rotation = Vector3(0,0,0);
+    Vector3 existing_initial_scale = Vector3(0,0,0);
+    
+    if (existing_tween.is_valid() && existing_tween->jiggle_tweener.is_valid() && existing_tween->jiggle_tweener->started_jiggle) {
+        existing_jiggle_time = existing_tween->jiggle_tweener->jiggle_time;
+        was_jiggling = existing_tween->jiggle_tweener->is_jiggling;
+        existing_initial_rotation = existing_tween->jiggle_tweener->initial_rotation;
+        existing_initial_scale = existing_tween->jiggle_tweener->initial_scale;
+        // Kill the existing tween
+        kill_specific_tween(existing_tween);
     }
+
+    // Create a new tween
+    Ref<YTweenJiggle> tween;
+    tween.instantiate(tree);
+    tween = create_tween_from(p_owner, tree, tween, p_tag);
+    
     if (!tween.is_valid()) {
         return tween;
     }
-
+    
+    Ref<JiggleTweener> jiggle_tweener;
+    jiggle_tweener.instantiate(p_owner, jiggle_power, jiggle_tilt, jiggle_frequency, scale_axes, rotation_axes, jiggle_decelerate, additional_speed, constant_jiggle, random_level, rejiggle_power, p_tag);
     // Store jiggle parameters
-    tween->jiggle_tilt = jiggle_tilt;
-    tween->jiggle_frequency = jiggle_frequency;
-    tween->jiggle_decelerate = jiggle_decelerate;
-    tween->additional_speed = additional_speed;
-    tween->constant_jiggle = constant_jiggle;
-    tween->random_level = random_level;
-    tween->scale_axes = scale_axes;
-    tween->rotation_axes = rotation_axes;
-    tween->power_multiplier = jiggle_power;
-    tween->rejiggle_power = rejiggle_power;
-    tween->is_jiggling = true;
-    tween->current_jiggle_power = 1.0f;
-    tween->is_jiggling_finished = false;
-    tween->jiggle_node = node3d;
-    if (tween->started_jiggle) {
-        tween->eased_power_progress = 1.1f * jiggle_power;
-        tween->rejiggled = true;
-        tween->rejiggle_progress = 1.0f * jiggle_power;
-        tween->randomize_trigs((rejiggle_power * jiggle_power) / 4.0f);
-        tween->stop();
-        tween->play();
+    tween->jiggle_tweener = jiggle_tweener;
+    jiggle_tweener->power_multiplier = jiggle_power;
+    jiggle_tweener->jiggle_tilt = jiggle_tilt;
+    jiggle_tweener->jiggle_frequency = jiggle_frequency;
+    jiggle_tweener->jiggle_decelerate = jiggle_decelerate;
+    jiggle_tweener->additional_speed = additional_speed;
+    jiggle_tweener->constant_jiggle = constant_jiggle;
+    jiggle_tweener->random_level = random_level;
+    jiggle_tweener->scale_axes = scale_axes;
+    jiggle_tweener->rotation_axes = rotation_axes;
+    jiggle_tweener->current_jiggle_power = 1.0f;
+    jiggle_tweener->is_jiggling_finished = false;
+
+    if (was_jiggling) {
+        jiggle_tweener->eased_power_progress = 1.1f * jiggle_power;
+        jiggle_tweener->jiggle_time = existing_jiggle_time;
+        jiggle_tweener->rejiggled = true;
+        jiggle_tweener->initial_rotation = existing_initial_rotation;
+        jiggle_tweener->initial_scale = existing_initial_scale;
+        jiggle_tweener->rejiggle_progress = 1.0f * jiggle_power;
+        jiggle_tweener->randomize_trigs((rejiggle_power * jiggle_power) / 4.0f);
     } else {
-        tween->target_jiggle_power = 1.15f * jiggle_power;
-        tween->eased_power_progress = 1.0f;
-        tween->current_jiggle_power = 0.15f * jiggle_power;
-        tween->rejiggled = false;
-        tween->randomize_trigs();
-        tween->tween_method(tween->get_jiggle_callable(), 0.0, 1.0, 10.0f);
+        jiggle_tweener->target_jiggle_power = 1.15f * jiggle_power;
+        jiggle_tweener->eased_power_progress = 1.0f;
+        jiggle_tweener->current_jiggle_power = 0.15f * jiggle_power;
+        jiggle_tweener->rejiggled = false;
+        jiggle_tweener->randomize_trigs();
     }
 
-    tween->eased_power_progress = 1.0f;
-    tween->rejiggle_random_offset = Math::random(-0.2f, 0.2f);
-    // print_line("Created jiggle tween with tag ",p_tag);
+    jiggle_tweener->eased_power_progress = 1.0f;
+    jiggle_tweener->rejiggle_random_offset = Math::random(-0.2f, 0.2f);
+
+    tween->append(jiggle_tweener);
+
     return tween;
 }
 
@@ -544,60 +612,106 @@ Ref<YTweenWrap> YTween::tween_jiggle_2d(Node *p_owner, float jiggle_power, float
         return new_wrap;
     }
 
-    // Create the tween
-    Ref<YTweenJiggle> created_tween = find_tween(p_owner, p_tag);
-    Ref<YTweenJiggle> tween;
-    if (created_tween.is_null() || !created_tween.is_valid()) {
-        created_tween = memnew(YTweenJiggle(tree));
-        tween = create_tween_from(p_owner, tree, created_tween, p_tag);
-    } else {
-        tween = created_tween;
+    // Check for existing tween and get its state if it exists
+    Ref<YTweenJiggle> existing_tween = find_tween(p_owner, p_tag);
+    bool was_jiggling = false;
+    float existing_jiggle_time = 0.0f;
+    Vector3 existing_initial_rotation = Vector3(0,0,0);
+    Vector3 existing_initial_scale = Vector3(0,0,0);
+    
+    if (existing_tween.is_valid() && existing_tween->jiggle_tweener.is_valid() && existing_tween->jiggle_tweener->started_jiggle) {
+        existing_jiggle_time = existing_tween->jiggle_tweener->jiggle_time;
+        was_jiggling = existing_tween->jiggle_tweener->is_jiggling;
+        existing_initial_rotation = existing_tween->jiggle_tweener->initial_rotation;
+        existing_initial_scale = existing_tween->jiggle_tweener->initial_scale;
+        // Kill the existing tween
+        kill_specific_tween(existing_tween);
     }
+
+    // Create a new tween
+    Ref<YTweenJiggle> tween;
+    tween.instantiate(tree);
+    tween = create_tween_from(p_owner, tree, tween, p_tag);
+    
     if (!tween.is_valid()) {
         return tween;
     }
-
+    
+    Ref<JiggleTweener> jiggle_tweener;
+    jiggle_tweener.instantiate(p_owner, jiggle_power, jiggle_tilt, jiggle_frequency, Vector3(scale_axes.x, scale_axes.y, 0), Vector3(0,0,1), jiggle_decelerate, additional_speed, constant_jiggle, random_level, rejiggle_power, p_tag);
     // Store jiggle parameters
-    tween->jiggle_tilt = jiggle_tilt;
-    tween->jiggle_frequency = jiggle_frequency;
-    tween->jiggle_decelerate = jiggle_decelerate;
-    tween->additional_speed = additional_speed;
-    tween->constant_jiggle = constant_jiggle;
-    tween->random_level = random_level;
-    tween->scale_axes = Vector3(scale_axes.x, scale_axes.y, 0);
-    tween->rotation_axes = Vector3(0,0,1);
-    tween->power_multiplier = jiggle_power;
-    tween->rejiggle_power = rejiggle_power;
-    tween->is_jiggling = true;
-    tween->current_jiggle_power = 1.0f;
-    tween->is_jiggling_finished = false;
-    tween->jiggle_node = nullptr;
-    tween->jiggle_node_2d = node2d;
-    tween->jiggle_node_control = control;
+    tween->jiggle_tweener = jiggle_tweener;
+    jiggle_tweener->power_multiplier = jiggle_power;
+    jiggle_tweener->jiggle_tilt = jiggle_tilt;
+    jiggle_tweener->jiggle_frequency = jiggle_frequency;
+    jiggle_tweener->jiggle_decelerate = jiggle_decelerate;
+    jiggle_tweener->additional_speed = additional_speed;
+    jiggle_tweener->constant_jiggle = constant_jiggle;
+    jiggle_tweener->random_level = random_level;
+    jiggle_tweener->scale_axes = Vector3(scale_axes.x, scale_axes.y, 0);
+    jiggle_tweener->rotation_axes = Vector3(0,0,1);
+    jiggle_tweener->current_jiggle_power = 1.0f;
+    jiggle_tweener->is_jiggling_finished = false;
 
-    if (tween->started_jiggle) {
-        tween->eased_power_progress = 1.1f * jiggle_power;
-        tween->rejiggled = true;
-        tween->rejiggle_progress = 1.0f * jiggle_power;
-        tween->randomize_trigs((rejiggle_power * jiggle_power) / 4.0f);
-        tween->stop();
-        tween->play();
+    if (was_jiggling) {
+        jiggle_tweener->initial_rotation = existing_initial_rotation;
+        jiggle_tweener->initial_scale = existing_initial_scale;
+        jiggle_tweener->eased_power_progress = 1.1f * jiggle_power;
+        jiggle_tweener->jiggle_time = existing_jiggle_time;
+        jiggle_tweener->rejiggled = true;
+        jiggle_tweener->rejiggle_progress = 1.0f * jiggle_power;
+        jiggle_tweener->randomize_trigs((rejiggle_power * jiggle_power) / 4.0f);
     } else {
-        tween->target_jiggle_power = 1.15f * jiggle_power;
-        tween->eased_power_progress = 1.0f;
-        tween->current_jiggle_power = 0.15f * jiggle_power;
-        tween->rejiggled = false;
-        tween->randomize_trigs();
-        tween->tween_method(tween->get_jiggle_callable(), 0.0, 1.0, 10.0f);
+        jiggle_tweener->target_jiggle_power = 1.15f * jiggle_power;
+        jiggle_tweener->eased_power_progress = 1.0f;
+        jiggle_tweener->current_jiggle_power = 0.15f * jiggle_power;
+        jiggle_tweener->rejiggled = false;
+        jiggle_tweener->randomize_trigs();
     }
 
-    tween->eased_power_progress = 1.0f;
-    tween->rejiggle_random_offset = Math::random(-0.2f, 0.2f);
-    // print_line("Created jiggle tween with tag ",p_tag);
+    jiggle_tweener->eased_power_progress = 1.0f;
+    jiggle_tweener->rejiggle_random_offset = Math::random(-0.2f, 0.2f);
+
+    tween->append(jiggle_tweener);
+
     return tween;
 }
 
-void YTweenJiggle::randomize_trigs(float p_trans)
+void JiggleTweener::set_tween(const Ref<Tween> &p_tween) {
+    Tweener::set_tween(p_tween);
+	if (trans_type == Tween::TRANS_MAX) {
+		trans_type = p_tween->get_trans();
+	}
+	if (ease_type == Tween::EASE_MAX) {
+		ease_type = p_tween->get_ease();
+	}
+}
+
+Ref<JiggleTweener> JiggleTweener::set_delay(double p_delay) {
+	delay = p_delay;
+	return this;
+}
+
+#ifdef YGODOT
+Ref<JiggleTweener> JiggleTweener::set_trans(Tween::TransitionType p_trans, real_t p_param1, real_t p_param2) {
+	trans_type = p_trans;
+	trans_params[0] = p_param1;
+	trans_params[1] = p_param2;
+	return this;
+}
+#else
+Ref<JiggleTweener> JiggleTweener::set_trans(Tween::TransitionType p_trans) {
+	trans_type = p_trans;
+	return this;
+}
+#endif
+
+Ref<JiggleTweener> JiggleTweener::set_ease(Tween::EaseType p_ease) {
+	ease_type = p_ease;
+	return this;
+}
+
+void JiggleTweener::randomize_trigs(float p_trans)
 {
     if (p_trans >= 1.0f)
     {
@@ -617,7 +731,7 @@ void YTweenJiggle::randomize_trigs(float p_trans)
             for (int t = 0; t < 2; t++)
             {
                 Vector4 new_t_values = get_random_trig_value();
-                Vector4 current_t_values = trig_values.get(i+t);
+                Vector4 current_t_values = trig_values.size() > i+t ? static_cast<Vector4>(trig_values.get(i+t)) : get_random_trig_value();
                 current_t_values.x = Math::lerp(current_t_values.x, new_t_values.x, p_trans);
                 current_t_values.y = Math::lerp(current_t_values.y, new_t_values.y, p_trans);
                 current_t_values.z = Math::lerp(current_t_values.z, new_t_values.z, p_trans);
@@ -627,41 +741,43 @@ void YTweenJiggle::randomize_trigs(float p_trans)
     }
 }
 
-void YTweenJiggle::calculate_jiggle(float p_delta)
-{
-    if (!started_jiggle) {
+void JiggleTweener::start() {
+    Tweener::start();
+    if (!rejiggled) {
         if (jiggle_node != nullptr && jiggle_node->is_inside_tree()) {
             initial_rotation = jiggle_node->get_rotation_degrees();
             initial_scale = jiggle_node->get_scale();
-            randomize_trigs();
-            is_jiggling = true;
-            started_jiggle = true;
         } else if (jiggle_node_2d != nullptr && jiggle_node_2d->is_inside_tree()) {
             initial_rotation = Vector3(0,0,jiggle_node_2d->get_rotation_degrees());
             initial_scale = Vector3(jiggle_node_2d->get_scale().x, jiggle_node_2d->get_scale().y, 0);
-            randomize_trigs();
-            is_jiggling = true;
-            started_jiggle = true;
         } else if (jiggle_node_control != nullptr && jiggle_node_control->is_inside_tree()) {
             initial_rotation = Vector3(0,0,jiggle_node_control->get_rotation_degrees());
             initial_scale = Vector3(jiggle_node_control->get_scale().x, jiggle_node_control->get_scale().y, 0);
-            randomize_trigs();
-            is_jiggling = true;
-            started_jiggle = true;
         }
     }
-    // print_line("Calculating jiggle ",p_delta," last delta time ",YTween::last_delta_time);
+    randomize_trigs();
+    is_jiggling = true;
+    started_jiggle = true;
+}
+
+bool JiggleTweener::step(double &p_delta)
+{
+    if (finished) {
+		return false;
+	}
+
+	elapsed_time += p_delta;
+
     if (!is_jiggling || ((jiggle_node == nullptr ||!jiggle_node->is_inside_tree()) && (jiggle_node_2d == nullptr || !jiggle_node_2d->is_inside_tree()) && (jiggle_node_control == nullptr || !jiggle_node_control->is_inside_tree()))) {
-        if (YTween::get_singleton() != nullptr) {
-            YTween::get_singleton()->kill_specific_tween(this);
-        }
-        return;
+        return false;
     }
 
-    calculate_trig_values();
+    calculate_trig_values(p_delta);
 
-    if (current_jiggle_power <= 0.0f && constant_jiggle <= 0.0f) is_jiggling_finished = true;
-    
+    if (current_jiggle_power <= 0.0001f && constant_jiggle <= 0.0001f) {
+        is_jiggling_finished = true;
+        current_jiggle_power = 0.0f;
+    }
 
     float val1 = 0.0f;
     float val2 = 0.0f;
@@ -681,10 +797,10 @@ void YTweenJiggle::calculate_jiggle(float p_delta)
     {
         if (rejiggle_progress > 0.0f)
         {
-            rejiggle_progress -= YTween::last_delta_time * jiggle_decelerate * 1.75f;
+            rejiggle_progress -= p_delta * jiggle_decelerate * 1.75f;
             if (rejiggle_progress < 0.001f) rejiggle_progress = 0.001f;
             float targetValue = Math::sin(jiggle_tilt * 1.45f * static_cast<Vector4>(trig_values.get(1)).w + static_cast<Vector4>(trig_values.get(0)).z + static_cast<Vector4>(trig_values.get(1)).z) * jiggle_tilt * static_cast<Vector4>(trig_values.get(0)).y * rejiggle_progress * rejiggle_power;
-            rejiggle_value = static_cast<float>(Math::lerp(static_cast<double>(rejiggle_value), static_cast<double>(targetValue), YTween::last_delta_time * 12.0));
+            rejiggle_value = static_cast<float>(Math::lerp(static_cast<double>(rejiggle_value), static_cast<double>(targetValue), p_delta * 12.0));
         }
         else
         {
@@ -727,6 +843,7 @@ void YTweenJiggle::calculate_jiggle(float p_delta)
         jiggle_node_control->set_rotation_degrees(initial_rotation.z + zAngle);
         jiggle_node_control->set_scale(Vector2(initial_scale.x + xScale, initial_scale.y + yScale));
     }
+
     if (is_jiggling_finished) {
         if (jiggle_node != nullptr && jiggle_node->is_inside_tree()) {
             jiggle_node->set_rotation_degrees(initial_rotation);
@@ -741,18 +858,24 @@ void YTweenJiggle::calculate_jiggle(float p_delta)
             jiggle_node_control->set_scale(Vector2(initial_scale.x, initial_scale.y));
         }
         is_jiggling = false;
-        if (YTween::get_singleton() != nullptr) {
-            YTween::get_singleton()->kill_specific_tween(this);
-        }
+        p_delta = 0.0f;
+        return false;
     } else {
-        if (p_delta > 0.9f && constant_jiggle > 0.0001f) {
-            stop();
-            play();
+        if (constant_jiggle > 0.0001f) {
+            is_jiggling_finished = false;
+
+            p_delta = 0.0f;
+            
+            return true;
         }
     }
+
+    p_delta = 0.0f;
+    
+    return true;
 }
 
-float YTweenJiggle::ease_in_out_cubic(float start, float end, float t) {
+float JiggleTweener::ease_in_out_cubic(float start, float end, float t) {
     t /= 0.5f;
     end -= start;
     if (t < 1) return end * 0.5f * t * t * t + start;
@@ -760,21 +883,21 @@ float YTweenJiggle::ease_in_out_cubic(float start, float end, float t) {
     return end * 0.5f * (t * t * t + 2) + start;
 }
 
-Vector4 YTweenJiggle::get_random_trig_value()
+Vector4 JiggleTweener::get_random_trig_value()
 {
     // x: Value, y: Multiplier, z: TimeOffset, w: RandomTimeMult
     return Vector4(0.0f, Math::random(0.85f, 1.15f), Math::random(-Math_PI, Math_PI), Math::random(0.8f, 1.2f));
 }
 
-void YTweenJiggle::calculate_trig_values(float time_multiplier) {
+void JiggleTweener::calculate_trig_values(float p_delta_time, float time_multiplier) {
         float finishingSafeRange = current_jiggle_power - 0.01f;
         if (finishingSafeRange <= 0.0f) finishingSafeRange = 0.0f;
 
-        jiggle_time += YTween::last_delta_time * (jiggle_frequency * time_multiplier);
+        jiggle_time += p_delta_time * (jiggle_frequency * time_multiplier);
 
-        current_jiggle_power = Math::lerp(current_jiggle_power, target_jiggle_power, static_cast<float>(YTween::last_delta_time) * 2.0f);
+        current_jiggle_power = Math::lerp(current_jiggle_power, target_jiggle_power, static_cast<float>(p_delta_time) * 2.0f);
 
-        eased_power_progress = MAX(constant_jiggle, eased_power_progress - YTween::last_delta_time * jiggle_decelerate * additional_speed);
+        eased_power_progress = MAX(constant_jiggle, eased_power_progress - p_delta_time * jiggle_decelerate * additional_speed);
 
         target_jiggle_power = ease_in_out_cubic(-0.001f, 1.0f, eased_power_progress);
 
@@ -782,12 +905,11 @@ void YTweenJiggle::calculate_trig_values(float time_multiplier) {
         {
             for (int j = 0; j < 2; j++)
             {
-                Vector4 parameters = trig_values.get(i + j);
+                Vector4 parameters = trig_values.size() > i + j ? static_cast<Vector4>(trig_values.get(i + j)) : get_random_trig_value();
 
                 float timeValue = jiggle_time * parameters.w + parameters.z;
                 float multiplyValue = (jiggle_tilt * power_multiplier + additional_tilt) * parameters.y *
                     finishingSafeRange / additional_speed;
-
                 if (j % 2 == 0)
                     parameters.x = Math::sin(timeValue) * multiplyValue;
                 else
@@ -796,9 +918,4 @@ void YTweenJiggle::calculate_trig_values(float time_multiplier) {
                 trig_values.set(i + j, parameters);
             }
         }
-}
-
-Callable YTweenJiggle::get_jiggle_callable()
-{
-    return callable_mp(this, &YTweenJiggle::calculate_jiggle);
 }
