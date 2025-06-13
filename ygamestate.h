@@ -110,6 +110,10 @@ public:
     HashMap<int,YGamePlayer*> game_players;
     HashMap<int,YVisualElement3D*> visual_elements_3d;
 
+    bool is_waiting_for_next_action_approval = false;
+    void set_is_waiting_for_next_action_approval(bool b);
+    bool get_is_waiting_for_next_action_approval() const { return is_waiting_for_next_action_approval; }
+
     int pending_waiting_for_start_approval_attempts = 0;
 
     int game_actions_done_since_started_counting = 0;

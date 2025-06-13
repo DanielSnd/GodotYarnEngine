@@ -111,7 +111,7 @@ void YGameState::_bind_methods() {
     ADD_SIGNAL(MethodInfo("ended_all_actions"));
     ADD_SIGNAL(MethodInfo("player_registered",PropertyInfo(Variant::OBJECT, "new_player", PROPERTY_HINT_RESOURCE_TYPE, "YGamePlayer")));
     ADD_SIGNAL(MethodInfo("player_removed",PropertyInfo(Variant::INT, "removed_player_id")));
-
+    ADD_SIGNAL(MethodInfo("changed_waiting_for_next_action_approval", PropertyInfo(Variant::BOOL, "is_waiting")));
 
     // Add RPC methods for action steps
     ClassDB::bind_method(D_METHOD("_rpc_request_action_step_approval", "action_id", "step_identifier", "step_data"), &YGameState::_rpc_request_action_step_approval);
@@ -458,6 +458,7 @@ void YGameState::do_process(double delta) {
                     }
                     switch (next_action->remote_start_approval) {
                         case YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_PENDING:
+                            set_is_waiting_for_next_action_approval(true);
                             pending_waiting_for_start_approval_attempts++;
                             if (pending_waiting_for_start_approval_attempts > 20) {
                                 if (debugging_level >= 2) {
@@ -490,7 +491,7 @@ void YGameState::do_process(double delta) {
                 }
 
                 overriding_game_actions.remove_at(0);
-                
+                set_is_waiting_for_next_action_approval(false);
                 if (next_action->runs_parallel) {
                     current_parallel_actions.push_back(next_action);
                     next_action->enter_action();
@@ -522,6 +523,7 @@ void YGameState::do_process(double delta) {
                     }
                     switch (next_action->remote_start_approval) {
                         case YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_PENDING:
+                            set_is_waiting_for_next_action_approval(true);
                             pending_waiting_for_start_approval_attempts++;
                             if (pending_waiting_for_start_approval_attempts > 20) {
                                 if (debugging_level >= 2) {
@@ -555,6 +557,7 @@ void YGameState::do_process(double delta) {
 
                 future_game_actions.remove_at(0);
 
+                set_is_waiting_for_next_action_approval(false);
                 if (next_action->runs_parallel) {
                     current_parallel_actions.push_back(next_action);
                     next_action->enter_action();
@@ -874,6 +877,13 @@ void YGameState::deserialize_game_actions_into(Vector<Ref<YGameAction>> &list_in
     for (int i = 0; i < serialized_game_actions.size(); i++) {
         Dictionary action_dict = serialized_game_actions[i];
         deserialize_individual_game_action_into(list_into, action_dict);
+    }
+}
+
+void YGameState::set_is_waiting_for_next_action_approval(bool b) {
+    if (b != is_waiting_for_next_action_approval) {
+        is_waiting_for_next_action_approval = b;
+        emit_signal(SNAME("changed_waiting_for_next_action_approval"), b);
     }
 }
 
@@ -1714,41 +1724,14 @@ void YGameState::_rpc_request_start_action_approval(int action_id) {
             }
         } else if (has_current_game_action()) {
             desired_action_id = get_current_game_action()->get_unique_id();
-            print_line(vformat("[YGameState] Current action is different: %d", desired_action_id));
-        }
-    }
-
-    // Check if action is next override action
-    if (!approved && !overriding_game_actions.is_empty()) {
-        if (overriding_game_actions[0]->get_unique_id() == action_id) {
-            approved = true;
-            desired_action_id = action_id;
             if (debugging_level >= 2) {
-                print_line(vformat("[YGameState] Action is next override action: %d", action_id));
-            }
-        } else {
-            desired_action_id = overriding_game_actions[0]->get_unique_id();
-            if (debugging_level >= 2) {
-                print_line(vformat("[YGameState] Next override action is different: %d", desired_action_id));
+                print_line(vformat("[YGameState] Current action is different: %d", desired_action_id));
             }
         }
     }
 
-    // Check if action is next future action (only if no override actions)
-    if (!approved && overriding_game_actions.is_empty() && !future_game_actions.is_empty()) {
-        if (future_game_actions[0]->get_unique_id() == action_id) {
-            approved = true;
-            desired_action_id = action_id;
-            if (debugging_level >= 2) {
-                print_line(vformat("[YGameState] Action is next future action: %d", action_id));
-            }
-        } else {
-            desired_action_id = future_game_actions[0]->get_unique_id();
-            if (debugging_level >= 2) {
-                print_line(vformat("[YGameState] Next future action is different: %d", desired_action_id));
-            }
-        }
-    }
+    // If it's not in past or current actions, don't approve it.
+    // Otherwise they might start a future action when in reality I might be about to add a new override action.
 
     if (approved) {
         desired_action_id = action_id;
