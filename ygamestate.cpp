@@ -121,11 +121,13 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("_rpc_end_game_action", "action_id"), &YGameState::_rpc_end_game_action);
     ClassDB::bind_method(D_METHOD("_rpc_mark_action_finished", "action_id"), &YGameState::_rpc_mark_action_finished);
     // Add new RPC methods for action approval
-    ClassDB::bind_method(D_METHOD("_rpc_request_start_action_approval", "action_id"), &YGameState::_rpc_request_start_action_approval);
-    ClassDB::bind_method(D_METHOD("_rpc_response_start_action_approval", "action_id", "desired_action_id", "approved"), &YGameState::_rpc_response_start_action_approval);
+    ClassDB::bind_method(D_METHOD("_rpc_request_start_action_approval", "previous_action_id","action_id"), &YGameState::_rpc_request_start_action_approval);
+    ClassDB::bind_method(D_METHOD("_rpc_response_start_action_approval", "action_id", "desired_action_id", "desired_previous_action_id", "approved"), &YGameState::_rpc_response_start_action_approval);
     // Add new RPC methods for state parameters
     ClassDB::bind_method(D_METHOD("_rpc_set_state_parameter", "param_id", "param_value"), &YGameState::_rpc_set_state_parameter);
     ClassDB::bind_method(D_METHOD("_rpc_remove_state_parameter", "param_id"), &YGameState::_rpc_remove_state_parameter);
+    ClassDB::bind_method(D_METHOD("_rpc_past_actions_order", "past_actions_order"), &YGameState::_rpc_past_actions_order);
+    ClassDB::bind_method(D_METHOD("_rpc_acknowledge_past_actions_order", "past_actions_order"), &YGameState::_rpc_acknowledge_past_actions_order);
 
     ClassDB::bind_method(D_METHOD("mark_action_finished_and_sync", "action_id"), &YGameState::mark_action_finished_and_sync);
 
@@ -460,7 +462,7 @@ void YGameState::do_process(double delta) {
                         case YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_PENDING:
                             set_is_waiting_for_next_action_approval(true);
                             pending_waiting_for_start_approval_attempts++;
-                            if (pending_waiting_for_start_approval_attempts > 20) {
+                            if (pending_waiting_for_start_approval_attempts > 100) {
                                 if (debugging_level >= 2) {
                                     print_line(vformat("[YGameState %d] Too many pending waiting for start approval attempts, requesting again.", scene_multiplayer->get_unique_id()));
                                 }
@@ -645,6 +647,7 @@ void YGameState::set_current_turn_player(YGamePlayer* _new_current_player)
         current_parallel_actions.clear();
         future_parallel_actions.clear();
         showed_out_of_actions_message=false;
+        tracking_past_actions_order.clear();
     }
 
 void YGameState::clear_all_players()
@@ -1098,6 +1101,8 @@ void YGameState::_notification(int p_what) {
             this->rpc_config(rpc_response_start_action_approval_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
             this->rpc_config(rpc_set_state_parameter_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
             this->rpc_config(rpc_remove_state_parameter_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+            this->rpc_config(rpc_past_actions_order_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_AUTHORITY, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
+            this->rpc_config(rpc_acknowledge_past_actions_order_stringname,create_rpc_dictionary_config(MultiplayerAPI::RPC_MODE_ANY_PEER, MultiplayerPeer::TRANSFER_MODE_RELIABLE, false, 0));
         }
     }
 }
@@ -1694,7 +1699,7 @@ void YGameState::_rpc_mark_action_finished(int action_id) {
     }
 }
 
-void YGameState::_rpc_request_start_action_approval(int action_id) {
+void YGameState::_rpc_request_start_action_approval(int previous_action_id, int action_id) {
     if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() != 1) {
         if (debugging_level >= 2) {
             print_line("[YGameState] Ignoring approval request - not server");
@@ -1705,31 +1710,93 @@ void YGameState::_rpc_request_start_action_approval(int action_id) {
         print_line(vformat("[YGameState] Server received approval request for action %d from %d", action_id, scene_multiplayer->get_remote_sender_id()));
     }
     int desired_action_id = 0;
+    int desired_previous_action_id = -1;
 
     bool approved = false;
+    bool send_past_actions_order = false;
     
+
+
     // Check if action is in past actions
-    for (const auto& action : past_game_actions) {
-        if (action.is_valid() && action->get_unique_id() == action_id) {
-            approved = true;
-            desired_action_id = action_id;
-            if (debugging_level >= 2) {
-                print_line(vformat("[YGameState] Action found in past actions: %d", action_id));
+    for (int i = 0; i < past_game_actions.size(); i++) {
+        if (!past_game_actions[i].is_valid()) continue;
+        if (previous_action_id != -1 && past_game_actions[i]->get_unique_id() == previous_action_id && i + 1 < past_game_actions.size()) {
+            if (past_game_actions[i+1]->get_unique_id() == action_id) {
+                approved = true;
+                desired_action_id = action_id;
+                desired_previous_action_id = previous_action_id;
+                if (debugging_level >= 2) {
+                    print_line(vformat("[YGameState] Action found in past actions and previous action is the same: %d", action_id));
+                }
+                break;
+            } else {
+                send_past_actions_order = true;
+                desired_action_id = past_game_actions[i+1]->get_unique_id();
+                desired_previous_action_id = past_game_actions[i]->get_unique_id();
+                approved = false;
+                if (debugging_level >= 2) {
+                    print_line(vformat("[YGameState] Action found in past actions but next action is not the same: %d", action_id));
+                }
+                break;
             }
-            break;
+        }
+        else if (past_game_actions[i]->get_unique_id() == action_id) {
+            // Now, we gotta make sure these actions are being executed in the correct order...
+            // So before approving, we need to check if the previous action before this one is the same for me as what they sent as their previous action id.
+            if (previous_action_id != -1 && i > 0 && past_game_actions[i-1].is_valid()) {
+                if (past_game_actions[i-1]->unique_id == previous_action_id) {
+                    approved = true;
+                    desired_action_id = action_id;
+                    desired_previous_action_id = previous_action_id;
+                    if (debugging_level >= 2) {
+                        print_line(vformat("[YGameState] Action found in past actions and previous action is the same: %d", action_id));
+                    }
+                    break;
+                }
+            }
+            else if (i == 0 || previous_action_id == -1) {
+                approved = true;
+                desired_action_id = action_id;
+                desired_previous_action_id = previous_action_id;
+                if (debugging_level >= 2) {
+                    print_line(vformat("[YGameState] Action found in past actions and previous action is the same: %d", action_id));
+                }
+            } else {
+                if (debugging_level >= 2) {
+                    print_line(vformat("[YGameState] Action found in past actions but previous action is not the same: %d", action_id));
+                }
+                send_past_actions_order = true;
+            }
         }
     }
 
     // Check if action is current action
-    if (!approved) {
+    if (!approved && desired_previous_action_id == -1) {
         if (has_current_game_action() && get_current_game_action()->get_unique_id() == action_id) {
-            approved = true;
-            desired_action_id = action_id;
-            if (debugging_level >= 2) {
-                print_line(vformat("[YGameState] Action is current action: %d", action_id));
+            if (previous_action_id != -1) {
+                if (past_game_actions.size() > 0 && past_game_actions[past_game_actions.size() - 1].is_valid()) {
+                    if (past_game_actions[past_game_actions.size() - 1]->unique_id == previous_action_id) {
+                        approved = true;
+                        desired_action_id = action_id;
+                        desired_previous_action_id = previous_action_id;
+                        if (debugging_level >= 2) {
+                            print_line(vformat("[YGameState] Action is current action and previous action is the same: %d", action_id));
+                        }
+                    } else {
+                        send_past_actions_order = true;
+                        desired_action_id = action_id;
+                        desired_previous_action_id = past_game_actions[past_game_actions.size() - 1]->unique_id;
+                        if (debugging_level >= 2) {
+                            print_line(vformat("[YGameState] Action is current action but previous action is not the same: %d", action_id));
+                        }
+                    }
+                }
             }
         } else if (has_current_game_action()) {
             desired_action_id = get_current_game_action()->get_unique_id();
+            if (past_game_actions.size() > 0 && past_game_actions[past_game_actions.size() - 1].is_valid()) {
+                desired_previous_action_id = past_game_actions[past_game_actions.size() - 1]->unique_id;
+            }
             if (debugging_level >= 2) {
                 print_line(vformat("[YGameState] Current action is different: %d", desired_action_id));
             }
@@ -1741,6 +1808,7 @@ void YGameState::_rpc_request_start_action_approval(int action_id) {
 
     if (approved) {
         desired_action_id = action_id;
+        desired_previous_action_id = previous_action_id;
     }
 
     if (debugging_level >= 2) {
@@ -1748,19 +1816,26 @@ void YGameState::_rpc_request_start_action_approval(int action_id) {
             action_id, desired_action_id, approved ? "true" : "false"));
     }
 
-    Array sending_rpc_array;
-    sending_rpc_array.push_back(action_id);
-    sending_rpc_array.push_back(desired_action_id);
-    sending_rpc_array.push_back(approved);
-    int argcount = sending_rpc_array.size();
-    const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
-    for (int i = 0; i < argcount; i++) {
-        argptrs[i] = &sending_rpc_array[i];
+    {
+        Array sending_rpc_array;
+        sending_rpc_array.push_back(action_id);
+        sending_rpc_array.push_back(desired_action_id);
+        sending_rpc_array.push_back(desired_previous_action_id);
+        sending_rpc_array.push_back(approved);
+        int argcount = sending_rpc_array.size();
+        const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+        for (int i = 0; i < argcount; i++) {
+            argptrs[i] = &sending_rpc_array[i];
+        }
+        rpcp(scene_multiplayer->get_remote_sender_id(), rpc_response_start_action_approval_stringname, argptrs, argcount);
     }
-    rpcp(scene_multiplayer->get_remote_sender_id(), rpc_response_start_action_approval_stringname, argptrs, argcount);
+
+    if (send_past_actions_order) {
+        send_past_actions_order_to_client(scene_multiplayer->get_remote_sender_id());
+    }
 }
 
-void YGameState::_rpc_response_start_action_approval(int action_id, int desired_action_id, bool approved) {
+void YGameState::_rpc_response_start_action_approval(int action_id, int desired_action_id, int desired_previous_action_id, bool approved) {
     if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() == 1) {
         if (debugging_level >= 2) {
             print_line("[YGameState] Ignoring approval response - not client");
@@ -1800,10 +1875,34 @@ void YGameState::_rpc_response_start_action_approval(int action_id, int desired_
         Ref<YGameAction> desired_action = get_game_action(desired_action_id);
         if (desired_action.is_valid()) {
             if(!desired_action->started) {
-                if (debugging_level >= 2) {
-                    print_line(vformat("[YGameState %d] Marking the server's desired action as approved", scene_multiplayer->get_unique_id()));
+                if (desired_previous_action_id != -1) {
+                    Ref<YGameAction> desired_previous_action = get_game_action(desired_previous_action_id);
+                    if (desired_previous_action.is_valid()) {
+                        if (past_game_actions.has(desired_previous_action)) {
+                            desired_action->remote_start_approval = YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_APPROVED;
+                            if (overriding_game_actions.has(desired_action)) {
+                                overriding_game_actions.erase(desired_action);
+                                overriding_game_actions.insert(0, desired_action);
+                            }
+                            if (future_game_actions.has(desired_action)) {
+                                future_game_actions.erase(desired_action);
+                                overriding_game_actions.insert(0, desired_action);
+                            }
+                            if (debugging_level >= 2) {
+                                print_line(vformat("[YGameState %d] Marking the server's desired action as approved because the previous action is in the past actions and the desired action is in the future", scene_multiplayer->get_unique_id()));
+                            }
+                        }
+                    }
+                } else {
+                    desired_action->remote_start_approval = YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_APPROVED;
+                    if (future_game_actions.has(desired_action)) {
+                        future_game_actions.erase(desired_action);
+                        overriding_game_actions.insert(0, desired_action);
+                    }
+                    if (debugging_level >= 2) {
+                        print_line(vformat("[YGameState %d] Marking the server's desired action as approved because there's no previous action and the desired action is in the future", scene_multiplayer->get_unique_id()));
+                    }
                 }
-                desired_action->remote_start_approval = YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_APPROVED;
             } else {
                 if (debugging_level >= 2) {
                     print_line(vformat("[YGameState %d] The server's desired action has already started.", scene_multiplayer->get_unique_id()));
@@ -1818,6 +1917,163 @@ void YGameState::_rpc_response_start_action_approval(int action_id, int desired_
 
     pending_waiting_for_start_approval_attempts = 0;
 }
+
+void YGameState::send_past_actions_order_to_client(int client_id) {
+    Vector<int> past_actions_order_for_player = tracking_past_actions_order[client_id];
+
+    TypedArray<int> past_actions_order;
+    
+    // I'll use the first spot on the list to keep track of the order of these syncing messages, to catch out of order problems.
+    if (past_actions_order_for_player.size() == 0) {
+        past_actions_order.push_back(0);
+    } else {
+        past_actions_order.push_back(past_actions_order_for_player[0] + 1);
+    }
+
+    for (int i = 0; i < past_game_actions.size(); i++) {
+        if (past_game_actions[i].is_valid() && !past_actions_order_for_player.has(past_game_actions[i]->unique_id)) {
+            past_actions_order.push_back(past_game_actions[i]->unique_id);
+        }
+    }
+    if (current_game_action.is_valid()) {
+        past_actions_order.push_back(current_game_action->unique_id);
+    }
+
+    Array sending_rpc_array;
+    sending_rpc_array.push_back(past_actions_order);
+    int argcount = sending_rpc_array.size();
+    const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+    for (int i = 0; i < argcount; i++) {
+        argptrs[i] = &sending_rpc_array[i];
+    }
+    rpcp(client_id, rpc_past_actions_order_stringname, argptrs, argcount);
+}
+void YGameState::_rpc_past_actions_order(const TypedArray<int>& past_actions_order) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() == 1) {
+        return; // Only clients should receive past actions order
+    }
+    if (past_actions_order.size() == 0) {
+        return;
+    }
+
+    Vector<int> past_actions_order_for_player = tracking_past_actions_order[scene_multiplayer->get_remote_sender_id()];
+    int last_received_past_actions_order_for_player = past_actions_order_for_player.size() > 0 ? past_actions_order_for_player[0] : -1;
+    int received_new_order = -1;
+    if (past_actions_order.size() > 0) {
+        received_new_order = past_actions_order[0];
+    }
+    if (last_received_past_actions_order_for_player != -1 && received_new_order != last_received_past_actions_order_for_player + 1) {
+        if (debugging_level >= 2) {
+            print_line(vformat("[YGameState %d] Past actions order is out of order", scene_multiplayer->get_unique_id()));
+        }
+        {
+            // Send a new request with the oldest order number received.
+            Array sending_rpc_array;
+            TypedArray<int> empty_past_actions_order;
+            sending_rpc_array.push_back(empty_past_actions_order);
+            int argcount = sending_rpc_array.size();
+            const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+            for (int i = 0; i < argcount; i++) {
+                argptrs[i] = &sending_rpc_array[i];
+            }
+            rpcp(1, rpc_acknowledge_past_actions_order_stringname, argptrs, argcount);
+        }
+        return;
+    }
+    
+    // 0->ordernumber are used to separate different messages with past action orders.
+    past_actions_order_for_player.push_back(0);
+
+    for (int i = 1; i < past_actions_order.size(); i++) {
+        if (!past_actions_order_for_player.has(past_actions_order[i])) {
+            past_actions_order_for_player.push_back(past_actions_order[i]);
+        }
+    }
+
+    HashMap<int,Ref<YGameAction>> actions_to_reorder;
+    Vector<int> actual_past_action_ids;
+    for (int i = 0; i < past_actions_order_for_player.size(); i++) {
+        // 0 are separators between different batches of past orders. After the 0 the next entry is the order batch number.
+        if (past_actions_order_for_player[i] == 0) {
+            // This way we skip the order number as well.
+            i++;
+            continue;
+        }
+        actual_past_action_ids.push_back(past_actions_order_for_player[i]);
+    }
+
+    // Ok, so we received a past actions order, we should make sure we're on track to hit the same past actions order on our end.
+    // Let's start by removing the actions from overriding actions if they are there.
+    for (int i = 0; i < actual_past_action_ids.size(); i++) {
+        Ref<YGameAction> action = get_game_action(actual_past_action_ids[i]);
+        if (action.is_valid()) {
+            if (past_game_actions.has(action)) {
+                continue;
+            }
+            else if (overriding_game_actions.has(action)) {
+                // Ok, it's in overriding game action, we need to move it to the list of reordering actions.
+                overriding_game_actions.erase(action);
+                actions_to_reorder[past_actions_order_for_player[i]] = action;
+            } else if (future_game_actions.has(action)) {
+                // Ok, it's in future game action, we need to move it to the list of reordering actions.
+                future_game_actions.erase(action);
+                actions_to_reorder[past_actions_order_for_player[i]] = action;
+            }
+        }
+    }
+
+    // Now we need to reorder the actions from the list of reordering actions into future actions.
+    for (int i = actual_past_action_ids.size() - 1; i >= 0; i--)
+    {
+        if (actions_to_reorder.has(actual_past_action_ids[i])) {
+            Ref<YGameAction> action  = actions_to_reorder[actual_past_action_ids[i]];
+            if (action.is_valid()) {
+                // Inserting in front but doing it backwards, so it should end up in the correct order.
+                future_game_actions.insert(0, action);
+            }
+        }
+    }
+
+    tracking_past_actions_order[scene_multiplayer->get_remote_sender_id()] = past_actions_order_for_player;
+    {
+        Array sending_rpc_array;
+        sending_rpc_array.push_back(past_actions_order);
+        int argcount = sending_rpc_array.size();
+        const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+        for (int i = 0; i < argcount; i++) {
+            argptrs[i] = &sending_rpc_array[i];
+        }
+        rpcp(1, rpc_acknowledge_past_actions_order_stringname, argptrs, argcount);
+    }
+}
+
+void YGameState::_rpc_acknowledge_past_actions_order(const TypedArray<int>& past_actions_order) {
+    if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() != 1) {
+        return; // Only server should receive acknowledgement of past actions order
+    }
+
+    if (past_actions_order.size() == 0) {
+        // In this case the client is reporting there's something wrong with the past actions order.
+        send_past_actions_order_to_client(scene_multiplayer->get_remote_sender_id());
+        return;
+    }
+
+    // Now that we know the player is aware of these new past action orders we can add them to the tracking list.
+    Vector<int> past_actions_order_for_player = tracking_past_actions_order[scene_multiplayer->get_remote_sender_id()];
+    if (past_actions_order_for_player.size() == 0) {
+        past_actions_order_for_player.push_back(0);
+    }
+    past_actions_order_for_player.write[0] = past_actions_order[0];
+    // Skipping the first one since it's the order number.
+    for (int i = 1; i < past_actions_order.size(); i++) {
+        if (!past_actions_order_for_player.has(past_actions_order[i])) {
+            past_actions_order_for_player.push_back(past_actions_order[i]);
+        }
+    }
+
+    tracking_past_actions_order[scene_multiplayer->get_remote_sender_id()] = past_actions_order_for_player;
+}
+
 
 void YGameState::request_action_approval(YGameAction* action) {
     if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() == 1) {
@@ -1837,6 +2093,11 @@ void YGameState::request_action_approval(YGameAction* action) {
     }
     action->remote_start_approval = YGameAction::RemoteStartApproval::REMOTE_START_APPROVAL_PENDING;
     Array sending_rpc_array;
+    if (past_game_actions.size() > 0 && past_game_actions[past_game_actions.size() - 1].is_valid()) {
+        sending_rpc_array.push_back(past_game_actions[past_game_actions.size() - 1]->unique_id);
+    } else {
+        sending_rpc_array.push_back(-1);
+    }
     sending_rpc_array.push_back(action->unique_id);
     int argcount = sending_rpc_array.size();
     const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
@@ -1845,6 +2106,3 @@ void YGameState::request_action_approval(YGameAction* action) {
     }
     rpcp(1, rpc_request_start_action_approval_stringname, argptrs, argcount);
 }
-
-                    
-                    

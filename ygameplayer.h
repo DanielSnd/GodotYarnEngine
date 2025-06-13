@@ -39,7 +39,7 @@ public:
     int get_player_controller() const {return player_controller;}
 
     bool is_remote;
-    void set_is_remote(bool v) {is_remote = v;}
+    void set_is_remote(bool v);
     bool get_is_remote() const {return is_remote;}
 
     int remote_player_id;

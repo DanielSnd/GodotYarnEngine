@@ -58,7 +58,9 @@ void YGamePlayer::_bind_methods() {
     ADD_SIGNAL(MethodInfo("player_type_changed", PropertyInfo(Variant::INT, "new_player_type")));
     ADD_SIGNAL(MethodInfo("player_parameter_changed", PropertyInfo(Variant::INT, "param_id"), PropertyInfo(Variant::VARIANT_MAX, "old_value"), PropertyInfo(Variant::VARIANT_MAX, "new_value")));
     ADD_SIGNAL(MethodInfo("player_parameter_removed", PropertyInfo(Variant::INT, "param_id")));
-    
+    ADD_SIGNAL(MethodInfo("is_remote_changed", PropertyInfo(Variant::BOOL, "new_is_remote")));
+    ADD_SIGNAL(MethodInfo("remote_player_id_changed", PropertyInfo(Variant::INT, "new_remote_player_id")));
+
     GDVIRTUAL_BIND(_on_player_registered)
     GDVIRTUAL_BIND(_on_turn_started)
     GDVIRTUAL_BIND(_on_turn_ended)
@@ -96,6 +98,13 @@ void YGamePlayer::set_player_type(int v) {
     emit_signal("player_type_changed",v);
 }
 
+void YGamePlayer::set_is_remote(bool v) {
+    if (is_remote != v) {
+        is_remote = v;
+        emit_signal("is_remote_changed",v);
+    }
+}
+
 void YGamePlayer::set_player_id(int v) {
     if (is_inside_tree() && get_multiplayer()->has_multiplayer_peer() && remote_player_id == get_multiplayer()->get_unique_id()) {
         Array p_arguments;
@@ -122,23 +131,26 @@ void YGamePlayer::set_player_id(int v) {
 }
 
 void YGamePlayer::set_remote_player_id(int v) {
-    if (is_inside_tree() && get_multiplayer()->has_multiplayer_peer() && get_multiplayer()->get_unique_id() == 1) {
-        Array p_arguments;
-        p_arguments.push_back("remote_player_id");
-        p_arguments.push_back(v);
-        int argcount = p_arguments.size();
-        const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
-        for (int i = 0; i < argcount; i++) {
-            argptrs[i] = &p_arguments[i];
+    if (remote_player_id != v) {
+        if (is_inside_tree() && get_multiplayer()->has_multiplayer_peer() && get_multiplayer()->get_unique_id() == 1) {
+            Array p_arguments;
+            p_arguments.push_back("remote_player_id");
+            p_arguments.push_back(v);
+            int argcount = p_arguments.size();
+            const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+            for (int i = 0; i < argcount; i++) {
+                argptrs[i] = &p_arguments[i];
+            }
+    #ifdef YNET
+            if (YNet::get_singleton() != nullptr)
+                YNet::get_singleton()->_send_yrpc_direct(this, rpc_set_property_stringname, argptrs, argcount);
+    #else
+            rpcp(0, rpc_set_property_stringname, argptrs, argcount);
+    #endif
         }
-#ifdef YNET
-        if (YNet::get_singleton() != nullptr)
-            YNet::get_singleton()->_send_yrpc_direct(this, rpc_set_property_stringname, argptrs, argcount);
-#else
-        rpcp(0, rpc_set_property_stringname, argptrs, argcount);
-#endif
+        remote_player_id = v;
+        emit_signal("remote_player_id_changed",v);
     }
-    remote_player_id = v;
 }
 
 void YGamePlayer::player_registered() {
@@ -267,9 +279,17 @@ void YGamePlayer::_rpc_set_property(const String& property_name, const Variant& 
     } else if (property_name == "player_controller") {
         player_controller = value;
     } else if (property_name == "is_remote") {
-        is_remote = value;
+        bool new_is_remote = value;
+        if (is_remote != new_is_remote) {
+            is_remote = new_is_remote;
+            emit_signal("is_remote_changed",new_is_remote);
+        }
     } else if (property_name == "remote_player_id") {
-        remote_player_id = value;
+        int new_remote_player_id = value;
+        if (remote_player_id != new_remote_player_id) {
+            remote_player_id = new_remote_player_id;
+            emit_signal("remote_player_id_changed",new_remote_player_id);
+        }
     }
 }
 

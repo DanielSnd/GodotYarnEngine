@@ -272,10 +272,13 @@ public:
         rpc_response_start_action_approval_stringname = SNAME("_rpc_response_start_action_approval");
         rpc_set_state_parameter_stringname = SNAME("_rpc_set_state_parameter");
         rpc_remove_state_parameter_stringname = SNAME("_rpc_remove_state_parameter");
+        rpc_past_actions_order_stringname = SNAME("_rpc_past_actions_order");
+        rpc_acknowledge_past_actions_order_stringname = SNAME("_rpc_acknowledge_past_actions_order");
     }
 
     ~YGameState() {
         clear_state_parameter_authorities();
+        tracking_past_actions_order.clear();
         rpc_config_cache.clear();
         if(singleton != nullptr && singleton == this) {
             singleton = nullptr;
@@ -332,6 +335,8 @@ public:
     StringName rpc_request_start_action_approval_stringname;
     StringName rpc_set_state_parameter_stringname;
     StringName rpc_remove_state_parameter_stringname;
+    StringName rpc_past_actions_order_stringname;
+    StringName rpc_acknowledge_past_actions_order_stringname;
 
     static Dictionary create_rpc_dictionary_config(MultiplayerAPI::RPCMode p_rpc_mode,
                                             MultiplayerPeer::TransferMode p_transfer_mode, bool p_call_local,
@@ -346,14 +351,19 @@ public:
     void _rpc_mark_action_finished(int action_id);
     Variant _receive_call_on_game_action(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
     void _rpc_register_game_action(const Dictionary& action_data);
+    void send_past_actions_order_to_client(int client_id);
+    void _rpc_past_actions_order(const TypedArray<int>& past_actions_order);
+    void _rpc_acknowledge_past_actions_order(const TypedArray<int>& past_actions_order);
+
+    HashMap<int,Vector<int>> tracking_past_actions_order;
 
     bool has_valid_multiplayer_peer() const;
 
     void mark_action_finished_and_sync(int action_id);
 
     // Add new RPC method declarations
-    void _rpc_request_start_action_approval(int action_id);
-    void _rpc_response_start_action_approval(int action_id, int desired_action_id, bool approved);
+    void _rpc_request_start_action_approval(int previous_action_id, int action_id);
+    void _rpc_response_start_action_approval(int action_id, int desired_action_id, int desired_previous_action_id, bool approved);
     void request_action_approval(YGameAction* action);
 };
 
