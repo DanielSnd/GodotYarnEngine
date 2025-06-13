@@ -232,6 +232,11 @@ public:
     void set_priority(int f) { has_priority = f; }
     int get_priority() const { return has_priority; }
 
+    YGameAction* assign_priority(int f) {
+        has_priority = f;
+        return this;
+    }
+
     bool only_starts_if();
 
     int get_all_steps_count() const {

@@ -735,7 +735,15 @@ Ref<YGameAction> YGameState::add_override_game_action_with_param(const Ref<YGame
     }
     if (overriding_game_actions.size()>0) {
         if (overriding_game_actions[0]->has_priority >= 0 && ygs->has_priority < overriding_game_actions[0]->has_priority) {
-            overriding_game_actions.insert(1,ygs);
+            // Should keep looking on the others until finding an ideal place to add where either it doesn't have priority or their priority is smaller than mine.
+            for (int i = 1; i < overriding_game_actions.size(); i++) {
+                if (overriding_game_actions[i]->has_priority >= 0 && ygs->has_priority >= overriding_game_actions[i]->has_priority) {
+                    overriding_game_actions.insert(i,ygs);
+                    break;
+                }
+            }
+            // If we didn't find a place to add, add it to the end.
+            overriding_game_actions.push_back(ygs);
         } else {
             overriding_game_actions.insert(0,ygs);
         }

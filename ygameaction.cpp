@@ -76,6 +76,7 @@ void YGameAction::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_unique_id"), &YGameAction::get_unique_id);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "unique_id"), "set_unique_id", "get_unique_id");
 
+    ClassDB::bind_method(D_METHOD("assign_priority","priority"), &YGameAction::assign_priority, DEFVAL(-1));
     ClassDB::bind_method(D_METHOD("set_priority","priority"), &YGameAction::set_priority, DEFVAL(-1));
     ClassDB::bind_method(D_METHOD("get_priority"), &YGameAction::get_priority);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "priority"), "set_priority", "get_priority");
