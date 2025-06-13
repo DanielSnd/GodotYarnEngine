@@ -1238,8 +1238,10 @@ void YGameState::_rpc_register_game_action(const Dictionary& action_data) {
     if (action_data.has("a_list_type")) {
         int a_list_type = action_data["a_list_type"];
         Vector<Ref<YGameAction>>* list_to_add_to = nullptr;
+        bool p_front_instead = false;
         if (a_list_type == 1) {
             list_to_add_to = &overriding_game_actions;
+            p_front_instead = true;
         } else if (a_list_type == 2) {
             list_to_add_to = &future_game_actions;
         } else if (a_list_type == 3) {
@@ -1250,7 +1252,7 @@ void YGameState::_rpc_register_game_action(const Dictionary& action_data) {
             list_to_add_to = &future_parallel_actions;
         }
         if (list_to_add_to != nullptr) {
-            deserialize_individual_game_action_into(*list_to_add_to, action_data, false);
+            deserialize_individual_game_action_into(*list_to_add_to, action_data, p_front_instead);
         }
     }
 }
