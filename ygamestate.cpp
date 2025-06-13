@@ -859,12 +859,16 @@ void YGameState::deserialize_individual_game_action_into(Vector<Ref<YGameAction>
     }
     action->deserialize(action_dict);
     if (p_front_instead){
-        if (action->has_priority >= 0) {
-            if (list_into[0]->has_priority >= 0 && action->has_priority < list_into[0]->has_priority) {
-                list_into.insert(1,action);
-            } else {
-                list_into.insert(0,action);
+        if (action->has_priority >= 0 && list_into[0]->has_priority >= 0 && action->has_priority < list_into[0]->has_priority) {
+            // Should keep looking on the others until finding an ideal place to add where either it doesn't have priority or their priority is smaller than mine.
+            for (int i = 1; i < list_into.size(); i++) {
+                if (list_into[i]->has_priority >= 0 && action->has_priority >= list_into[i]->has_priority) {
+                    list_into.insert(i,action);
+                    break;
+                }
             }
+            // If we didn't find a place to add, add it to the end.
+            list_into.push_back(action);
         } else {
             list_into.insert(0,action);
         }

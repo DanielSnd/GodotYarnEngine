@@ -534,6 +534,7 @@ YGameAction::YGameAction() {
     has_executed_created_method = false;
     player_turn = -1;
     instant_execute = false;
+    has_priority = -1;
     time_started = 0.0;
     steps_consumed = 0;
     unique_id = 0;
