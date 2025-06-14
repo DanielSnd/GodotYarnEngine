@@ -22,6 +22,7 @@
 #include "yeventdata.h"
 #include "ybone_attachment_3d.h"
 #include "yboxcontainer.h"
+#include "yboxcontainer3D.h"
 #include "yvisualelement3d.h"
 #include "ygamestate.h"
 #include "yvisualaction.h"
@@ -144,6 +145,9 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<CombinedTexture2D>();
 	ClassDB::register_class<YPersistentID>();
 	ClassDB::register_class<IntersectResult>();
+	ClassDB::register_class<YBoxContainer3D>();
+	ClassDB::register_class<YVBoxContainer3D>();
+	ClassDB::register_class<YHBoxContainer3D>();
 
 	// Initialize your singleton.
 
