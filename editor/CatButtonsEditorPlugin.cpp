@@ -21,8 +21,9 @@ yarnengine::CatButtonsEditorPlugin::~CatButtonsEditorPlugin() {
         if(singleton != nullptr && singleton == this) {
                 singleton = nullptr;
         }
-        if (!inspector_plugin.is_null() && inspector_plugin.is_valid())
-                inspector_plugin.unref();
+        if (!inspector_plugin.is_null() && inspector_plugin.is_valid()) {
+                inspector_plugin = nullptr;
+        }
 }
 
 void yarnengine::YarnEditorFunctionButton::_bind_methods() {

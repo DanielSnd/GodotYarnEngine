@@ -397,7 +397,7 @@ private:
 			} break;
 			case NOTIFICATION_EXIT_TREE: {
 				if (ao_bake_generator.is_valid()) {
-					ao_bake_generator.unref();
+					ao_bake_generator = nullptr;
 				}
 				if (singleton != nullptr && singleton == this) {
 					singleton = nullptr;

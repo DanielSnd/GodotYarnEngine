@@ -10,11 +10,12 @@ CombinedTexture2D::CombinedTexture2D() {
 
 CombinedTexture2D::~CombinedTexture2D() {
 	if (use_image.is_valid()) {
-		use_image.unref();
+		use_image = nullptr;	
 	}
 	if (texture.is_valid()) {
 		ERR_FAIL_NULL(RenderingServer::get_singleton());
 		RS::get_singleton()->free(texture);
+		texture = RID();
 	}
 }
 
@@ -34,11 +35,11 @@ void CombinedTexture2D::_update() {
 	if (first_time) {
 		use_image.instantiate();
 	} else  if (use_image->get_width() != width || use_image->get_height() != height ) {
-			use_image->resize(width,height);
-			use_image.unref();
-			use_image.instantiate();
-			first_time=true;
-		}
+		use_image = nullptr;
+		use_image.instantiate();
+		use_image->resize(width,height);
+		first_time=true;
+	}
 
 	const int data_size = width*height*4;
 	if (image_data.size() < data_size)
@@ -276,7 +277,7 @@ void CombinedTexture2D::set_texture_back(const Ref<Texture2D> &p_texture_back) {
 	if (TextureBack.is_valid()) {
 		ImageBack = TextureBack->get_image();
 	} else {
-		ImageBack.unref();
+		ImageBack = nullptr;	
 	}
 	_queue_update();
 }
@@ -286,7 +287,7 @@ void CombinedTexture2D::set_texture_front(const Ref<Texture2D> &p_texture_front)
 	if (TextureFront.is_valid()) {
 		ImageFront = TextureFront->get_image();
 	} else {
-		ImageFront.unref();
+		ImageFront = nullptr;
 	}
 	_queue_update();
 }
@@ -296,7 +297,7 @@ void CombinedTexture2D::set_texture_overlay(const Ref<Texture2D> &p_texture_over
 	if (TextureOverlay.is_valid()) {
 		ImageOverlay = TextureOverlay->get_image();
 	} else {
-		ImageOverlay.unref();
+		ImageOverlay = nullptr;
 	}
 	_queue_update();
 }

@@ -45,7 +45,9 @@ public:
     ~YStateOverride() override {
         override_with_state = nullptr;
         ignore_if_state = nullptr;
-        if (fsm_owner.is_valid()) fsm_owner.unref();
+        if (fsm_owner.is_valid()) {
+            fsm_owner = nullptr;
+        }
     }
 };
 

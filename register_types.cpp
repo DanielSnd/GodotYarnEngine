@@ -202,9 +202,19 @@ void uninitialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	}
 
 	// Cleanup refs
-	if (yarn_time_ref.is_valid()) yarn_time_ref.unref();
-	if (yarn_save_ref.is_valid()) yarn_save_ref.unref();
-	if (yarn_physics_ref.is_valid()) yarn_physics_ref.unref();
-	if (yarn_game_log_ref.is_valid()) yarn_game_log_ref.unref();
-	if (yarn_tween_ref.is_valid()) yarn_tween_ref.unref();
+	if (yarn_time_ref.is_valid()) {
+		yarn_time_ref = nullptr;
+	}	
+	if (yarn_save_ref.is_valid()) {
+		yarn_save_ref = nullptr;
+	}
+	if (yarn_physics_ref.is_valid()) {
+		yarn_physics_ref = nullptr;
+	}
+	if (yarn_game_log_ref.is_valid()) {
+		yarn_game_log_ref = nullptr;
+	}
+	if (yarn_tween_ref.is_valid()) {
+		yarn_tween_ref = nullptr;
+	}
 }

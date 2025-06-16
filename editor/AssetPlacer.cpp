@@ -311,11 +311,13 @@ void yarnengine::AssetPanelEditorBottomPanel::_empty_clicked(const Vector2 &p_po
     if (item_list->is_anything_selected()) {
         item_list->deselect_all();
         current_activated_item_i = -1;
-        if (current_activated_pscene.is_valid())
-            current_activated_pscene.unref();
+        if (current_activated_pscene.is_valid()) {
+            current_activated_pscene = nullptr;
+        }
         current_activated_item_path = "";
-        if (current_cativated_item_mesh.is_valid())
-            current_cativated_item_mesh.unref();
+        if (current_cativated_item_mesh.is_valid()) {
+            current_cativated_item_mesh = nullptr;
+        }
 
         emit_signal("deselected_pscene");
     }

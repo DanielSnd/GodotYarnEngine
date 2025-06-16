@@ -367,7 +367,7 @@ void YGameState::do_process(double delta) {
             if (current_game_action->can_be_serialized) {
                 past_game_actions.push_back(current_game_action);
             }
-            current_game_action.unref();
+            current_game_action = nullptr;
             return;
         }
 
@@ -415,7 +415,7 @@ void YGameState::do_process(double delta) {
                 if (current_game_action->can_be_serialized) {
                     past_game_actions.push_back(current_game_action);
                 }
-                current_game_action.unref();
+                current_game_action = nullptr;
                 return;
             }
 
@@ -429,7 +429,7 @@ void YGameState::do_process(double delta) {
                     if (current_game_action->can_be_serialized) {
                         past_game_actions.push_back(current_game_action);
                     }
-                    current_game_action.unref();
+                    current_game_action = nullptr;
                     return;
                 }
             }

@@ -196,8 +196,9 @@ var last_used_in_count:int = 0*/
         pass_condition_state = nullptr;
         fail_condition_state = nullptr;
         autooverride_check_node = nullptr;
-        if (fsm_machine.is_valid())
-            fsm_machine.unref();
+        if (fsm_machine.is_valid()) {
+            fsm_machine = nullptr;
+        }
     }
 };
 

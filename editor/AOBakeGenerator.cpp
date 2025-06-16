@@ -279,7 +279,7 @@ AOBakeGenerator::~AOBakeGenerator() {
     RS::get_singleton()->free(scenario);
     RS::get_singleton()->free(environment);
 	if (!mesh_to_generate.is_null() && mesh_to_generate.is_valid()) {
-		mesh_to_generate.unref();
+		mesh_to_generate = nullptr;
 	}
 }
 

@@ -10,7 +10,7 @@ CircleWithConeTexture2D::CircleWithConeTexture2D() {
 
 CircleWithConeTexture2D::~CircleWithConeTexture2D() {
 	if (use_image.is_valid()) {
-		use_image.unref();
+		use_image = nullptr;
 	}
 	if (texture.is_valid()) {
 		ERR_FAIL_NULL(RenderingServer::get_singleton());
@@ -35,7 +35,7 @@ void CircleWithConeTexture2D::_update() {
 		use_image.instantiate();
 	} else  if (use_image->get_width() != width || use_image->get_height() != height ) {
 			use_image->resize(width,height);
-			use_image.unref();
+			use_image = nullptr;
 			use_image.instantiate();
 			first_time=true;
 		}
