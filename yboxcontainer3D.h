@@ -58,7 +58,6 @@ private:
     Vector3 container_size = Vector3(1.0, 1.0, 1.0);
     float spacing = 0.1;
 
-    void _resort();
     void position_child_in_space(Node3D *p_child, const AABB &p_bounds);
     AABB get_child_bounds(Node3D *p_child) const;
     Vector3 calculate_child_scale(Node3D *p_child, const AABB &p_bounds) const;
@@ -74,6 +73,8 @@ protected:
     static bool has_gizmo_plugin;
 #endif
 public:
+    void _resort();
+    
     void set_layout_axis(LayoutAxis p_axis);
     LayoutAxis get_layout_axis() const;
 
@@ -111,6 +112,10 @@ public:
 
     void set_vertical(bool p_vertical);
     bool is_vertical() const;
+
+    void queue_sort();
+    bool pending_sort = false;
+
 
     YBoxContainer3D(bool p_vertical = false);
     ~YBoxContainer3D();

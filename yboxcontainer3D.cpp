@@ -55,6 +55,9 @@ void YBoxContainer3D::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_layout_axis"), &YBoxContainer3D::get_layout_axis);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "layout_axis", PROPERTY_HINT_ENUM, "X,Y,Z"), "set_layout_axis", "get_layout_axis");
 
+    ClassDB::bind_method(D_METHOD("queue_sort"), &YBoxContainer3D::queue_sort);
+    ClassDB::bind_method(D_METHOD("_resort"), &YBoxContainer3D::_resort);
+
     BIND_ENUM_CONSTANT(ALIGNMENT_BEGIN);
     BIND_ENUM_CONSTANT(ALIGNMENT_CENTER);
     BIND_ENUM_CONSTANT(ALIGNMENT_END);
@@ -83,6 +86,19 @@ YBoxContainer3D::~YBoxContainer3D() {
     tracking_objects.clear();
 }
 
+void YBoxContainer3D::queue_sort() {
+	if (!is_inside_tree()) {
+		return;
+	}
+
+	if (pending_sort) {
+		return;
+	}
+
+	callable_mp(this, &YBoxContainer3D::_resort).call_deferred();
+	pending_sort = true;
+}
+
 void YBoxContainer3D::_notification(int p_what) {
     switch (p_what) {
         case NOTIFICATION_ENTER_TREE:
@@ -94,17 +110,22 @@ void YBoxContainer3D::_notification(int p_what) {
                 Node3DEditor::get_singleton()->add_gizmo_plugin(gizmo_plugin);
             }
 #endif
-            _resort();
+            queue_sort();
             break;
         case NOTIFICATION_MOVED_IN_PARENT:
-            _resort();
+            queue_sort();
             break;
         case NOTIFICATION_TRANSFORM_CHANGED:
-            _resort();
+            queue_sort();
             break;
         case NOTIFICATION_CHILD_ORDER_CHANGED:
-            _resort();
+            queue_sort();
             break;
+        case NOTIFICATION_VISIBILITY_CHANGED: {
+			if (is_visible_in_tree()) {
+				queue_sort();
+			}
+		} break;
     }
 }
 
@@ -144,6 +165,7 @@ AABB YBoxContainer3D::get_child_bounds(Node3D *p_child) const {
 }
 
 void YBoxContainer3D::_resort() {
+    pending_sort = false;
     struct ChildInfo {
         Node3D* node;
         Vector3 original_scale;
@@ -535,7 +557,7 @@ Vector3 YBoxContainer3D::calculate_child_scale(Node3D *p_child, const AABB &p_bo
 void YBoxContainer3D::set_alignment(AlignmentMode p_alignment) {
     if (alignment == p_alignment) return;
     alignment = p_alignment;
-    _resort();
+    queue_sort();
 }
 
 YBoxContainer3D::AlignmentMode YBoxContainer3D::get_alignment() const {
@@ -553,7 +575,7 @@ YBoxContainer3D::PositioningMethod YBoxContainer3D::get_positioning() const {
 void YBoxContainer3D::set_space_fill_mode(SpaceFillMode p_mode) {
     if (space_fill_mode == p_mode) return;
     space_fill_mode = p_mode;
-    _resort();
+    queue_sort();
 }
 
 YBoxContainer3D::SpaceFillMode YBoxContainer3D::get_space_fill_mode() const {
@@ -563,7 +585,7 @@ YBoxContainer3D::SpaceFillMode YBoxContainer3D::get_space_fill_mode() const {
 void YBoxContainer3D::set_container_size(Vector3 p_size) {
     if (container_size == p_size) return;
     container_size = p_size;
-    _resort();
+    queue_sort();
 #ifdef TOOLS_ENABLED
     update_gizmos();
 #endif
@@ -576,7 +598,7 @@ Vector3 YBoxContainer3D::get_container_size() const {
 void YBoxContainer3D::set_spacing(float p_spacing) {
     if (spacing == p_spacing) return;
     spacing = p_spacing;
-    _resort();
+    queue_sort();
 }
 
 float YBoxContainer3D::get_spacing() const {
@@ -626,7 +648,7 @@ Tween::TransitionType YBoxContainer3D::get_tween_transition_type() const {
 void YBoxContainer3D::set_vertical(bool p_vertical) {
     if (vertical == p_vertical) return;
     vertical = p_vertical;
-    _resort();
+    queue_sort();
 }
 
 bool YBoxContainer3D::is_vertical() const {
@@ -636,7 +658,7 @@ bool YBoxContainer3D::is_vertical() const {
 void YBoxContainer3D::set_layout_axis(LayoutAxis p_axis) {
     if (layout_axis == p_axis) return;
     layout_axis = p_axis;
-    _resort();
+    queue_sort();
 #ifdef TOOLS_ENABLED    
     update_gizmos();
 #endif
