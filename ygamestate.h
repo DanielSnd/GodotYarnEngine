@@ -274,6 +274,8 @@ public:
         rpc_remove_state_parameter_stringname = SNAME("_rpc_remove_state_parameter");
         rpc_past_actions_order_stringname = SNAME("_rpc_past_actions_order");
         rpc_acknowledge_past_actions_order_stringname = SNAME("_rpc_acknowledge_past_actions_order");
+        rpc_request_specific_action_resend_stringname = SNAME("_rpc_request_specific_action_resend");
+        rpc_grant_specific_action_resend_stringname = SNAME("_rpc_grant_specific_action_resend");
     }
 
     ~YGameState() {
@@ -337,6 +339,8 @@ public:
     StringName rpc_remove_state_parameter_stringname;
     StringName rpc_past_actions_order_stringname;
     StringName rpc_acknowledge_past_actions_order_stringname;
+    StringName rpc_request_specific_action_resend_stringname;
+    StringName rpc_grant_specific_action_resend_stringname;
 
     static Dictionary create_rpc_dictionary_config(MultiplayerAPI::RPCMode p_rpc_mode,
                                             MultiplayerPeer::TransferMode p_transfer_mode, bool p_call_local,
@@ -354,6 +358,8 @@ public:
     void send_past_actions_order_to_client(int client_id);
     void _rpc_past_actions_order(const TypedArray<int>& past_actions_order);
     void _rpc_acknowledge_past_actions_order(const TypedArray<int>& past_actions_order);
+    void _rpc_request_specific_action_resend(int action_id);
+    void _rpc_grant_specific_action_resend(int action_id, const Dictionary& action_data);
 
     HashMap<int,Vector<int>> tracking_past_actions_order;
 
