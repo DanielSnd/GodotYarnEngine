@@ -194,6 +194,7 @@ public:
     int last_turn_player_id=-1;
 
     bool is_playing_back = false;
+    int is_guest_waiting_for_more_actions = 0;
     bool stop_playing_back_when_current_action_steps_done = false;
     int stop_playing_back_at_id = -1;
     void set_is_playing_back(bool b) {
@@ -358,8 +359,9 @@ public:
     void send_past_actions_order_to_client(int client_id);
     void _rpc_past_actions_order(const TypedArray<int>& past_actions_order);
     void _rpc_acknowledge_past_actions_order(const TypedArray<int>& past_actions_order);
-    void _rpc_request_specific_action_resend(int action_id);
+    void _rpc_request_specific_action_resend(int action_id, bool send_next_action = false);
     void _rpc_grant_specific_action_resend(int action_id, const Dictionary& action_data);
+    void request_next_action_resend();
 
     HashMap<int,Vector<int>> tracking_past_actions_order;
 

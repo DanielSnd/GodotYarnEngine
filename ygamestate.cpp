@@ -128,7 +128,7 @@ void YGameState::_bind_methods() {
     ClassDB::bind_method(D_METHOD("_rpc_remove_state_parameter", "param_id"), &YGameState::_rpc_remove_state_parameter);
     ClassDB::bind_method(D_METHOD("_rpc_past_actions_order", "past_actions_order"), &YGameState::_rpc_past_actions_order);
     ClassDB::bind_method(D_METHOD("_rpc_acknowledge_past_actions_order", "past_actions_order"), &YGameState::_rpc_acknowledge_past_actions_order);
-    ClassDB::bind_method(D_METHOD("_rpc_request_specific_action_resend", "action_id"), &YGameState::_rpc_request_specific_action_resend);
+    ClassDB::bind_method(D_METHOD("_rpc_request_specific_action_resend", "action_id", "send_next_action"), &YGameState::_rpc_request_specific_action_resend, DEFVAL(false));
     ClassDB::bind_method(D_METHOD("_rpc_grant_specific_action_resend", "action_id", "action_data"), &YGameState::_rpc_grant_specific_action_resend);
 
     ClassDB::bind_method(D_METHOD("mark_action_finished_and_sync", "action_id"), &YGameState::mark_action_finished_and_sync);
@@ -356,6 +356,9 @@ void YGameState::do_process(double delta) {
     }
 
     if (current_game_action.is_valid()) {
+        if (is_guest_waiting_for_more_actions > 0) {
+            is_guest_waiting_for_more_actions = 0;
+        }
         //HAS A CURRENT GAMEACTION!!
         //Has it ended?
 
@@ -592,9 +595,21 @@ void YGameState::do_process(double delta) {
                 future_game_actions.remove_at(0);
             }
         }
+        
         if (!showed_out_of_actions_message) {
             showed_out_of_actions_message=true;
+            if (has_valid_multiplayer_peer() && scene_multiplayer->get_unique_id() != 1) {
+                is_guest_waiting_for_more_actions = 1;
+            }
             emit_signal("ended_all_actions");
+        } else {
+            if (is_guest_waiting_for_more_actions > 0) {
+                is_guest_waiting_for_more_actions++;
+                if (is_guest_waiting_for_more_actions > 400) {
+                    is_guest_waiting_for_more_actions = 1;
+                    request_next_action_resend();
+                }
+            }
         }
     }
 }
@@ -1230,7 +1245,10 @@ void YGameState::broadcast_game_action(const Dictionary& action_data) {
     if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() != 1) {
         return; // Only server can broadcast
     }
-    
+    if (debugging_level >= 2) {
+        print_line(vformat("[YGameState %d] Server broadcasting game action %s", scene_multiplayer->get_unique_id(), action_data.get("id", -1)));
+    }
+
     // Broadcast to all clients
     rpc(rpc_register_game_action_stringname, action_data);
 }
@@ -1257,6 +1275,9 @@ void YGameState::_rpc_register_game_action(const Dictionary& action_data) {
             list_to_add_to = &future_parallel_actions;
         }
         if (list_to_add_to != nullptr) {
+            if (debugging_level >= 2) {
+                print_line(vformat("[YGameState %d] Client deserializing game action %d into list %d", scene_multiplayer->get_unique_id(), action_data.get("id", -1), a_list_type));
+            }
             deserialize_individual_game_action_into(*list_to_add_to, action_data, p_front_instead);
         }
     }
@@ -1914,7 +1935,8 @@ void YGameState::_rpc_response_start_action_approval(int action_id, int desired_
             }
             // We need to request a resend of the action.
             Array sending_rpc_array;
-            sending_rpc_array.push_back(action_id);
+            sending_rpc_array.push_back(desired_action_id);
+            sending_rpc_array.push_back(false);
             int argcount = sending_rpc_array.size();
             const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
             for (int i = 0; i < argcount; i++) {
@@ -2112,10 +2134,73 @@ void YGameState::_rpc_acknowledge_past_actions_order(const TypedArray<int>& past
     tracking_past_actions_order[scene_multiplayer->get_remote_sender_id()] = past_actions_order_for_player;
 }
 
-void YGameState::_rpc_request_specific_action_resend(int action_id) {
+void YGameState::request_next_action_resend() {
+    if (has_valid_multiplayer_peer() && scene_multiplayer->get_unique_id() != 1 && is_guest_waiting_for_more_actions > 0) {
+        if (!current_game_action.is_valid()) {
+            Array sending_rpc_array;
+            // Find the last id that's on our past actions list.
+            int last_past_action_id = -1;
+            for (int i = past_game_actions.size() - 1; i >= 0; i--) {
+                if (past_game_actions[i].is_valid()) {
+                    last_past_action_id = past_game_actions[i]->unique_id;
+                    break;
+                }
+            }
+            sending_rpc_array.push_back(last_past_action_id);
+            sending_rpc_array.push_back(true);
+            int argcount = sending_rpc_array.size();
+            const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+            for (int i = 0; i < argcount; i++) {
+                argptrs[i] = &sending_rpc_array[i];
+            }
+            rpcp(1, rpc_request_specific_action_resend_stringname, argptrs, argcount);
+        }
+    }
+}
+
+void YGameState::_rpc_request_specific_action_resend(int action_id, bool send_next_action) {
     if (!has_valid_multiplayer_peer() || scene_multiplayer->get_unique_id() != 1) {
         return; // Only server should receive request for specific action resend
     }
+
+    if (send_next_action) {
+        // First find the action that comes after the action we're looking for.
+        // If the acction id they sent is the last one on our past list and we have a current action, it'd be that one.
+        Ref<YGameAction> desired_action;
+        if (past_game_actions.size() > 0 && action_id == past_game_actions[past_game_actions.size() - 1]->unique_id && current_game_action.is_valid()) {
+            desired_action = current_game_action;
+        } else {
+            // Find the action that comes after the action we're looking for.
+            for (int i = 0; i < past_game_actions.size(); i++) {
+                if (past_game_actions[i].is_valid() && past_game_actions[i]->unique_id == action_id && i < past_game_actions.size() - 1) {
+                    desired_action = past_game_actions[i + 1];
+                    break;
+                }
+            }
+        }
+
+        if (desired_action.is_valid()) {
+            if (debugging_level >= 2) {
+                print_line(vformat("[YGameState %d] Received resend request for action %d, sending next action %d", scene_multiplayer->get_unique_id(), action_id, desired_action->unique_id));
+            }
+            Array sending_rpc_array;
+            sending_rpc_array.push_back(desired_action->unique_id);
+            sending_rpc_array.push_back(desired_action->serialize());
+            int argcount = sending_rpc_array.size();
+            const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * argcount);
+            for (int i = 0; i < argcount; i++) {
+                argptrs[i] = &sending_rpc_array[i];
+            }
+            rpcp(scene_multiplayer->get_remote_sender_id(), rpc_grant_specific_action_resend_stringname, argptrs, argcount);
+            return;
+        }
+        else {
+            if (debugging_level >= 2) {
+                    print_line(vformat("[YGameState %d] Could not find action past id %d to resend", scene_multiplayer->get_unique_id(), action_id));
+            }
+        }
+    }
+
 
     Ref<YGameAction> action = get_game_action(action_id);
     if (action.is_valid()) {
@@ -2146,10 +2231,11 @@ void YGameState::_rpc_grant_specific_action_resend(int action_id, const Dictiona
     // We need to check if we already have it, and we should only add it if we don't.
     Ref<YGameAction> action = get_game_action(action_id);
     if (!action.is_valid()) {
-        if (debugging_level >= 2) {
-            print_line(vformat("[YGameState %d] Received resent action %d, applying it.", scene_multiplayer->get_unique_id(), action_id));
-        }
+        // if (debugging_level >= 2) {
+        print_line(vformat("[YGameState %d] Received resent action %d, applying it.", scene_multiplayer->get_unique_id(), action_id));
+        // }
         deserialize_individual_game_action_into(overriding_game_actions, action_data, true);
+        is_guest_waiting_for_more_actions = 0;
         return;
     } else {
         if (debugging_level >= 2) {
