@@ -647,6 +647,7 @@ void YGameState::set_current_turn_player(YGamePlayer* _new_current_player)
     void YGameState::clear_all_game_actions()
     {
         pending_waiting_for_start_approval_attempts = 0;
+        YEngine::get_singleton()->using_game_state = false;
         if (!current_game_action.is_null() && current_game_action.is_valid()) {
             current_game_action = Ref<YGameAction>();
         }
@@ -1089,7 +1090,7 @@ void YGameState::check_future_parallel_actions() {
 }
 
 bool YGameState::has_valid_multiplayer_peer() const {
-    return !scene_multiplayer.is_null() && scene_multiplayer.is_valid() && scene_multiplayer->has_multiplayer_peer();
+    return !scene_multiplayer.is_null() && scene_multiplayer.is_valid() && scene_multiplayer->has_multiplayer_peer() && scene_multiplayer->get_multiplayer_peer()->get_connection_status() == MultiplayerPeer::CONNECTION_CONNECTED;
 }
 
 void YGameState::_notification(int p_what) {
