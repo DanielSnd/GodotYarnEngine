@@ -13,6 +13,20 @@
 			<description>
 			</description>
 		</method>
+		<method name="_on_player_parameter_changed" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="param_id" type="int" />
+			<param index="1" name="old_value" type="Variant" />
+			<param index="2" name="new_value" type="Variant" />
+			<description>
+			</description>
+		</method>
+		<method name="_on_player_parameter_removed" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="param_id" type="int" />
+			<description>
+			</description>
+		</method>
 		<method name="_on_player_registered" qualifiers="virtual">
 			<return type="void" />
 			<description>
@@ -59,8 +73,13 @@
 			</description>
 		</method>
 		<method name="remove_player_parameter">
-			<return type="void" />
+			<return type="YGamePlayer" />
 			<param index="0" name="param_id" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="request_sync">
+			<return type="void" />
 			<description>
 			</description>
 		</method>
@@ -70,7 +89,7 @@
 			</description>
 		</method>
 		<method name="set_player_parameter">
-			<return type="void" />
+			<return type="YGamePlayer" />
 			<param index="0" name="param_id" type="int" />
 			<param index="1" name="param_value" type="Variant" />
 			<description>
@@ -84,9 +103,40 @@
 		</member>
 		<member name="player_controller" type="int" setter="set_player_controller" getter="get_player_controller" default="-1">
 		</member>
-		<member name="player_id" type="int" setter="set_player_id" getter="get_player_id" default="0">
+		<member name="player_id" type="int" setter="set_player_id" getter="get_player_id" default="-1">
 		</member>
 		<member name="player_type" type="int" setter="set_player_type" getter="get_player_type" default="0">
 		</member>
+		<member name="remote_player_id" type="int" setter="set_remote_player_id" getter="get_remote_player_id" default="-1">
+		</member>
 	</members>
+	<signals>
+		<signal name="is_remote_changed">
+			<param index="0" name="new_is_remote" type="bool" />
+			<description>
+			</description>
+		</signal>
+		<signal name="player_parameter_changed">
+			<param index="0" name="param_id" type="int" />
+			<param index="1" name="old_value" type="" />
+			<param index="2" name="new_value" type="" />
+			<description>
+			</description>
+		</signal>
+		<signal name="player_parameter_removed">
+			<param index="0" name="param_id" type="int" />
+			<description>
+			</description>
+		</signal>
+		<signal name="player_type_changed">
+			<param index="0" name="new_player_type" type="int" />
+			<description>
+			</description>
+		</signal>
+		<signal name="remote_player_id_changed">
+			<param index="0" name="new_remote_player_id" type="int" />
+			<description>
+			</description>
+		</signal>
+	</signals>
 </class>

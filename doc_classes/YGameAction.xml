@@ -103,7 +103,7 @@
 			<param index="0" name="step_index" type="int" />
 			<param index="1" name="step_identifier" type="int" />
 			<param index="2" name="step_data" type="Variant" />
-			<param index="3" name="is_ending" type="bool" />
+			<param index="3" name="is_playback" type="bool" />
 			<description>
 			</description>
 		</method>
@@ -112,12 +112,38 @@
 			<param index="0" name="step_index" type="int" />
 			<param index="1" name="step_identifier" type="int" />
 			<param index="2" name="step_data" type="Variant" />
-			<param index="3" name="is_ending" type="bool" />
+			<param index="3" name="is_playback" type="bool" />
 			<description>
 			</description>
 		</method>
 		<method name="_only_starts_if" qualifiers="virtual const">
 			<return type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="_step_request_approval" qualifiers="virtual const">
+			<return type="bool" />
+			<param index="0" name="step_identifier" type="int" />
+			<param index="1" name="step_data" type="Variant" />
+			<param index="2" name="sender_id" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="assign_priority">
+			<return type="YGameAction" />
+			<param index="0" name="priority" type="int" default="-1" />
+			<description>
+			</description>
+		</method>
+		<method name="broadcast_call" qualifiers="vararg">
+			<return type="int" enum="Error" />
+			<param index="0" name="method" type="Callable" />
+			<description>
+			</description>
+		</method>
+		<method name="broadcast_call_and_execute" qualifiers="vararg">
+			<return type="int" enum="Error" />
+			<param index="0" name="method" type="Callable" />
 			<description>
 			</description>
 		</method>
@@ -152,6 +178,7 @@
 		</method>
 		<method name="end_action">
 			<return type="void" />
+			<param index="0" name="sync_to_others" type="bool" default="false" />
 			<description>
 			</description>
 		</method>
@@ -186,6 +213,11 @@
 			</description>
 		</method>
 		<method name="get_all_steps_count" qualifiers="const">
+			<return type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="get_current_step_index" qualifiers="const">
 			<return type="int" />
 			<description>
 			</description>
@@ -252,6 +284,13 @@
 			<description>
 			</description>
 		</method>
+		<method name="request_step_approval">
+			<return type="void" />
+			<param index="0" name="step_identifier" type="int" />
+			<param index="1" name="step_data" type="Variant" />
+			<description>
+			</description>
+		</method>
 		<method name="serialize">
 			<return type="Dictionary" />
 			<description>
@@ -279,12 +318,14 @@
 		</method>
 		<method name="wait_for_step">
 			<return type="void" />
-			<param index="0" name="prevent_processing" type="bool" />
+			<param index="0" name="prevent_processing" type="bool" default="true" />
 			<description>
 			</description>
 		</method>
 	</methods>
 	<members>
+		<member name="auto_release_step_on_register" type="bool" setter="set_auto_release_step_on_register" getter="get_auto_release_step_on_register" default="false">
+		</member>
 		<member name="can_be_serialized" type="bool" setter="set_can_be_serialized" getter="get_can_be_serialized" default="true">
 		</member>
 		<member name="is_debugging" type="bool" setter="set_is_debugging" getter="get_is_debugging" default="false">
@@ -315,7 +356,6 @@
 			</description>
 		</signal>
 		<signal name="ended_action">
-			<param index="0" name="action_name" type="String" />
 			<description>
 			</description>
 		</signal>
@@ -337,7 +377,6 @@
 			</description>
 		</signal>
 		<signal name="started_action">
-			<param index="0" name="action_name" type="String" />
 			<description>
 			</description>
 		</signal>

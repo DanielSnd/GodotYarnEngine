@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YBoxContainer3D" inherits="Node3D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="queue_sort">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="alignment" type="int" setter="set_alignment" getter="get_alignment" enum="YBoxContainer3D.AlignmentMode" default="0">
+		</member>
+		<member name="container_size" type="Vector3" setter="set_container_size" getter="get_container_size" default="Vector3(1, 1, 1)">
+		</member>
+		<member name="layout_axis" type="int" setter="set_layout_axis" getter="get_layout_axis" enum="YBoxContainer3D.LayoutAxis" default="1">
+		</member>
+		<member name="positioning" type="int" setter="set_positioning" getter="get_positioning" enum="YBoxContainer3D.PositioningMethod" default="0">
+		</member>
+		<member name="space_fill_mode" type="int" setter="set_space_fill_mode" getter="get_space_fill_mode" enum="YBoxContainer3D.SpaceFillMode" default="2">
+		</member>
+		<member name="spacing" type="float" setter="set_spacing" getter="get_spacing" default="0.1">
+		</member>
+		<member name="tween_duration" type="float" setter="set_tween_duration" getter="get_tween_duration">
+		</member>
+		<member name="tween_ease_type" type="int" setter="set_tween_ease_type" getter="get_tween_ease_type" enum="Tween.EaseType">
+		</member>
+		<member name="tween_new_element_offset" type="Vector3" setter="set_tween_new_element_offset" getter="get_tween_new_element_offset">
+		</member>
+		<member name="tween_overshoot" type="float" setter="set_tween_overshoot" getter="get_tween_overshoot">
+		</member>
+		<member name="tween_transition_type" type="int" setter="set_tween_transition_type" getter="get_tween_transition_type" enum="Tween.TransitionType">
+		</member>
+		<member name="vertical" type="bool" setter="set_vertical" getter="is_vertical" default="false">
+		</member>
+	</members>
+	<constants>
+		<constant name="ALIGNMENT_BEGIN" value="0" enum="AlignmentMode">
+		</constant>
+		<constant name="ALIGNMENT_CENTER" value="1" enum="AlignmentMode">
+		</constant>
+		<constant name="ALIGNMENT_END" value="2" enum="AlignmentMode">
+		</constant>
+		<constant name="POSITION_INSTANT" value="0" enum="PositioningMethod">
+		</constant>
+		<constant name="POSITION_YTWEEN" value="1" enum="PositioningMethod">
+		</constant>
+		<constant name="POSITION_MANUAL" value="2" enum="PositioningMethod">
+		</constant>
+		<constant name="SPACE_FILL_NONE" value="0" enum="SpaceFillMode">
+		</constant>
+		<constant name="SPACE_FILL_CONTAINED" value="1" enum="SpaceFillMode">
+		</constant>
+		<constant name="SPACE_FILL_UNIFORM" value="2" enum="SpaceFillMode">
+		</constant>
+		<constant name="SPACE_FILL_STRETCH" value="3" enum="SpaceFillMode">
+		</constant>
+		<constant name="SPACE_FILL_PROPORTIONAL" value="4" enum="SpaceFillMode">
+		</constant>
+		<constant name="SPACE_FILL_DISTRIBUTE" value="5" enum="SpaceFillMode">
+		</constant>
+		<constant name="AXIS_X" value="0" enum="LayoutAxis">
+		</constant>
+		<constant name="AXIS_Y" value="1" enum="LayoutAxis">
+		</constant>
+		<constant name="AXIS_Z" value="2" enum="LayoutAxis">
+		</constant>
+	</constants>
+</class>

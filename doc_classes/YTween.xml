@@ -196,6 +196,23 @@
 			<description>
 			</description>
 		</method>
+		<method name="tween_scale_to_and_then">
+			<return type="YTweenWrap" />
+			<param index="0" name="owner" type="Node" />
+			<param index="1" name="to_scale" type="float" default="1.25" />
+			<param index="2" name="then_scale" type="float" default="1.0" />
+			<param index="3" name="duration_to" type="float" default="0.65" />
+			<param index="4" name="duration_then" type="float" default="0.25" />
+			<param index="5" name="ease_type_to" type="int" enum="Tween.EaseType" default="0" />
+			<param index="6" name="ease_type_then" type="int" enum="Tween.EaseType" default="1" />
+			<param index="7" name="transition" type="int" enum="Tween.TransitionType" default="4" />
+			<param index="8" name="trans_amount" type="float" default="1.68" />
+			<param index="9" name="delay_to" type="float" default="0.0" />
+			<param index="10" name="delay_then" type="float" default="0.0" />
+			<param index="11" name="tag" type="int" default="0" />
+			<description>
+			</description>
+		</method>
 		<method name="tween_scale_unique">
 			<return type="YTweenWrap" />
 			<param index="0" name="owner" type="Node" />

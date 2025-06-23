@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="YGameState" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+<class name="YGameState" inherits="Node" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
 		Core class that manages game state through a sequence of actions, players, and state parameters.
 	</brief_description>
@@ -136,6 +136,25 @@
 				The parallel action will be initialized with the specified parameter before being added.
 			</description>
 		</method>
+		<method name="add_state_parameter_authority">
+			<return type="void" />
+			<param index="0" name="param_id" type="int" />
+			<param index="1" name="network_id_authority" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="broadcast_call_on_game_action" qualifiers="vararg">
+			<return type="int" enum="Error" />
+			<param index="0" name="method" type="Callable" />
+			<description>
+			</description>
+		</method>
+		<method name="broadcast_call_on_game_action_and_execute" qualifiers="vararg">
+			<return type="int" enum="Error" />
+			<param index="0" name="method" type="Callable" />
+			<description>
+			</description>
+		</method>
 		<method name="clear_all_game_actions">
 			<return type="void" />
 			<description>
@@ -148,6 +167,11 @@
 			<description>
 				Removes all registered players from the game state and resets the current turn player.
 				Players are properly cleaned up and freed from memory.
+			</description>
+		</method>
+		<method name="clear_state_parameter_authorities">
+			<return type="void" />
+			<description>
 			</description>
 		</method>
 		<method name="deserialize">
@@ -181,6 +205,11 @@
 			<description>
 				Ends the parallel action at the specified index. The action's [method _on_exit_action] will be called
 				and it will be added to history if serializable.
+			</description>
+		</method>
+		<method name="ensure_has_initialized">
+			<return type="bool" />
+			<description>
 			</description>
 		</method>
 		<method name="get_all_parallel_actions" qualifiers="const">
@@ -230,6 +259,12 @@
 				Returns the number of actions waiting in the future actions queue.
 			</description>
 		</method>
+		<method name="get_game_action" qualifiers="const">
+			<return type="YGameAction" />
+			<param index="0" name="action_id" type="int" />
+			<description>
+			</description>
+		</method>
 		<method name="get_game_actions_counted" qualifiers="const">
 			<return type="int" />
 			<description>
@@ -265,6 +300,11 @@
 			<description>
 				Returns the next action that will execute (either from override or future queue),
 				or [code]null[/code] if no actions are queued.
+			</description>
+		</method>
+		<method name="get_next_player_unique_id" qualifiers="const">
+			<return type="int" />
+			<description>
 			</description>
 		</method>
 		<method name="get_override_game_action_by_index" qualifiers="const">
@@ -342,9 +382,28 @@
 				Returns [code]true[/code] if a state parameter with the specified ID exists.
 			</description>
 		</method>
+		<method name="has_state_parameter_authority" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="param_id" type="int" />
+			<param index="1" name="network_id_authority" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="has_valid_multiplayer_peer" qualifiers="const">
+			<return type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="mark_action_finished_and_sync">
+			<return type="void" />
+			<param index="0" name="action_id" type="int" />
+			<description>
+			</description>
+		</method>
 		<method name="register_player">
 			<return type="int" />
 			<param index="0" name="game_player" type="YGamePlayer" />
+			<param index="1" name="rename_to" type="String" default="&quot;&quot;" />
 			<description>
 				Registers a player with the game state and assigns them a unique ID. Returns the assigned player ID.
 				Players can be retrieved later using [method get_game_player].
@@ -354,6 +413,7 @@
 			<return type="int" />
 			<param index="0" name="game_player" type="YGamePlayer" />
 			<param index="1" name="desired_id" type="int" />
+			<param index="2" name="rename_to" type="String" default="&quot;&quot;" />
 			<description>
 				Similar to [method register_player], but allows specifying the player ID instead of auto-generating one.
 				Returns the assigned ID (same as [code]desired_id[/code] if successful).
@@ -379,6 +439,13 @@
 			<param index="0" name="param_id" type="int" />
 			<description>
 				Removes the state parameter with the specified ID if it exists.
+			</description>
+		</method>
+		<method name="remove_state_parameter_authority">
+			<return type="void" />
+			<param index="0" name="param_id" type="int" />
+			<param index="1" name="network_id_authority" type="int" />
+			<description>
 			</description>
 		</method>
 		<method name="restart_action_counting">
@@ -410,9 +477,13 @@
 			Reference to the player whose turn is currently active. Actions can check this to validate moves or determine
 			available options.
 		</member>
+		<member name="debugging_level" type="int" setter="set_debugging_level" getter="get_debugging_level" default="0">
+		</member>
 		<member name="is_playing_back" type="bool" setter="set_is_playing_back" getter="get_is_playing_back" default="false">
 			When true, indicates the state is being reconstructed from saved data. Actions can check this to skip animations
 			or visual effects during playback.
+		</member>
+		<member name="last_action_was_denied" type="bool" setter="set_last_action_was_denied" getter="get_last_action_was_denied" default="false">
 		</member>
 		<member name="prevent_proceed_to_next_action" type="int" setter="set_prevent_proceed_to_next_action" getter="get_prevent_proceed_to_next_action" default="0">
 			Counter that prevents the game state from proceeding to the next action.
@@ -442,10 +513,25 @@
 				Provides both the previous and new player IDs.
 			</description>
 		</signal>
+		<signal name="changed_waiting_for_next_action_approval">
+			<param index="0" name="is_waiting" type="bool" />
+			<description>
+			</description>
+		</signal>
 		<signal name="ended_all_actions">
 			<description>
 				Emitted when all actions have been completed and no new actions are queued.
 				Useful for detecting when a sequence or game has finished.
+			</description>
+		</signal>
+		<signal name="player_registered">
+			<param index="0" name="new_player" type="YGamePlayer" />
+			<description>
+			</description>
+		</signal>
+		<signal name="player_removed">
+			<param index="0" name="removed_player_id" type="int" />
+			<description>
 			</description>
 		</signal>
 		<signal name="registered_action">
@@ -453,6 +539,18 @@
 			<description>
 				Emitted when a new action is added to the game state.
 				Useful for monitoring or logging action creation.
+			</description>
+		</signal>
+		<signal name="state_parameter_changed">
+			<param index="0" name="param_id" type="int" />
+			<param index="1" name="old_value" type="" />
+			<param index="2" name="new_value" type="" />
+			<description>
+			</description>
+		</signal>
+		<signal name="state_parameter_removed">
+			<param index="0" name="param_id" type="int" />
+			<description>
 			</description>
 		</signal>
 	</signals>

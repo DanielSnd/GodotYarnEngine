@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="YHBoxContainer3D" inherits="YBoxContainer3D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+	</description>
+	<tutorials>
+	</tutorials>
+	<members>
+		<member name="layout_axis" type="int" setter="set_layout_axis" getter="get_layout_axis" overrides="YBoxContainer3D" enum="YBoxContainer3D.LayoutAxis" default="0" />
+	</members>
+</class>

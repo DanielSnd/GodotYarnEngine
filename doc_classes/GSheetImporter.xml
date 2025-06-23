@@ -146,6 +146,11 @@
 				[b]Note:[/b] This method is typically called automatically by the editor plugin when using the menu item, but can also be called manually if needed.
 			</description>
 		</method>
+		<method name="rescan_file_system_in_editor">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
 		<method name="sanitize_filename">
 			<return type="String" />
 			<param index="0" name="filename" type="String" />

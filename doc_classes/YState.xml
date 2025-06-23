@@ -131,26 +131,6 @@
 				[/codeblock]
 			</description>
 		</method>
-		<method name="can_move">
-			<return type="bool" />
-			<description>
-			</description>
-		</method>
-		<method name="enter_state">
-			<return type="void" />
-			<description>
-			</description>
-		</method>
-		<method name="exit_state">
-			<return type="void" />
-			<description>
-			</description>
-		</method>
-		<method name="finished_navigation">
-			<return type="void" />
-			<description>
-			</description>
-		</method>
 		<method name="get_last_transitioned_from_or_null" qualifiers="const">
 			<return type="Node" />
 			<description>
@@ -161,25 +141,41 @@
 			<description>
 			</description>
 		</method>
-		<method name="get_speed">
-			<return type="float" />
-			<description>
-			</description>
-		</method>
-		<method name="override_animation">
+		<method name="has_time_passed_since_last_exited" qualifiers="const">
 			<return type="bool" />
+			<param index="0" name="amount_passed" type="float" />
 			<description>
 			</description>
 		</method>
-		<method name="process_state">
+		<method name="has_time_passed_since_last_started" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="amount_passed" type="float" />
+			<description>
+			</description>
+		</method>
+		<method name="set_as_backup_state">
 			<return type="void" />
-			<param index="0" name="_unnamed_arg0" type="float" />
+			<description>
+			</description>
+		</method>
+		<method name="set_as_default_state">
+			<return type="void" />
 			<description>
 			</description>
 		</method>
 		<method name="state_machine_setup">
 			<return type="void" />
 			<param index="0" name="fsm" type="YStateMachine" />
+			<description>
+			</description>
+		</method>
+		<method name="transition_to_backup_state">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="transition_to_default_state">
+			<return type="void" />
 			<description>
 			</description>
 		</method>
@@ -205,8 +201,20 @@
 		</member>
 		<member name="fail_condition_state" type="YState" setter="set_fail_condition_state" getter="get_fail_condition_state">
 		</member>
+		<member name="global_position" type="Variant" setter="set_global_position" getter="get_global_position" default="null">
+		</member>
+		<member name="global_transform" type="Variant" setter="set_global_transform" getter="get_global_transform" default="null">
+		</member>
 		<member name="ignore_if_states" type="NodePath[]" setter="set_autooverride_ignore_if_states" getter="get_autooverride_ignore_if_states" default="[]">
 			List of states that will prevent this state from overriding when active.
+		</member>
+		<member name="last_time_state_exited" type="float" setter="set_last_time_state_exited" getter="get_last_time_state_exited" default="0.0">
+		</member>
+		<member name="last_time_state_started" type="float" setter="set_last_time_state_started" getter="get_last_time_state_started" default="0.0">
+		</member>
+		<member name="node_owner_2d" type="Node2D" setter="set_node_owner_2d" getter="get_node_owner_2d">
+		</member>
+		<member name="node_owner_3d" type="Node3D" setter="set_node_owner_3d" getter="get_node_owner_3d">
 		</member>
 		<member name="only_if_states" type="NodePath[]" setter="set_autooverride_only_if_states" getter="get_autooverride_only_if_states" default="[]">
 			List of states that must be active for this state to override. If empty, can override during any state.
@@ -224,15 +232,23 @@
 			When multiple states can override at the same time, states with higher weights are more likely to be chosen.
 		</member>
 	</members>
+	<signals>
+		<signal name="state_entered">
+			<description>
+			</description>
+		</signal>
+		<signal name="state_exited">
+			<description>
+			</description>
+		</signal>
+	</signals>
 	<constants>
 		<constant name="NONE" value="0" enum="CheckType">
 			No condition check will be performed.
 		</constant>
-		<constant name="TRUE" value="1" enum="CheckType">
-			Override if property is true.
+		<constant name="CHECK_TRUE" value="1" enum="CheckType">
 		</constant>
-		<constant name="FALSE" value="2" enum="CheckType">
-			Override if property is false.
+		<constant name="CHECK_FALSE" value="2" enum="CheckType">
 		</constant>
 		<constant name="EQUAL" value="3" enum="CheckType">
 			Override if property equals value.

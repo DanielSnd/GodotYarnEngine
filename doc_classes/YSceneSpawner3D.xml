@@ -44,6 +44,7 @@
 		<method name="add_spawnable_scene">
 			<return type="void" />
 			<param index="0" name="path" type="String" />
+			<param index="1" name="_unnamed_arg1" type="float" />
 			<description>
 				Adds a scene at the specified [param path] to the list of spawnable scenes. The scene must be a valid PackedScene resource.
 			</description>
@@ -73,46 +74,59 @@
 				Returns the number of scenes in the spawnable scenes list.
 			</description>
 		</method>
+		<method name="get_spawnable_scene_weight" qualifiers="const">
+			<return type="float" />
+			<param index="0" name="index" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="set_spawnable_scene_weight">
+			<return type="void" />
+			<param index="0" name="index" type="int" />
+			<param index="1" name="weight" type="float" />
+			<description>
+			</description>
+		</method>
 	</methods>
 	<members>
+		<member name="_spawnable_scene_weights" type="float[]" setter="_set_spawnable_scene_weights" getter="_get_spawnable_scene_weights" default="[]">
+		</member>
 		<member name="_spawnable_scenes" type="String[]" setter="_set_spawnable_scenes" getter="_get_spawnable_scenes" default="[]">
 			Internal array storing the paths to spawnable scenes. Use the exposed methods to modify this list.
-		</member>
-		<member name="align_to_ground" type="bool" setter="set_align_to_ground" getter="get_align_to_ground" default="false">
-			When enabled, spawned objects will be rotated to align with the surface normal at their spawn position.
 		</member>
 		<member name="auto_spawn_on_ready" type="bool" setter="set_auto_spawn_on_ready" getter="get_auto_spawn_on_ready" default="false">
 			If [code]true[/code], the spawner will automatically spawn objects when entering the scene tree. The spawn is slightly delayed (0.04-0.125 seconds) to ensure proper scene setup.
 		</member>
+		<member name="debug_print_spawn_messages" type="bool" setter="set_debug_spawn_messages" getter="get_debug_spawn_messages" default="false">
+		</member>
 		<member name="debug_show_spawn_area" type="bool" setter="set_debug_show_spawn_area" getter="get_debug_show_spawn_area" default="false">
 			Enables visual debugging of the spawn area in the editor.
-		</member>
-		<member name="debug_spawn_messages" type="bool" setter="set_debug_spawn_messages" getter="get_debug_spawn_messages" default="false">
-			When enabled, prints detailed debug messages about spawn attempts and results.
 		</member>
 		<member name="despawn_when_destroyed" type="bool" setter="set_despawn_when_destroyed" getter="get_despawn_when_destroyed" default="false">
 			If [code]true[/code], spawned objects will be removed from the spawner's tracking when they are destroyed.
 		</member>
-		<member name="force_spawn_under" type="bool" setter="set_force_spawn_under" getter="get_force_spawn_under" default="false">
-			When enabled, only allows spawning at positions below [member under_value]. Cannot be used with [member prevent_spawn_under].
+		<member name="ground_align" type="bool" setter="set_align_to_ground" getter="get_align_to_ground" default="false">
 		</member>
-		<member name="lock_to_layer" type="int" setter="set_lock_to_layer" getter="get_lock_to_layer" default="0">
-			Physics layer mask for spawn position raycasts. Only surfaces on these layers will be considered for spawning.
+		<member name="ground_lock_to_layer" type="int" setter="set_lock_to_layer" getter="get_lock_to_layer" default="0">
 		</member>
-		<member name="min_max_random_scale" type="Vector2" setter="set_min_max_random_scale" getter="get_min_max_random_scale" default="Vector2(1, 1)">
-			Range for random scaling when [member randomize_scale] is enabled. X component is minimum scale, Y is maximum.
+		<member name="height_treshold_force_spawn_under" type="bool" setter="set_force_spawn_under" getter="get_force_spawn_under" default="false">
+		</member>
+		<member name="height_treshold_prevent_spawn_under" type="bool" setter="set_prevent_spawn_under" getter="get_prevent_spawn_under" default="false">
+		</member>
+		<member name="height_treshold_under_value" type="float" setter="set_under_value" getter="get_under_value" default="0.0">
 		</member>
 		<member name="placing_radius" type="float" setter="set_placing_radius" getter="get_placing_radius" default="10.0">
 			Radius around the spawner's position in which objects can be spawned.
-		</member>
-		<member name="prevent_spawn_under" type="bool" setter="set_prevent_spawn_under" getter="get_prevent_spawn_under" default="false">
-			When enabled, prevents spawning at positions below [member under_value]. Cannot be used with [member force_spawn_under].
 		</member>
 		<member name="prevent_stacking_layer" type="int" setter="set_prevent_stacking_layer" getter="get_prevent_stacking_layer" default="0">
 			Physics layer mask used for checking stacking prevention. Only objects on these layers are considered for stacking checks.
 		</member>
 		<member name="prevent_stacking_radius" type="float" setter="set_prevent_stacking_radius" getter="get_prevent_stacking_radius" default="0.0">
 			Minimum required distance between spawn positions and existing objects. Set to 0 to disable stacking prevention.
+		</member>
+		<member name="random_min_max_scale" type="Vector2" setter="set_min_max_random_scale" getter="get_min_max_random_scale" default="Vector2(1, 1)">
+		</member>
+		<member name="random_scale" type="bool" setter="set_randomize_scale" getter="get_randomize_scale" default="false">
 		</member>
 		<member name="random_y_rotate" type="bool" setter="set_random_y_rotate" getter="get_random_y_rotate" default="false">
 			When enabled, spawned objects will be randomly rotated around their Y axis.
@@ -123,20 +137,21 @@
 		<member name="random_z_rotate" type="bool" setter="set_random_z_rotate" getter="get_random_z_rotate" default="false">
 			When enabled, spawned objects will be randomly rotated around their Z axis.
 		</member>
-		<member name="randomize_scale" type="bool" setter="set_randomize_scale" getter="get_randomize_scale" default="false">
-			Enables uniform random scaling between [member min_max_random_scale].x and [member min_max_random_scale].y.
-		</member>
-		<member name="respawn_only_until_maximum" type="int" setter="set_respawn_only_until_maximum" getter="get_respawn_only_until_maximum" default="0">
-			Maximum number of spawned objects for automatic respawning. Set to 0 for unlimited respawns.
-		</member>
 		<member name="respawns_after_time" type="int" setter="set_respawns_after_time" getter="get_respawns_after_time" default="0">
 			Time in seconds between automatic respawn attempts. Set to 0 to disable automatic respawning.
+		</member>
+		<member name="respawns_only_until_maximum" type="int" setter="set_respawn_only_until_maximum" getter="get_respawn_only_until_maximum" default="0">
 		</member>
 		<member name="spawn_amount" type="Vector2i" setter="set_spawn_amount" getter="get_spawn_amount" default="Vector2i(1, 1)">
 			Range for number of objects to spawn. X component is minimum count, Y is maximum.
 		</member>
-		<member name="under_value" type="float" setter="set_under_value" getter="get_under_value" default="0.0">
-			Height threshold used by [member prevent_spawn_under] and [member force_spawn_under].
-		</member>
 	</members>
+	<signals>
+		<signal name="scene_spawned">
+			<param index="0" name="scene" type="Object" />
+			<param index="1" name="index" type="int" />
+			<description>
+			</description>
+		</signal>
+	</signals>
 </class>

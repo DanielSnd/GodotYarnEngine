@@ -9,20 +9,35 @@ void EditorYarn3DTools::_bind_methods() {
     ClassDB::bind_method(D_METHOD("_export_gltf_file_selected"), &EditorYarn3DTools::_export_gltf_file_selected);
 }
 
+void EditorYarn3DTools::_notification(int p_what) {
+	switch (p_what) {
+		case NOTIFICATION_ENTER_TREE: {
+            if (tools_menu == nullptr) {
+                tools_menu = memnew(PopupMenu);
+                tools_menu->add_item("Create Combined Mesh", 0);
+                tools_menu->add_item("Create Parent Node3D", 1);
+                tools_menu->add_item("Export Node3D as GLTF", 2);
+                tools_menu->connect("id_pressed", callable_mp(this, &EditorYarn3DTools::_menu_callback));
+                _add_menu_item();
+            }
+		} break;
+
+		case NOTIFICATION_EXIT_TREE: {
+			if (tools_menu != nullptr) {
+                remove_tool_menu_item("3D Tools");
+                tools_menu->queue_free();
+                tools_menu = nullptr;
+            }
+		} break;
+    }
+}
+
 EditorYarn3DTools::EditorYarn3DTools() {
-    tools_menu = memnew(PopupMenu);
-    tools_menu->add_item("Create Combined Mesh", 0);
-    tools_menu->add_item("Create Parent Node3D", 1);
-    tools_menu->add_item("Export Node3D as GLTF", 2);
-    tools_menu->connect("id_pressed", callable_mp(this, &EditorYarn3DTools::_menu_callback));
-    _add_menu_item();
+    
 }
 
 EditorYarn3DTools::~EditorYarn3DTools() {
-    if (tools_menu) {
-        tools_menu->queue_free();
-        tools_menu = nullptr;
-    }
+    
 }
 
 void EditorYarn3DTools::_add_menu_item() {

@@ -84,12 +84,12 @@ public:
     String get_save_reset_backup_path() {return save_reset_backup_path;}
     void set_save_reset_backup_path(String val) {save_reset_backup_path = val;}
 
-    bool save_requested;
+    bool save_requested = false;
     bool get_save_requested() {return save_requested;}
     void set_save_requested(bool val) {save_requested = val;}
 
-    float last_time_save_requested;
-    bool save_next_frame;
+    float last_time_save_requested = 0;
+    bool save_next_frame = false;
 
     Dictionary settings_data;
     Dictionary get_settings_data() const {return settings_data;}

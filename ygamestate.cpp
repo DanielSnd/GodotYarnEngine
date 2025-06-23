@@ -399,7 +399,7 @@ void YGameState::do_process(double delta) {
                                     is_playing_back = false;
                                     current_game_action->is_playing_back = false;
                                 }
-                                current_game_action->step_action(current_game_action->action_steps[current_game_action->steps_consumed], false);
+                                current_game_action->step_action(current_game_action->action_steps[current_game_action->steps_consumed], is_playing_back);
                             }
                         }
                     }

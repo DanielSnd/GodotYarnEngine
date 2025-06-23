@@ -23,7 +23,7 @@ void YSave::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_save_backup_path"), &YSave::get_save_backup_path);
     ADD_PROPERTY(PropertyInfo(Variant::STRING, "save_backup_path"), "set_save_backup_path", "get_save_backup_path");
     
-    ClassDB::bind_method(D_METHOD("set_save_requested", "save_requested"), &YSave::set_save_requested);
+    ClassDB::bind_method(D_METHOD("set_save_requested", "save_requested"), &YSave::set_save_requested, DEFVAL(false));
     ClassDB::bind_method(D_METHOD("get_save_requested"), &YSave::get_save_requested);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "save_requested"), "set_save_requested", "get_save_requested");
     
@@ -169,6 +169,9 @@ bool YSave::load_settings() {
 
 YSave::YSave() {
     singleton = this;
+    save_requested = false;
+    save_next_frame = false;
+    last_time_save_requested = 0;
 }
 
 YSave::~YSave() {

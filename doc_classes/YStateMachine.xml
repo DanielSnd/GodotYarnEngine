@@ -158,10 +158,24 @@
 				[/codeblock]
 			</description>
 		</method>
+		<method name="transition_to_backup_state">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="transition_to_default_state">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
 	</methods>
 	<members>
+		<member name="backup_state" type="YState" setter="set_backup_state" getter="get_backup_state">
+		</member>
 		<member name="current_state" type="YState" setter="set_current_state" getter="get_current_state">
 			The currently active state in the state machine. Change this using [method transition] instead of setting directly.
+		</member>
+		<member name="default_state" type="YState" setter="set_default_state" getter="get_default_state">
 		</member>
 		<member name="overrider_check_interval" type="int" setter="set_overrider_check_interval" getter="get_overrider_check_interval" default="2">
 			Number of frames between checking for state overrides. Higher values improve performance but make overrides less responsive.

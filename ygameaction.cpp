@@ -149,8 +149,8 @@ void YGameAction::_bind_methods() {
 
     GDVIRTUAL_BIND(_on_created)
     GDVIRTUAL_BIND(_on_enter_action)
-    GDVIRTUAL_BIND(_on_stepped_action,"step_index","step_identifier","step_data","is_ending")
-    GDVIRTUAL_BIND(_on_waiting_step_released,"step_index","step_identifier","step_data","is_ending")
+    GDVIRTUAL_BIND(_on_stepped_action,"step_index","step_identifier","step_data","is_playback")
+    GDVIRTUAL_BIND(_on_waiting_step_released,"step_index","step_identifier","step_data","is_playback")
     GDVIRTUAL_BIND(_on_exit_action)
     GDVIRTUAL_BIND(_on_process_action,"delta")
     GDVIRTUAL_BIND(_on_serialize,"dict")
@@ -335,7 +335,7 @@ void YGameAction::enter_action() {
     started=true;
 }
 
-void YGameAction::step_action(Ref<YActionStep> data, bool is_ending) {
+void YGameAction::step_action(Ref<YActionStep> data, bool is_playback) {
     if (is_debugging) {
         print_line(vformat("%s is calling step action, current steps %d next step index %d",get_name(),steps_consumed,steps_consumed+1));
     }
@@ -355,9 +355,9 @@ void YGameAction::step_action(Ref<YActionStep> data, bool is_ending) {
             waiting_for_step = true;
             emit_signal(SNAME("waiting_for_step"), data->step_index);
         }
-        GDVIRTUAL_CALL(_on_stepped_action, data->get_step_index(), data->get_step_identifier(), data->step_data, is_ending);
+        GDVIRTUAL_CALL(_on_stepped_action, data->get_step_index(), data->get_step_identifier(), data->step_data, is_playback);
         data->step_taken = true;
-        data->step_taken_as_ending = is_ending;
+        data->step_taken_as_ending = is_playback;
         if (!waiting_for_step)
             emit_signal(SNAME("action_stepped"), data->step_index);
         else {

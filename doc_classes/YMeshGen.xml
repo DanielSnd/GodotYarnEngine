@@ -11,16 +11,16 @@
 		Example of basic usage:
 		[codeblock]
 		var mesh_gen = YMeshGen.new()
-		
+
 		# Create a simple room (coordinates are in grid units)
 		mesh_gen.fill_rect(Vector3i(0, 0, 0), Vector3i(4, 0, 4), YMeshGen.Inside)
-		
+
 		# Add a door on one side
 		mesh_gen.make_world_change(Vector3i(2, 0, 0), YMeshGen.InsideDoor)
-		
+
 		# Add a window
 		mesh_gen.make_world_change(Vector3i(4, 0, 2), YMeshGen.InsideWindow)
-		
+
 		# Get the generated mesh
 		var mesh = mesh_gen.rebuild_walls()
 		[/codeblock]
@@ -45,7 +45,7 @@
 			<param index="4" name="push_verts_down" type="float" default="0.0" />
 			<description>
 				Creates a mesh from a collection of 2D axis-aligned bounding boxes (AABBs). This is useful for generating floor plans or terrain.
-				
+
 				[param aabbs]: Array of Rect2 defining the areas to be meshed.
 				[param encompassing_aabb]: A Rect2 that encompasses all input AABBs.
 				[param margin]: Additional margin to add around the AABBs.
@@ -59,10 +59,11 @@
 			<param index="1" name="dir_right" type="Vector3" />
 			<param index="2" name="dir_front" type="Vector3" />
 			<param index="3" name="desired_byte" type="int" />
-			<param index="4" name="height" type="float" default="2.0" />
+			<param index="4" name="height" type="int" />
+			<param index="5" name="_unnamed_arg5" type="float" default="2.0" />
 			<description>
 				Creates a wall segment at the specified position with the given orientation and type.
-				
+
 				[param wall_center_pos]: Center position of the wall segment.
 				[param dir_right]: Right direction vector for wall orientation.
 				[param dir_front]: Forward direction vector for wall orientation.
@@ -77,7 +78,7 @@
 			<param index="2" name="cell_type" type="int" />
 			<description>
 				Fills a rectangular area of the world with the specified cell type. Coordinates are in grid units (each unit is 2 world units wide).
-				
+
 				[param start]: Starting corner of the rectangle (inclusive).
 				[param end]: Ending corner of the rectangle (inclusive).
 				[param cell_type]: Type of cell to fill the area with (use CellType enum values).
@@ -103,16 +104,16 @@
 				Returns the most recently generated mesh. This is updated whenever [method rebuild_walls] is called.
 			</description>
 		</method>
-		<method name="get_world_bounds_min" qualifiers="const">
-			<return type="Vector3" />
-			<description>
-				Returns the minimum coordinate bounds of the generated world geometry.
-			</description>
-		</method>
 		<method name="get_world_bounds_max" qualifiers="const">
 			<return type="Vector3" />
 			<description>
 				Returns the maximum coordinate bounds of the generated world geometry.
+			</description>
+		</method>
+		<method name="get_world_bounds_min" qualifiers="const">
+			<return type="Vector3" />
+			<description>
+				Returns the minimum coordinate bounds of the generated world geometry.
 			</description>
 		</method>
 		<method name="has_wall_at" qualifiers="const">
@@ -161,50 +162,49 @@
 		</member>
 	</members>
 	<constants>
-		<constant name="CellType::Inside" value="0" enum="CellType">
-			Regular interior cell type.
+		<constant name="Inside" value="0" enum="CellType">
 		</constant>
-		<constant name="CellType::InsideDoor" value="1" enum="CellType">
-			Interior cell with a door.
+		<constant name="InsideDoor" value="1" enum="CellType">
 		</constant>
-		<constant name="CellType::InsideWindow" value="2" enum="CellType">
-			Interior cell with a window.
+		<constant name="InsideWindow" value="2" enum="CellType">
 		</constant>
-		<constant name="CellType::InsideB" value="3" enum="CellType">
-			Alternative interior cell type.
+		<constant name="InsideB" value="3" enum="CellType">
 		</constant>
-		<constant name="CellType::InsideDoorB" value="4" enum="CellType">
-			Alternative interior cell with a door.
+		<constant name="InsideDoorB" value="4" enum="CellType">
 		</constant>
-		<constant name="CellType::InsideDoorB2" value="5" enum="CellType">
-			Second alternative interior cell with a door.
+		<constant name="InsideDoorB2" value="5" enum="CellType">
 		</constant>
-		<constant name="CellType::InsideWindow2" value="6" enum="CellType">
-			Alternative interior cell with a window.
+		<constant name="InsideWindow2" value="6" enum="CellType">
 		</constant>
-		<constant name="CellType::InsideB2" value="7" enum="CellType">
-			Second alternative interior cell type.
+		<constant name="InsideB2" value="7" enum="CellType">
 		</constant>
-		<constant name="CellType::InsideDoor2" value="8" enum="CellType">
-			Third alternative interior cell with a door.
+		<constant name="InsideDoor2" value="8" enum="CellType">
 		</constant>
-		<constant name="CellType::InsideWindow2_2" value="9" enum="CellType">
-			Second alternative interior cell with a window, variant 2.
+		<constant name="InsideWindow2_2" value="9" enum="CellType">
 		</constant>
-		<constant name="CellType::Inside2" value="10" enum="CellType">
-			Third alternative interior cell type.
+		<constant name="Inside2" value="10" enum="CellType">
 		</constant>
-		<constant name="CellType::Outside" value="100" enum="CellType">
-			Regular exterior cell type.
+		<constant name="Outside" value="100" enum="CellType">
 		</constant>
-		<constant name="CellType::OutsideDoor" value="101" enum="CellType">
-			Exterior cell with a door.
+		<constant name="OutsideDoor" value="101" enum="CellType">
 		</constant>
-		<constant name="CellType::OutsideWindow" value="102" enum="CellType">
-			Exterior cell with a window.
+		<constant name="OutsideWindow" value="102" enum="CellType">
 		</constant>
-		<constant name="CellType::None" value="255" enum="CellType">
-			Empty cell / no cell exists at this position.
+		<constant name="None" value="255" enum="CellType">
+		</constant>
+		<constant name="Wall" value="0" enum="WallType">
+		</constant>
+		<constant name="Door" value="1" enum="WallType">
+		</constant>
+		<constant name="Window" value="2" enum="WallType">
+		</constant>
+		<constant name="SideColumn" value="3" enum="WallType">
+		</constant>
+		<constant name="SideColumnLeft" value="4" enum="WallType">
+		</constant>
+		<constant name="SideColumnRight" value="5" enum="WallType">
+		</constant>
+		<constant name="Floor" value="6" enum="WallType">
 		</constant>
 	</constants>
 </class>

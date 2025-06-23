@@ -45,5 +45,8 @@ def get_doc_classes():
         "YBoneAttachment3D",
         "CombinedTexture2D",
         "YSaveable3D",
-        "YEventData"
+        "YEventData",
+        "YBoxContainer3D",
+        "YHBoxContainer3D",
+        "YVBoxContainer3D"
     ]

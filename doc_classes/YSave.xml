@@ -375,7 +375,7 @@
 		<member name="save_path" type="String" setter="set_save_path" getter="get_save_path" default="&quot;user://game.save&quot;">
 			The file path where the save file is stored.
 		</member>
-		<member name="save_requested" type="bool" setter="set_save_requested" getter="get_save_requested" default="true">
+		<member name="save_requested" type="bool" setter="set_save_requested" getter="get_save_requested" default="false">
 			Indicates whether a save operation has been requested but not yet executed.
 		</member>
 		<member name="settings_path" type="String" setter="set_settings_path" getter="get_settings_path" default="&quot;user://game.settings&quot;">
