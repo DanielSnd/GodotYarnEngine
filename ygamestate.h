@@ -63,7 +63,7 @@ public:
     static YGameState *get_singleton();
     void _notification(int p_what);
 
-    bool has_started=false;
+    bool has_started = false;
 
     HashSet<Vector2i> state_parameter_authorities;
 

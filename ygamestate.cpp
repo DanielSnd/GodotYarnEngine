@@ -648,6 +648,7 @@ void YGameState::set_current_turn_player(YGamePlayer* _new_current_player)
     {
         pending_waiting_for_start_approval_attempts = 0;
         YEngine::get_singleton()->using_game_state = false;
+        has_started = false;
         if (!current_game_action.is_null() && current_game_action.is_valid()) {
             current_game_action = Ref<YGameAction>();
         }
@@ -698,7 +699,7 @@ Ref<YGameAction> YGameState::add_game_action_with_param(const Ref<YGameAction> &
     }
     if(!has_started) {
         YEngine::get_singleton()->game_state_starting(this);
-        has_started=true;
+        has_started = true;
     }
     if (desired_game_state_id == -1) {
         desired_game_state_id = next_game_action_unique_id;
