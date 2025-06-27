@@ -67,7 +67,7 @@ public:
     void logf_error_custom(const char *p_format, ...) _PRINTF_FORMAT_ATTRIBUTE_2_3;
     bool last_pushed_was_warning=false;
     bool last_pushed_was_error=false;
-    virtual void log_error(const char *p_function, const char *p_file, int p_line, const char *p_code, const char *p_rationale, bool p_editor_notify, ErrorType p_type = ERR_ERROR) override;
+    virtual void log_error(const char *p_function, const char *p_file, int p_line, const char *p_code, const char *p_rationale, bool p_editor_notify, ErrorType p_type = ERR_ERROR, const Vector<Ref<ScriptBacktrace>> &p_script_backtraces = {}) override;
     virtual ~YLogger() {}
 };
 

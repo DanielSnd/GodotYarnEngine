@@ -306,12 +306,14 @@ public:
 
     void owner_node_exiting_tree();
 
-    YStateMachine(): state_target(nullptr), state_target_3d(nullptr), state_target_2d(nullptr) {
+    YStateMachine(): backup_state(nullptr), default_state(nullptr), state_target(nullptr), state_target_3d(nullptr), state_target_2d(nullptr) {
         transitions_count = 0;
         overrides_count = 0;
         has_overriders = false;
         block_other_overrides = false;
         run_on_server_only = false;
+        backup_state = nullptr;
+        default_state = nullptr;
         current_state = nullptr;
         fsm_owner = nullptr;
         override_with_state = nullptr;
@@ -325,6 +327,8 @@ public:
         state_target_3d = nullptr;
         state_target_2d = nullptr;
         current_state = nullptr;
+        backup_state = nullptr;
+        default_state = nullptr;
         fsm_owner = nullptr;
         override_with_state = nullptr;
         has_done_setup = false;

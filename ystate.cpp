@@ -491,11 +491,11 @@ bool YState::can_auto_override() const {
                 break;
             case EQUAL: {
                 const float epsilon = 0.00001f;
-                found_result = abs(current_value- autooverride_check_value) < epsilon;
+                found_result = Math::abs(current_value- autooverride_check_value) < epsilon;
             }break;
             case NOT_EQUAL: {
                 const float epsilon = 0.00001f;
-                found_result = abs(current_value- autooverride_check_value) > epsilon;
+                found_result = Math::abs(current_value- autooverride_check_value) > epsilon;
             }break;
             case BIGGER_THAN:
                 found_result = current_value > autooverride_check_value;
@@ -505,11 +505,11 @@ bool YState::can_auto_override() const {
                 break;
             case BIGGER_THAN_OR_EQUAL: {
                 const float epsilon = 0.00001f;
-                found_result = current_value > autooverride_check_value || (abs(current_value- autooverride_check_value) < epsilon);
+                found_result = current_value > autooverride_check_value || (Math::abs(current_value- autooverride_check_value) < epsilon);
             }break;
             case SMALLER_THAN_OR_EQUAL:{
                 const float epsilon = 0.00001f;
-                found_result = current_value < autooverride_check_value || (abs(current_value- autooverride_check_value) < epsilon);
+                found_result = current_value < autooverride_check_value || (Math::abs(current_value- autooverride_check_value) < epsilon);
             }break;
             default: ;
         }

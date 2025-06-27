@@ -67,7 +67,7 @@ String GSheetImporter::get_string_from_utf8(const PackedByteArray &p_instance) {
     String s;
     if (p_instance.size() > 0) {
         const uint8_t *r = p_instance.ptr();
-        s.parse_utf8((const char *)r, p_instance.size());
+        s = String::utf8((const char *)r, p_instance.size());
     }
     return s;
 }

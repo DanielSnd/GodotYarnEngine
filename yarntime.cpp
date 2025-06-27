@@ -273,7 +273,7 @@ void YTime::set_clock_and_emit_signal(const int val)  {
             emit_signal(SNAME("clock_day_changed"));
         }
     }
-    if (ABS(previous_clock - val) >= 1) {
+    if (Math::abs(previous_clock - val) >= 1) {
         Vector<int> _passed_times_to_callback;
         for (const auto& errlist: reg_clock_callbacks) {
             if (errlist.key < clock) {

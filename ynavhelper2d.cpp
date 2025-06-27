@@ -179,7 +179,7 @@ void YNavHelper2D::initialize_raycasts() {
 
     // Create a circle of raycasts
     for (int i = 0; i < direction_amount; i++) {
-        float angle = (i * Math_TAU) / direction_amount;
+        float angle = (i * Math::TAU) / direction_amount;
         Vector2 direction = Vector2(cos(angle), sin(angle)).normalized();
         directions.push_back(direction);
         interest_values.push_back(0.0f);

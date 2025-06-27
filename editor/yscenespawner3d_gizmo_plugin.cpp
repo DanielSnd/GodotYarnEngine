@@ -72,8 +72,8 @@ void YSceneSpawner3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 	Vector<Vector3> collision_segments;
 
 	for (int i = 0; i < 64; i++) {
-		float ra = i * (Math_TAU / 64.0);
-		float rb = (i + 1) * (Math_TAU / 64.0);
+		float ra = i * (Math::TAU / 64.0);
+		float rb = (i + 1) * (Math::TAU / 64.0);
 		Point2 a = Vector2(Math::sin(ra), Math::cos(ra)) * r;
 		Point2 b = Vector2(Math::sin(rb), Math::cos(rb)) * r;
 

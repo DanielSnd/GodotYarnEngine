@@ -439,7 +439,7 @@ Vector2 YDir::random_direction_2d() {
    if (singleton == nullptr) {
     return Vector2();
    }
-    float angle = singleton->rng->randf_range(0, Math_TAU);
+    float angle = singleton->rng->randf_range(0, Math::TAU);
     return Vector2(Math::cos(angle), Math::sin(angle));
 }
 
@@ -449,7 +449,7 @@ Vector3 YDir::random_direction() {
    }
    
     // Generate random angles for spherical coordinates
-    float theta = singleton->rng->randf_range(0, Math_TAU); // Azimuthal angle
+    float theta = singleton->rng->randf_range(0, Math::TAU); // Azimuthal angle
     float phi = Math::acos(singleton->rng->randf_range(-1, 1)); // Polar angle
     
     // Convert to Cartesian coordinates
@@ -498,7 +498,7 @@ Vector3 YDir::random_from_dir(const Vector3& direction, float angle_radians) {
     
     // Generate random angles for the cone
     float random_angle = singleton->rng->randf_range(0, angle_radians); // Angle from center line
-    float random_rotation = singleton->rng->randf_range(0, Math_TAU); // Rotation around center line
+    float random_rotation = singleton->rng->randf_range(0, Math::TAU); // Rotation around center line
     
     // First rotate perp around dir by random_rotation
     Basis rotation_around_dir = Basis(dir, random_rotation);

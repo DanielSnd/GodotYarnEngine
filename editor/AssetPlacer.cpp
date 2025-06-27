@@ -5,8 +5,6 @@
 
 #include "AssetPlacer.h"
 
-using namespace godot;
-
 Variant yarnengine::AsssetPanelItemList::get_drag_data(const Point2 &p_point) {
     if (bottom_panel_owner != nullptr && bottom_panel_owner->current_activated_item_i >= 0 && !bottom_panel_owner->current_activated_item_path.is_empty() ) {
         Dictionary returndict;

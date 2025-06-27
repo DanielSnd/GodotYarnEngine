@@ -194,7 +194,7 @@ void YNavHelper3D::_bind_methods() {
 
 
 void YNavHelper3D::initialize_raycasts() {
-    directions.clear();
+    directions.clear(); 
     interest_values.clear();
     danger_values.clear();
     context_map.clear();
@@ -202,7 +202,7 @@ void YNavHelper3D::initialize_raycasts() {
     if (use_flat_raycasts) {
         // Create a flat circle of raycasts
         for (int i = 0; i < direction_amount; i++) {
-            float angle = (i * Math_TAU) / direction_amount;
+            float angle = (i * Math::TAU) / direction_amount;
             Vector3 direction = Vector3(cos(angle), 0, sin(angle)).normalized();
             directions.push_back(direction);
             interest_values.push_back(0.0f);
@@ -215,7 +215,7 @@ void YNavHelper3D::initialize_raycasts() {
             float y = 1.0f - (2.0f * i) / (direction_amount - 1.0f);
             float radius = sqrt(1.0f - y * y);
             
-            float theta = Math_PI * (3.0f - sqrt(5.0f)); // Golden angle
+            float theta = Math::PI * (3.0f - sqrt(5.0f)); // Golden angle
             float phi = theta * i;
             
             float x = cos(phi) * radius;
@@ -378,7 +378,7 @@ void YNavHelper3D::do_physics_process(double delta) {
         if (look_dir.length() > 0.001f) {
             Vector3 look_at_position = parent->get_global_position() + look_dir;
             Vector3 up_vector = Vector3(0, 1, 0);
-            if (abs(look_at_position.dot(up_vector)) < 0.97f) {
+            if (Math::abs(look_at_position.dot(up_vector)) < 0.97f) {
                 parent->call("look_at", look_at_position, up_vector, true);
             }
         }
@@ -420,7 +420,7 @@ void YNavHelper3D::do_physics_process(double delta) {
         if (look_dir.length() > 0.001f) {
             Vector3 look_at_position = parent->get_global_position() + look_dir;
             Vector3 up_vector = Vector3(0, 1, 0);
-            if (abs(look_at_position.dot(up_vector)) < 0.97f) {
+            if (Math::abs(look_at_position.dot(up_vector)) < 0.97f) {
                 parent->call("look_at", look_at_position, up_vector, true);
             }
         }
@@ -429,7 +429,7 @@ void YNavHelper3D::do_physics_process(double delta) {
         if (look_dir.length() > 0.001f) {
             Vector3 look_at_position = parent->get_global_position() + look_dir;
             Vector3 up_vector = Vector3(0, 1, 0);
-            if (abs(look_at_position.dot(up_vector)) < 0.97f) {
+            if (Math::abs(look_at_position.dot(up_vector)) < 0.97f) {
                 parent->call("look_at", look_at_position, up_vector, true);
             }
         }
