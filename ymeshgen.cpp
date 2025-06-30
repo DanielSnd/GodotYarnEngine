@@ -167,7 +167,9 @@ uint8_t YMeshGen::get_cell_byte(const Vector3i& pos) const {
     return cell ? *cell : CellType::Outside;
 }
 
-Ref<Mesh> YMeshGen::create_mesh_from_aabbs_vcolor(const TypedArray<Rect2>& p_aabbs, const Rect2& p_encompassing_aabb, float p_margin, float p_resolution, float push_verts_down) {
+Ref<ArrayMesh> YMeshGen::create_mesh_from_aabbs_vcolor(const TypedArray<Rect2>& p_aabbs, const Rect2& p_encompassing_aabb, float p_margin, float p_resolution, float push_verts_down) {
+    // auto start = std::chrono::high_resolution_clock::now();
+
     Ref<ArrayMesh> mesh;
     mesh.instantiate();
 
@@ -178,64 +180,122 @@ Ref<Mesh> YMeshGen::create_mesh_from_aabbs_vcolor(const TypedArray<Rect2>& p_aab
     encompassing_aabb.size.x += 2 * p_margin;
     encompassing_aabb.size.y += 2 * p_margin;
 
+    // Simple adaptive resolution - use larger quads for areas far from AABBs
+    const float BASE_RESOLUTION = p_resolution;
+    const float COARSE_RESOLUTION = p_resolution * 2.0f; // 2x larger quads for distant areas
+    
     // Calculate steps
-    int x_steps = int(encompassing_aabb.size.x / MAX(p_resolution, 0.01f)) + 1;
-    int z_steps = int(encompassing_aabb.size.y / MAX(p_resolution, 0.01f)) + 1;
+    int x_steps = int(encompassing_aabb.size.x / MAX(BASE_RESOLUTION, 0.01f)) + 1;
+    int z_steps = int(encompassing_aabb.size.y / MAX(BASE_RESOLUTION, 0.01f)) + 1;
 
     // Initialize arrays for mesh data
     PackedVector3Array vertices;
     PackedColorArray vertices_colors;
     PackedInt32Array indices;
-    HashMap<int64_t, int> vertex_to_index; // Using int64_t as key for x,z coordinates
+    HashMap<Vector2, int> vertex_to_index;
 
-    // Iterate through the grid
-    for (int o = 0; o < x_steps; o++) {
-        float x = encompassing_aabb.position.x + (o * p_resolution);
-        for (int j = 0; j < z_steps; j++) {
-            float z = encompassing_aabb.position.y + (j * p_resolution);
+    // Pre-calculate AABB bounds for faster intersection tests
+    PackedFloat32Array aabb_min_x, aabb_max_x, aabb_min_z, aabb_max_z;
+    aabb_min_x.resize(p_aabbs.size());
+    aabb_max_x.resize(p_aabbs.size());
+    aabb_min_z.resize(p_aabbs.size());
+    aabb_max_z.resize(p_aabbs.size());
+    
+    for (int aabb_idx = 0; aabb_idx < p_aabbs.size(); aabb_idx++) {
+        Rect2 aabb = p_aabbs[aabb_idx];
+        aabb_min_x.set(aabb_idx, aabb.position.x);
+        aabb_max_x.set(aabb_idx, aabb.position.x + aabb.size.x);
+        aabb_min_z.set(aabb_idx, aabb.position.y);
+        aabb_max_z.set(aabb_idx, aabb.position.y + aabb.size.y);
+    }
 
-            // Define vertices for a face
-            Vector3 new_verts[4] = {
+    // Iterate through the grid with adaptive resolution
+    for (int o = 0; o < x_steps - 1; o++) {
+        float x = encompassing_aabb.position.x + (o * BASE_RESOLUTION);
+        for (int j = 0; j < z_steps - 1; j++) {
+            float z = encompassing_aabb.position.y + (j * BASE_RESOLUTION);
+
+            // Check if this area is near any AABB
+            float center_x = x + BASE_RESOLUTION * 0.5f;
+            float center_z = z + BASE_RESOLUTION * 0.5f;
+            
+            bool near_aabb = false;
+            for (int aabb_idx = 0; aabb_idx < p_aabbs.size(); aabb_idx++) {
+                if (center_x >= aabb_min_x[aabb_idx] - 5.0f && center_x <= aabb_max_x[aabb_idx] + 5.0f &&
+                    center_z >= aabb_min_z[aabb_idx] - 5.0f && center_z <= aabb_max_z[aabb_idx] + 5.0f) {
+                    near_aabb = true;
+                    break;
+                }
+            }
+
+            // Use fine resolution near AABBs, coarse resolution far away
+            float current_resolution = near_aabb ? BASE_RESOLUTION : COARSE_RESOLUTION;
+            
+            // Skip coarse quads that are completely outside the area of interest
+            if (!near_aabb && o % 2 == 1 && j % 2 == 1) {
+                continue; // Skip every other quad when using coarse resolution
+            }
+
+            // Define vertices for a quad
+            Vector3 quad_verts[4] = {
                 Vector3(x, 0.0, z),
-                Vector3(x + p_resolution, 0.0, z),
-                Vector3(x + p_resolution, 0.0, z + p_resolution),
-                Vector3(x, 0.0, z + p_resolution)
+                Vector3(x + current_resolution, 0.0, z),
+                Vector3(x + current_resolution, 0.0, z + current_resolution),
+                Vector3(x, 0.0, z + current_resolution)
             };
 
-            // Process vertices and create indices
-            for (int i = 0; i < 4; i++) {
-                // Create a unique key for this vertex position
-                int64_t key = (int64_t(o) << 32) | int64_t(j + (i >= 2 ? 1 : 0));
+            // Check if any vertex of this quad is inside any AABB
+            bool quad_has_inside_vertex = false;
+            bool vertex_inside[4] = {false, false, false, false};
+            
+            for (int v = 0; v < 4; v++) {
+                float vx = quad_verts[v].x;
+                float vz = quad_verts[v].z;
                 
-                if (!vertex_to_index.has(key)) {
-                    vertex_to_index[key] = vertices.size();
-
-                    // Check if vertex is inside any AABB
-                    bool is_inside = false;
-                    for (int aabb_idx = 0; aabb_idx < p_aabbs.size(); aabb_idx++) {
-                        Rect2 aabb = p_aabbs[aabb_idx];
-                        if (aabb.has_point(Vector2(new_verts[i].x, new_verts[i].z))) {
-                            is_inside = true;
-                            break;
-                        }
-                    }
-                    if (is_inside) {
-                        vertices_colors.push_back(Color(1, 0, 0));
-                        vertices.push_back(new_verts[i] + Vector3(0, push_verts_down, 0));
-                    } else {
-                        vertices_colors.push_back(Color(1, 1, 1));
-                        vertices.push_back(new_verts[i]);
+                for (int aabb_idx = 0; aabb_idx < p_aabbs.size(); aabb_idx++) {
+                    if (vx >= aabb_min_x[aabb_idx] && vx <= aabb_max_x[aabb_idx] &&
+                        vz >= aabb_min_z[aabb_idx] && vz <= aabb_max_z[aabb_idx]) {
+                        vertex_inside[v] = true;
+                        quad_has_inside_vertex = true;
+                        break;
                     }
                 }
             }
 
-            // Add indices for the two triangles
-            indices.push_back(vertex_to_index[(int64_t(o) << 32) | int64_t(j)]);
-            indices.push_back(vertex_to_index[(int64_t(o + 1) << 32) | int64_t(j)]);
-            indices.push_back(vertex_to_index[(int64_t(o + 1) << 32) | int64_t(j + 1)]);
-            indices.push_back(vertex_to_index[(int64_t(o + 1) << 32) | int64_t(j + 1)]);
-            indices.push_back(vertex_to_index[(int64_t(o) << 32) | int64_t(j + 1)]);
-            indices.push_back(vertex_to_index[(int64_t(o) << 32) | int64_t(j)]);
+            // if (quad_has_inside_vertex) {
+            //     total_quads_inside++;
+            // }
+            // total_quads_processed++;
+
+            // Process vertices and create indices
+            int quad_indices[4];
+            for (int i = 0; i < 4; i++) {
+                Vector2 vertex_key(quad_verts[i].x, quad_verts[i].z);
+                
+                if (!vertex_to_index.has(vertex_key)) {
+                    vertex_to_index[vertex_key] = vertices.size();
+
+                    // Use pre-calculated vertex inside status
+                    if (vertex_inside[i]) {
+                        vertices_colors.push_back(Color(1, 0, 0));
+                        vertices.push_back(quad_verts[i] + Vector3(0, push_verts_down, 0));
+                        // total_inside_verts++;
+                    } else {
+                        vertices_colors.push_back(Color(1, 1, 1));
+                        vertices.push_back(quad_verts[i]);
+                        // total_outside_verts++;
+                    }
+                }
+                quad_indices[i] = vertex_to_index[vertex_key];
+            }
+
+            // Add indices for the two triangles of this quad
+            indices.push_back(quad_indices[0]);
+            indices.push_back(quad_indices[1]);
+            indices.push_back(quad_indices[2]);
+            indices.push_back(quad_indices[2]);
+            indices.push_back(quad_indices[3]);
+            indices.push_back(quad_indices[0]);
         }
     }
 
@@ -248,6 +308,11 @@ Ref<Mesh> YMeshGen::create_mesh_from_aabbs_vcolor(const TypedArray<Rect2>& p_aab
 
     // Add surface to mesh
     mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, surface_array);
+
+    // // Calculate the duration in microseconds
+    // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
+    // // Print the duration
+    // print_line(vformat("Mesh generation complete. Time taken by generation: %s us", static_cast<int64_t>(duration.count())));
 
     return mesh;
 }

@@ -156,7 +156,7 @@ public:
     void calculate_uvs_for_face(FaceData& face, bool is_wall);
     void add_face_to_mesh(const FaceData& face);
 
-    Ref<Mesh> create_mesh_from_aabbs_vcolor(const TypedArray<Rect2>& p_aabbs, const Rect2& p_encompassing_aabb, float p_margin, float p_resolution, float push_verts_down);
+    Ref<ArrayMesh> create_mesh_from_aabbs_vcolor(const TypedArray<Rect2>& p_aabbs, const Rect2& p_encompassing_aabb, float p_margin, float p_resolution, float push_verts_down);
     
     // Wall generation functions
     void create_wall(const Vector3& wall_center_pos, const Vector3& dir_right, const Vector3& dir_front, uint8_t desired_byte, uint8_t wall_type, float height = 2.0f);
