@@ -34,7 +34,7 @@ Ref<YTweenWrap> YTweenWrap::yparallel() {
 }
 
 void YTweenWrap::register_finished_extra_callback() {
-    connect("finished",callable_mp(this,&YTweenWrap::emitted_finished));
+    connect("finished",callable_mp(this,&YTweenWrap::emitted_finished), CONNECT_DEFERRED);
 }
 
 void YTweenWrap::register_node_kill_when(Node* p_node_owner) {
@@ -42,7 +42,7 @@ void YTweenWrap::register_node_kill_when(Node* p_node_owner) {
         return;
     }
 
-    p_node_owner->connect(SceneStringName(tree_exiting), callable_mp(this,&YTweenWrap::kill_due_to_node_tree_exiting));
+    p_node_owner->connect(SceneStringName(tree_exiting), callable_mp(this,&YTweenWrap::kill_due_to_node_tree_exiting), CONNECT_DEFERRED);
 }
 
 Ref<PropertyTweener> YTweenWrap::set_ytrans(Tween::TransitionType p_trans, real_t p_param1, real_t p_param2) {
@@ -162,6 +162,7 @@ void YTween::kill_specific_tween(Ref<YTweenWrap> specific_tween) {
     if (specific_tween.is_valid()) {
         // Remove from main list first to prevent any further processing
         tweens.erase(specific_tween);
+        tweens_to_unref_next_frame.push_back(specific_tween);
         
         if (specific_tween->is_running()) {
             specific_tween->stop();
@@ -238,6 +239,7 @@ void YTween::kill_tweens(Node *p_owner, uint64_t p_tag) {
         
         tween_wrap->kill();
         tweens.erase(tween_wrap);
+        tweens_to_unref_next_frame.push_back(tween_wrap);
         tween_wrap->clear();
     }
 }
@@ -400,6 +402,10 @@ Ref<YTweenWrap> YTween::create_tween_from(Node *node_owner, SceneTree *tree, Ref
 void YTween::process_tweens(double p_delta, bool p_physics) {
     _THREAD_SAFE_METHOD_
 
+    if (tweens_to_unref_next_frame.size() > 0 && !p_physics) {
+        tweens_to_unref_next_frame.clear();
+    }
+
     if (tweens.size() == 0) {
         return;  // No tweens to process
     }
@@ -469,6 +475,7 @@ void YTween::process_tweens(double p_delta, bool p_physics) {
     
     // Now safely remove the tweens that are done
     for (List<Ref<YTweenWrap>>::Element *E = tweens_to_remove.front(); E; E = E->next()) {
+        tweens_to_unref_next_frame.push_back(E->get());
         tweens.erase(E->get());
     }
 }

@@ -157,6 +157,7 @@ protected:
 public:
 
     List<Ref<YTweenWrap>> tweens;
+    List<Ref<YTweenWrap>> tweens_to_unref_next_frame;
     _FORCE_INLINE_ static YTween *get_singleton() {return singleton;}
     HashMap<uint64_t,Vector<Ref<YTweenWrap>>> tween_finder;
     void do_process(double delta);
