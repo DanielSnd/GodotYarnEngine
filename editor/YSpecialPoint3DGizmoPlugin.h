@@ -6,7 +6,7 @@
 #define YSPECIALPOINT3DGIZMOPLUGIN_H
 
 #if TOOLS_ENABLED
-#include "editor/plugins/node_3d_editor_gizmos.h"
+#include "editor/scene/3d/node_3d_editor_gizmos.h"
 
 class YSpecialPoint3DGizmoPlugin : public EditorNode3DGizmoPlugin {
     GDCLASS(YSpecialPoint3DGizmoPlugin, EditorNode3DGizmoPlugin);

@@ -8,7 +8,7 @@
 #include "scene/main/http_request.h"
 #include "core/variant/callable.h"
 #ifdef TOOLS_ENABLED
-#include "editor/editor_file_system.h"
+#include "editor/file_system/editor_file_system.h"
 #endif
 
 class GSheetImporter : public RefCounted {

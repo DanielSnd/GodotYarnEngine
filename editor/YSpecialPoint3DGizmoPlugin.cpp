@@ -7,7 +7,7 @@
 #if TOOLS_ENABLED
 #include "editor/editor_node.h"
 #include "editor/editor_string_names.h"
-#include "editor/plugins/node_3d_editor_plugin.h"
+#include "editor/scene/3d/node_3d_editor_plugin.h"
 #include "scene/3d/audio_listener_3d.h"
 #include "../yspecialpoint3d.h"
 

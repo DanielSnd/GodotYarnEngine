@@ -10,7 +10,7 @@
 #include "../gsheetimporter.h"
 #include "editor/plugins/editor_plugin.h"
 #include "editor/editor_node.h"
-#include "editor/editor_paths.h"
+#include "editor/file_system/editor_paths.h"
 
 struct EditorProgress;
 class GSheetImporterEditorPlugin : public EditorPlugin {

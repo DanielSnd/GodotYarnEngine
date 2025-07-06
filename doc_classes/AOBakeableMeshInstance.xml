@@ -30,7 +30,7 @@
 		<member name="baked_mesh" type="Mesh" setter="set_baked_mesh" getter="get_baked_mesh">
 			The mesh containing the baked ambient occlusion data.
 		</member>
-		<member name="environment_color" type="Color" setter="set_environment_color" getter="get_environment_color" default="Color(1, 0.980392, 0.901961, 1)">
+		<member name="environment_color" type="Color" setter="set_environment_color" getter="get_environment_color" default="Color(1, 0.9803922, 0.9019608, 1)">
 			The color of the environment light used in ambient occlusion calculations.
 		</member>
 		<member name="occlusion_angle" type="float" setter="set_occlusion_angle" getter="get_occlusion_angle" default="135.0">

@@ -6,8 +6,8 @@
 #define YSCENESPAWNER3D_GIZMO_PLUGIN_H
 
 #ifdef TOOLS_ENABLED
-#include "editor/plugins/node_3d_editor_gizmos.h"
-#include "editor/editor_settings.h"
+#include "editor/scene/3d/node_3d_editor_gizmos.h"
+#include "editor/settings/editor_settings.h"
 
 class YSceneSpawner3DGizmoPlugin : public EditorNode3DGizmoPlugin {
     GDCLASS(YSceneSpawner3DGizmoPlugin, EditorNode3DGizmoPlugin);

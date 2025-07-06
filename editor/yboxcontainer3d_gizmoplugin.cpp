@@ -3,7 +3,7 @@
 
 #include "yboxcontainer3d_gizmoplugin.h"
 #include "editor/editor_node.h"
-#include "editor/editor_settings.h"
+#include "editor/settings/editor_settings.h"
 #include "scene/3d/mesh_instance_3d.h"
 
 bool YBoxContainer3DGizmoPlugin::has_gizmo(Node3D *p_spatial) {

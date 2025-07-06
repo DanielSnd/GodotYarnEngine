@@ -7,7 +7,7 @@
 
 #ifdef TOOLS_ENABLED
 #include "../AOBakeableMeshInstance.h"
-#include "editor/editor_inspector.h"
+#include "editor/inspector/editor_inspector.h"
 #include "editor/plugins/editor_plugin.h"
 #include "scene/gui/button.h"
 #include "AOBakeGenerator.h"

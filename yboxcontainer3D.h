@@ -4,8 +4,8 @@
 #include "scene/3d/node_3d.h"
 #include "ytween.h"
 #ifdef TOOLS_ENABLED
-#include "editor/editor_settings.h"
-#include "editor/plugins/node_3d_editor_plugin.h"
+#include "editor/settings/editor_settings.h"
+#include "editor/scene/3d/node_3d_editor_plugin.h"
 #include "editor/yboxcontainer3d_gizmoplugin.h"
 #endif
 

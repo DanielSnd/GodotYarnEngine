@@ -245,7 +245,6 @@ Ref<ArrayMesh> YMeshGen::create_mesh_from_aabbs_vcolor(const TypedArray<Rect2>& 
             };
 
             // Check if any vertex of this quad is inside any AABB
-            bool quad_has_inside_vertex = false;
             bool vertex_inside[4] = {false, false, false, false};
             
             for (int v = 0; v < 4; v++) {
@@ -256,16 +255,10 @@ Ref<ArrayMesh> YMeshGen::create_mesh_from_aabbs_vcolor(const TypedArray<Rect2>& 
                     if (vx >= aabb_min_x[aabb_idx] && vx <= aabb_max_x[aabb_idx] &&
                         vz >= aabb_min_z[aabb_idx] && vz <= aabb_max_z[aabb_idx]) {
                         vertex_inside[v] = true;
-                        quad_has_inside_vertex = true;
                         break;
                     }
                 }
             }
-
-            // if (quad_has_inside_vertex) {
-            //     total_quads_inside++;
-            // }
-            // total_quads_processed++;
 
             // Process vertices and create indices
             int quad_indices[4];
