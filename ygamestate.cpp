@@ -133,8 +133,8 @@ void YGameState::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("mark_action_finished_and_sync", "action_id"), &YGameState::mark_action_finished_and_sync);
 
-    
-
+    ClassDB::bind_method(D_METHOD("define_state_parameter_names", "enum", "give_priority_to_server"), &YGameState::define_state_parameter_names, DEFVAL(true));
+    ClassDB::bind_method(D_METHOD("print_state_parameters"), &YGameState::print_state_parameters);
 
 // broadcast_call_on_game_action
     {
@@ -167,6 +167,29 @@ void YGameState::_bind_methods() {
         ClassDB::bind_vararg_method(METHOD_FLAGS_DEFAULT, "broadcast_call_on_game_action_and_execute", &YGameState::broadcast_call_on_game_action_and_execute, mi);
     }
 
+}
+
+void YGameState::print_state_parameters() {
+    bool has_state_param_names = !state_parameter_names.is_empty();
+    PackedStringArray return_state_param_names;
+    for (const auto& state_param : state_parameters) {
+        if (has_state_param_names) {
+            return_state_param_names.push_back(vformat("[%s : %s]",state_parameter_names.find_key(state_param.key), state_param.value));
+        } else {
+            return_state_param_names.push_back(vformat("[%s : %s]",state_param.key, state_param.value));
+        }
+    }
+    print_line(String(", ").join(return_state_param_names));
+}
+
+void YGameState::define_state_parameter_names(Dictionary p_names, bool give_priority_to_server) {
+    state_parameter_names = p_names;
+    
+    if (give_priority_to_server) {
+        for (const auto& name : p_names.keys()) {
+            state_parameter_authorities.insert(Vector2i(state_parameter_names[name],1));
+        }
+    }
 }
 
 Ref<YGameAction> YGameState::get_game_action(int netid) const {

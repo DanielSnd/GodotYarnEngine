@@ -92,6 +92,10 @@ public:
     void set_wait_before_going_to_next_step(double f) {wait_before_going_to_next_step = f;}
     double get_wait_before_going_to_next_step() const {return wait_before_going_to_next_step;}
 
+    void define_state_parameter_names(Dictionary p_names, bool give_priority_to_server=true);
+    void print_state_parameters();
+    Dictionary state_parameter_names;
+
     Dictionary serialize();
 
     void deserialize_individual_game_action_into(Vector<Ref<YGameAction>> &list_into, const Dictionary &action_dict, bool p_front_instead);
