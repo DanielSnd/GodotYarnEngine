@@ -28,7 +28,7 @@ private:
     int width = 64;
     int height = 64;
 
-    Vector4 _get_color_at(int x, int y, float aspect_ration, bool has_texture_overlay) const;
+    Vector4 _get_color_at(int x, int y, float aspect_ratio, bool has_texture_overlay, const Vector2 &front_offset_calc, const Vector2 &front_scale_calc) const;
 
     bool show_based_on_back_alpha = false;
     bool only_use_front_full_alpha = false;
@@ -43,6 +43,15 @@ protected:
     static void _bind_methods();
 
 public:
+    enum AutoFitMode {
+        AUTO_FIT_NONE,
+		AUTO_FIT_CONTAIN,  // Fit entire front image within canvas (letterbox/pillarbox)
+		AUTO_FIT_COVER,    // Cover entire canvas with front image (may crop)
+        AUTO_FIT_CONTAIN_TOP,  // Fit entire front image within canvas (letterbox/pillarbox)
+        AUTO_FIT_COVER_TOP,    // Cover entire canvas with front image (may crop)
+		AUTO_FIT_STRETCH   // Stretch to fill canvas exactly (may distort)
+	};
+
     void set_width(int p_width);
     virtual int get_width() const override;
     void set_height(int p_height);
@@ -62,6 +71,21 @@ public:
     int black_on_black_overrides_under = 0;
     int show_based_on_back_alpha_under = 0;
 
+    bool enable_bilinear_filtering = true;
+    bool get_enable_bilinear_filtering() { return enable_bilinear_filtering;}
+    void set_enable_bilinear_filtering(bool b);
+
+    bool transparency_aware_fitting = true;
+    bool get_transparency_aware_fitting() { return transparency_aware_fitting;}
+    void set_transparency_aware_fitting(bool b);
+
+	AutoFitMode auto_fit_mode = AUTO_FIT_NONE;
+
+    void set_auto_fit_mode(AutoFitMode p_mode);
+	AutoFitMode get_auto_fit_mode() const;
+
+    void _calculate_auto_fit(Vector2 &out_offset, Vector2 &out_scale) const;
+    Color _sample_bilinear(const Ref<Image> &image, float x, float y) const;
     int get_show_based_on_back_alpha_under() const { return show_based_on_back_alpha_under; }
     void set_show_based_on_back_alpha_under(int p_show_based_on_back_alpha_under);
 
@@ -137,5 +161,6 @@ public:
     virtual ~CombinedTexture2D();
 };
 
+VARIANT_ENUM_CAST(CombinedTexture2D::AutoFitMode);
 
 #endif //COMBINEDTEXTURE2D_H
