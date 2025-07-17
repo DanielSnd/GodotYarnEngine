@@ -287,12 +287,11 @@ Vector4 CombinedTexture2D::_get_color_at(int x, int y, float aspect_ratio, bool 
 		front_x = adjusted_x / front_scale_calc.x;
 		front_y = adjusted_y / front_scale_calc.y;
 	} else {
-		int front_x = static_cast<int>(CLAMP(Math::round((pixel.x * (static_cast<float>(ImageFront->get_width()) - 1))), 0, ImageFront->get_width() - 1));
-		int front_y = static_cast<int>(CLAMP(Math::round((pixel.y * (static_cast<float>(ImageFront->get_height()) - 1) * aspect_ratio)), 0, ImageFront->get_height() - 1));
-
+		front_x = static_cast<float>(CLAMP(Math::round((pixel.x * (static_cast<float>(ImageFront->get_width()) - 1))), 0, ImageFront->get_width() - 1));
+		front_y = static_cast<float>(CLAMP(Math::round((pixel.y * (static_cast<float>(ImageFront->get_height()) - 1) * aspect_ratio)), 0, ImageFront->get_height() - 1));
 		// add offset and scale vector
-		front_x = static_cast<int>((static_cast<float>(front_x) + (front_offset.x * 100.0)) * front_scale.x);
-		front_y = static_cast<int>((static_cast<float>(front_y) + (front_offset.y * 100.0)) * front_scale.y);
+		front_x = static_cast<float>((static_cast<float>(front_x) + (front_offset.x * 100.0)) * front_scale.x);
+		front_y = static_cast<float>((static_cast<float>(front_y) + (front_offset.y * 100.0)) * front_scale.y);
 	}
 	// Use bilinear sampling for better quality
 	Color colorBack = enable_bilinear_filtering ? 
