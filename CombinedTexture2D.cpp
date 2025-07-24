@@ -262,7 +262,7 @@ Vector4 CombinedTexture2D::_get_color_at(int x, int y, float aspect_ratio, bool 
 
 	Vector2 pixel;
 	if (width > 1) {
-		pixel.x = static_cast<float>(front_flips_h ? (width - x) : x) / static_cast<float>(width);  // normalize x-coordinate
+		pixel.x = static_cast<float>(x) / static_cast<float>(width);  // normalize x-coordinate
 	}
 	if (height > 1) {
 		pixel.y = static_cast<float>(y) / static_cast<float>(height);  // normalize y-coordinate
@@ -280,14 +280,15 @@ Vector4 CombinedTexture2D::_get_color_at(int x, int y, float aspect_ratio, bool 
 	if (auto_fit_mode != AUTO_FIT_NONE) {
 		// For auto-fit modes, we need to transform from target pixel coordinates to source image coordinates
 		// First, apply the offset to get the position within the scaled image
-		float adjusted_x = static_cast<float>(x) - front_offset_calc.x;
+		float adjusted_x = static_cast<float>(front_flips_h ? (width - x) : x) - front_offset_calc.x;
 		float adjusted_y = static_cast<float>(y) - front_offset_calc.y;
 		
 		// Then scale back to source image coordinates
 		front_x = adjusted_x / front_scale_calc.x;
 		front_y = adjusted_y / front_scale_calc.y;
 	} else {
-		front_x = static_cast<float>(CLAMP(Math::round((pixel.x * (static_cast<float>(ImageFront->get_width()) - 1))), 0, ImageFront->get_width() - 1));
+		float front_pixel_x = front_flips_h ? (1.0f - pixel.x) : pixel.x;
+		front_x = static_cast<float>(CLAMP(Math::round((front_pixel_x * (static_cast<float>(ImageFront->get_width()) - 1))), 0, ImageFront->get_width() - 1));
 		front_y = static_cast<float>(CLAMP(Math::round((pixel.y * (static_cast<float>(ImageFront->get_height()) - 1) * aspect_ratio)), 0, ImageFront->get_height() - 1));
 		// add offset and scale vector
 		front_x = static_cast<float>((static_cast<float>(front_x) + (front_offset.x * 100.0)) * front_scale.x);
