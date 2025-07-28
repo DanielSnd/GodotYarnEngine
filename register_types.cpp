@@ -39,6 +39,7 @@
 #include "ynavhelper3d.h"
 #include "ynavhelper2d.h"
 #include "ysaveable3d.h"
+#include "richtextlabel3d.h"
 #include "importers/resource_importer_glb_as_mesh.h"
 
 #ifdef NO_FMOD
@@ -148,6 +149,7 @@ void initialize_yarnengine_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<YBoxContainer3D>();
 	ClassDB::register_class<YVBoxContainer3D>();
 	ClassDB::register_class<YHBoxContainer3D>();
+	ClassDB::register_class<RichTextLabel3D>();
 
 	// Initialize your singleton.
 
